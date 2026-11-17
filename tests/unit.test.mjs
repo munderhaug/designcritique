@@ -184,7 +184,7 @@ test('merge: same problem from two critics, or a critic and a check, becomes one
   assert.equal(out.length, 4);
   const del = out.find((x) => x.rule === 'IOS-DESTRUCTIVE');
   assert.deepEqual(del.raisedBy.sort(), ['anthropic-design', 'impeccable']);
-  assert.equal(del.agreement, 'both-critics');
+  assert.equal(del.agreement, 'critics-agree');
   assert.equal(del.severity, 'P1');
   assert.equal(del.also[0].evidence, undefined);
   const scale = out.find((x) => x.rule === 'CHK-TEXT-SCALE');
@@ -216,7 +216,7 @@ test('merge: differently worded findings on the same principle and place are one
     { id: 'imp-2', source: 'impeccable', screen: 'welcome', rule: 'NN-H4', basis: ['NN-H4'], severity: 'P3', title: 'Buttons differ from the kit', element: { region: 'call-to-action stack' } },
   ]);
   assert.equal(out.length, 3);
-  assert.equal(out.find((f) => f.rule === 'TELL-WEB-IDIOMS').agreement, 'both-critics');
+  assert.equal(out.find((f) => f.rule === 'TELL-WEB-IDIOMS').agreement, 'critics-agree');
   assert.equal(out.filter((f) => f.rule === 'NN-H4').length, 2, 'distinct problems under one principle stay apart');
 });
 
@@ -639,4 +639,24 @@ test('styles: a web style becomes a phone-app starting point', async () => {
   assert.match(text, /12px radius/, 'radii from components carry over');
   assert.match(text, /Type scale:\*\* 11\/12\/14\/16\/22\/24\/28\/32\/36\/45\/57/);
   assert.match(text, /Material Design 3/);
+});
+
+test('gate: every key task must be scored by a critic that walked the whole task', async () => {
+  const { parseKeyTasks } = await import('../scripts/lib/product.mjs');
+  const keyTasks = parseKeyTasks('# P\n## Key Tasks\n\n1. **Pay for an order** (must not fail): When …\n2. **Log in**: When …\n');
+  assert.deepEqual(keyTasks.map((k) => [k.id, k.name, k.critical]), [['T1', 'Pay for an order', true], ['T2', 'Log in', false]]);
+  const g = normalizeGate({ target_score: 7 });
+  // T2 only scored by a batch reviewer that saw part of it: not enough.
+  const tasks = [
+    { id: 'T1', task: 'Pay', score: 8, source: 'anthropic-design', coverage: 'whole' },
+    { task: 'pay for an order', score: 9, source: 'impeccable' },
+    { id: 'T2', task: 'Log in', score: 3, source: 'anthropic-design-2', coverage: 'partial' },
+  ];
+  const r = evaluateGate({ findings: [], tasks, critics: ['a'], keyTasks }, g);
+  assert.equal(r.pass, false);
+  assert.ok(r.reasons.some((x) => /T2 "Log in" was not scored/.test(x)));
+  assert.ok(!r.reasons.some((x) => /scored 3/.test(x)), 'a partial view never lowers the score');
+  assert.equal(r.scores.find((s) => s.id === 'T1').score, 8, 'lowest whole-task score, matched by id or name');
+  const ok = evaluateGate({ findings: [], tasks: [...tasks, { id: 'T2', task: 'Log in', score: 7, source: 'impeccable' }], critics: ['a'], keyTasks }, g);
+  assert.equal(ok.pass, true);
 });

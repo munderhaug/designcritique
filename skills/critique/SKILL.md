@@ -17,7 +17,9 @@ For the whole product (where things belong, journeys across screens, scope, syst
 consistency), use the **review** skill (`/designcritique:review`); it costs more.
 
 This skill adds what they don't provide: mobile capture and checks for mockups, independence
-between critics, a merged report, and build recommendations from a cited catalog.
+between critics, a merged report, and build recommendations from a cited catalog. Other design
+skills in the session (for example Refero's `refero-design`, which calls itself the default for
+all design work) don't change this workflow and are never given to a critic.
 
 `PLUGIN_ROOT` is two folders up from this skill's base directory. Scripts are in
 `PLUGIN_ROOT/scripts`, the citation index in `PLUGIN_ROOT/skills/principles/references`, and
@@ -33,7 +35,7 @@ when an installer can't download). If the person declines, continue with what is
 say which critic ran in fallback mode.
 
 Then check the reference sources the same way, before any critique work: a connected MCP server
-can still refuse searches (Mobbin needs a paid plan). Run the one-call probe in
+can still refuse searches (Mobbin and Refero need a paid plan). Run the one-call probe in
 [references.md](references/references.md#check-the-source-first) for Mobbin, then Refero, and tell
 the person the result up front: connected and working, connected but needs a paid plan, or not
 connected. Use the first that works in step 4.
@@ -50,43 +52,20 @@ covered in [inputs.md](references/inputs.md): HTML, images, `.zip`, folders, Cla
 (pulled into `.designcritique/sources/<id>/`), Figma frames (exported through the Figma MCP),
 canvases with several phone frames (`phone_frame:`), and screenshots from a simulator or device
 (MobileBuildMCP, Android CLI, Expo MCP, mobile-mcp). Order flows with `flow:` and `step:`, and
-put each screen's intent in `notes:`. If the person has chosen a direction, put its 9–12
-reference images under `taste:`.
+put each screen's intent in `notes:`. If the person has chosen a visual direction, its images go
+under `taste:`; critics see them as context, never as a score.
 
 ## 3. Capture and check (deterministic)
 
 ```bash
 node PLUGIN_ROOT/scripts/capture/capture.mjs --config mockups.yaml   # prints RUN_DIR=...
-node PLUGIN_ROOT/scripts/checks/run-checks.mjs --run <RUN_DIR>
+node PLUGIN_ROOT/scripts/checks/run-all.mjs --run <RUN_DIR>
 ```
 
 Read the manifest warnings and look at one standard-light screenshot per screen. Fix
-mis-renders (phone-frame canvases, missing assets) and capture again.
-
-The checks also review `DESIGN.md` itself: text/surface token contrast, colour roles, a
-4-based spacing scale, and whether it covers the eight essentials of the Smpl design-system
-guide (buttons and their states, forms, navigation, empty and error states, voice).
-
-**Motion (HTML mockups).** Static screenshots can't show motion, so run the transitions.dev
-scanner (Jakub Antalik; deterministic, local, no account), installed by setup at a pinned version:
-
-```bash
-node PLUGIN_ROOT/scripts/checks/motion.mjs scan --run <RUN_DIR>
-```
-
-Its duration scale is a web scale, so off-scale timing stays P3; missing reduced-motion
-handling and overlays without transitions are P2.
-
-**Detectors (two angles).** Impeccable's detector reads each rendered HTML mockup or served PWA
-(`url:`) at phone size; unslopovich reads the code (`source:` in mockups.yaml: SwiftUI, Compose,
-Android XML, React Native, Flutter, web). Both are pinned, local and deterministic:
-
-```bash
-node PLUGIN_ROOT/scripts/checks/detectors.mjs --run <RUN_DIR>
-```
-
-Only allowlisted rules are kept, each cited to a principle. A problem seen on the screen and in
-its code is merged into one finding. Rules [companions.md](references/companions.md#detectors).
+mis-renders (phone-frame canvases, missing assets) and capture again. `run-all` runs every check
+(screens, DESIGN.md, motion, detectors) and writes `checks/all.json` for the critics to skip;
+what each finds: [checks.md](references/checks.md).
 
 ## 4. References from shipped apps
 
@@ -96,24 +75,26 @@ describes. This writes `RUN_DIR/references.md`.
 
 ## 5. Two independent critiques, in parallel
 
-Neither sees the other's output or how the screens were made. Both briefs name the decisions
-file (`.designcritique/decisions.yaml`), the taste references and the gate.
+Neither sees the other's output or how the screens were made. Fill in
+[critic-brief.md](references/critic-brief.md) for each: it names the decisions file, the key
+tasks by ID (`T1`, `T2`, … from PRODUCT.md), `checks/all.json`, the direction images if any and
+the gate. Run every critic on `critics.judge_model`, or a model other than the one that made the
+mockups.
 
-- **design-reviewer** (this plugin's read-only agent), on the model in `critics.judge_model`, or
-  a model other than the one that made the mockups. Fill in [critic-brief.md](references/critic-brief.md)
-  with the Anthropic design-plugin SKILL.md paths from step 0, plus companion guidance for the
-  platform (Material 3 or Expo skills, when installed). With more than 8 screens,
-  run one reviewer per batch of 8, and give one of them the whole flow for the walkthrough.
-- **Impeccable critique**, in a fresh general-purpose agent, using the Impeccable brief in
-  critic-brief.md. The critic doesn't run Impeccable's detector: step 3 already ran it as a
-  plugin check, at phone size and mapped to principles. Skip this critic if Impeccable isn't installed.
+- **design-reviewer** (this plugin's read-only agent), with the Anthropic design-plugin SKILL.md
+  paths from step 0 and companion guidance for the platform (Material 3 or Expo skills). With
+  more than 8 screens, batches of 8 score tasks as `partial`; one more reviewer with every screen
+  of the key tasks scores them as `whole`.
+- **Impeccable critique**, in a fresh general-purpose agent, using the Impeccable brief. It
+  doesn't run Impeccable's detector (step 3 did) and sets severity by severity.md. Skip it if
+  Impeccable isn't installed.
 - **External judges**, one per name in `critics.external` (for example `codex`), as described at
   the end of critic-brief.md. Skip any that isn't installed and say so.
 
-Save each JSON reply unchanged to `RUN_DIR/critique/anthropic-design.json` (`-2`, … for batches),
-`RUN_DIR/critique/impeccable.json` and `RUN_DIR/critique/external-<name>.json`. This plugin's hook validates each file as it's saved
-(schema, screen ids, principle IDs) and reports problems back; fix them, asking the critic
-again if needed. `node PLUGIN_ROOT/scripts/report/validate-critique.mjs <file>` does the same by hand.
+Save each JSON reply unchanged to `RUN_DIR/critique/anthropic-design.json` (`-2`, … for
+batches), `impeccable.json` and `external-<name>.json`. The plugin's hook validates each file as
+it's saved and reports problems back; fix them, asking the critic again if needed
+(`node PLUGIN_ROOT/scripts/report/validate-critique.mjs <file>` by hand).
 
 ## 6. Report and build stack
 
@@ -121,23 +102,21 @@ again if needed. `node PLUGIN_ROOT/scripts/report/validate-critique.mjs <file>` 
 node PLUGIN_ROOT/scripts/report/render-report.mjs --run <RUN_DIR>
 ```
 
-This merges all findings and writes `findings.json`, `report.md` and `report.html`. If an
-earlier run of the same mockups exists, it adds **Since last run**: fixed, new and still-open
-findings (`--base <run>` to choose the run, `--no-compare` to skip). The report ends with **To build this**: design system and components, tokens, platform skills,
-design-quality skills, design inputs and device checks for the platform and stack in
-PRODUCT.md. Every pick comes from `PLUGIN_ROOT/catalog/stack.yaml` with its source, ranked by
-what the findings show. Never add tools that aren't in the catalog; propose catalog additions
-separately, with sources.
+This merges all findings (one per problem) and writes `findings.json`, `report.md` and
+`report.html`, with **Since last run** when an earlier run of the same mockups exists
+(`--base <run>`, `--no-compare`). It ends with **To build this**: picks for the platform and
+stack in PRODUCT.md, only from `PLUGIN_ROOT/catalog/stack.yaml`, each with its source. Never add
+tools that aren't in the catalog; propose catalog additions separately, with sources.
 
 The report applies the person's decisions and states whether the run passes the **gate**
-(`gate:` in mockups.yaml: no open finding at `fail_on` or worse, every key task at or above
-`target_score` by the lowest critic's score). `node PLUGIN_ROOT/scripts/report/gate.mjs --run
+(`gate:` in mockups.yaml: no open finding at `fail_on` or worse, and every key task scored, at or
+above `target_score`, by the lowest score of the critics that walked the whole task). `node PLUGIN_ROOT/scripts/report/gate.mjs --run
 <RUN_DIR>` exits 2 with the reasons when it fails, for CI or a Stop hook.
 
 ## 7. Reply
 
 The problem in one line, plus open assumptions; the gate result; what changed since the last
-run, if there was one; the verdict and lowest score for each key task; the taste score, if any; the top P0/P1
+run, if there was one; the verdict and lowest score for each key task; the top P0/P1
 findings (five at most, each with its principle and the user it affects); what works; the first
 two build-stack steps; which critics ran, on which models, and which were missing. Point to
 `report.html`. Don't edit the mockups unless asked; `/designcritique:iterate` fixes and

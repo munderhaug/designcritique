@@ -1,4 +1,4 @@
-// System consistency across every captured screen (principles: CONS-*, STATE-NUMBERS-AGREE).
+// System consistency across every captured screen (principles: CONS-*).
 // Deterministic: component variants per role (Frost, Atomic Design 2016), icons with two meanings
 // and terms against the glossary (Covert 2014; Podmajersky 2019), number formats (Unicode CLDR
 // conventions), and the same labelled figure showing different values (Norman's conceptual model).

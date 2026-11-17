@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { parseArgs } from './lib/config.mjs';
+import { parseArgs, pinned } from './lib/config.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const project = path.resolve(args.project || process.cwd());
@@ -60,25 +60,25 @@ export const COMPANIONS = {
   },
   impeccable: {
     skill: 'impeccable',
-    use: 'Core: init writes PRODUCT.md (frame skill); critique is one of the two critics.',
-    install: 'npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks',
+    use: 'Core: init writes PRODUCT.md (frame skill); critique is one of the two critics; harden is the system lens\'s method for states.',
+    install: `npx -y impeccable@${pinned('impeccable')} install -y --providers=claude --scope=project --no-hooks`,
     by: 'Paul Bakaus (pbakaus/impeccable), Apache-2.0',
   },
   'material-3': {
     skill: 'material-3',
-    use: 'Android screens: give the ui critic its Material 3 guidance and compliance audit.',
+    use: 'Android screens: give the design-reviewer its Material 3 guidance and compliance audit.',
     install: 'npx skills add hamen/material-3-skill --skill material-3 -a claude-code',
     by: 'hamen/material-3-skill, MIT',
   },
   'expo-design-system': {
     skill: 'expo-design-system',
-    use: 'Expo / React Native projects: design-system drift and "looks AI-generated" audit guidance for the ui critic.',
+    use: 'Expo / React Native projects: design-system drift and "looks AI-generated" audit guidance for the design-reviewer.',
     install: 'claude plugin install expo@claude-plugins-official',
     by: 'Expo team, official',
   },
   'expo-native-ui': {
     skill: 'expo-native-ui',
-    use: 'Expo / React Native projects on iOS: native styling guidance (HIG, semantic colours, SF Symbols) for the ui critic.',
+    use: 'Expo / React Native projects on iOS: native styling guidance (HIG, semantic colours, SF Symbols) for the design-reviewer.',
     install: 'claude plugin install expo@claude-plugins-official',
     by: 'Expo team, official',
   },

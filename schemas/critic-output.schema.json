@@ -125,6 +125,18 @@
                 "maximum": 10
               }
             }
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^T[0-9]+$",
+            "description": "Key task ID from PRODUCT.md: the list number (T1, T2, \u2026)"
+          },
+          "coverage": {
+            "enum": [
+              "whole",
+              "partial"
+            ],
+            "description": "whole: the critic saw every screen of the task; partial: only some (a batch reviewer). Only whole-task scores count in the gate."
           }
         }
       }
@@ -335,45 +347,6 @@
     },
     "method": {
       "type": "string"
-    },
-    "taste_check": {
-      "type": "object",
-      "description": "How close the screens are to the references the person chose (manifest taste). Judged apart from usability findings.",
-      "required": [
-        "score",
-        "summary"
-      ],
-      "properties": {
-        "score": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 10
-        },
-        "summary": {
-          "type": "string"
-        },
-        "gaps": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "screen",
-              "text"
-            ],
-            "properties": {
-              "screen": {
-                "type": "string"
-              },
-              "reference": {
-                "type": "string"
-              },
-              "text": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      }
     },
     "journeys": {
       "type": "array",

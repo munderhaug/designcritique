@@ -84,7 +84,7 @@ if (formats.length > 1) add({
   recommendation: "Format numbers, currency and dates one way, following the locale's conventions.",
 });
 for (const fig of figures) add({
-  rule: 'CHK-FIGURES-DISAGREE', basis: ['STATE-NUMBERS-AGREE', 'NORMAN-MODEL'], category: 'logic', severity: 'P2', confidence: 'medium',
+  rule: 'CHK-FIGURES-DISAGREE', basis: ['CONS-FIGURES', 'NORMAN-MODEL'], category: 'logic', severity: 'P2', confidence: 'medium',
   title: `"${fig.label}" shows ${fig.values.length} different values`,
   affected_screens: names(fig.values.flatMap((v) => v.screens)),
   evidence: fig.values.map((v) => `${v.value} on ${names(v.screens).join(', ')}`).join('\n'),

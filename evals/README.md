@@ -85,14 +85,22 @@ to different places; the tab order differs from `## Navigation`; an out-of-scope
 present; the balance differs between two screens; a term the glossary says to avoid; one icon
 with two meanings; three styles of primary button.
 
-The lens reviewers (ia, scope, system) aren't scored yet: run `/designcritique:review
-evals/review/seeded.yaml` and compare with the seeded list above.
+The checks already find every seeded flaw, so the reviewers are scored on what judgement adds
+(`expected.json` → `lenses`): on `seeded`, the IA reviewer cites a depth, orphan or navigation
+principle and proposes a move; the scope reviewer cites `SCOPE-OUT` and proposes a cut, deferral
+or move; the system reviewer cites a `CONS-*` principle; the design-reviewer and Impeccable judge
+the must-not-fail "card lost" journey blocked or at risk. On `clean`, no reviewer raises a P0/P1
+or proposes a cut or move. Run `/designcritique:review evals/review/seeded.yaml` (and
+`clean.yaml`), then `npm run eval:lenses -- --run <run>`. **Not yet run:** the reviewers have
+no recorded score.
 
 ## Critic results
 
 First end-to-end run of both critics on this set (2026-11-17). Each ran in a fresh agent that
 had never seen the screens, the seeded flaws or the other critic's output, and the two ran on
-different models.
+different models. **Out of date:** this run covered the first six screens only; `signup`,
+`choices` and `activity` came later, and so did key-task IDs, task coverage and Impeccable using
+`severity.md` instead of its own scale. Re-run both critics before relying on these numbers.
 
 | Critic | Setup | Recall on seeded screens | P0/P1 on clean screens | Findings |
 |---|---|---|---|---|

@@ -21,10 +21,7 @@ for (const variant of ['seeded', 'clean']) {
   fs.rmSync(out, { recursive: true, force: true });
   run('scripts/crawl/crawl.mjs', ['--config', config, '--out', out, '--offline']);
   run('scripts/capture/capture.mjs', ['--config', config, '--out', out, '--inventory', path.join(out, 'inventory.json'), '--offline']);
-  run('scripts/checks/run-checks.mjs', ['--run', out]);
-  run('scripts/checks/structure.mjs', ['--run', out]);
-  run('scripts/checks/consistency.mjs', ['--run', out]);
-  run('scripts/checks/detectors.mjs', ['--run', out]);
+  run('scripts/checks/run-all.mjs', ['--run', out, '--review']);
   const found = ['structure.json', 'consistency.json'].flatMap((f) => {
     const p = path.join(out, 'checks', f);
     return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : [];
@@ -33,7 +30,11 @@ for (const variant of ['seeded', 'clean']) {
   const must = expected[variant].must;
   const missing = must.filter((r) => !rules.has(r));
   const unexpected = variant === 'clean' ? expected.watch.filter((r) => rules.has(r)) : [];
-  if (missing.length || unexpected.length) failures++;
-  console.log(`${variant.padEnd(7)} ${missing.length || unexpected.length ? 'FAIL' : 'pass'}  recall ${must.length - missing.length}/${must.length}${missing.length ? ` (missing ${missing.join(', ')})` : ''}${variant === 'clean' ? `, false alarms ${unexpected.length}${unexpected.length ? ` (${unexpected.join(', ')})` : ''}` : ''}`);
+  // The clean version must pass the gate's finding rule too: no P0-P2 from any check.
+  const dirty = variant === 'clean'
+    ? JSON.parse(fs.readFileSync(path.join(out, 'checks', 'all.json'), 'utf8')).filter((f) => f.severity !== 'P3')
+    : [];
+  if (missing.length || unexpected.length || dirty.length) failures++;
+  console.log(`${variant.padEnd(7)} ${missing.length || unexpected.length || dirty.length ? 'FAIL' : 'pass'}  recall ${must.length - missing.length}/${must.length}${missing.length ? ` (missing ${missing.join(', ')})` : ''}${variant === 'clean' ? `, false alarms ${unexpected.length}${unexpected.length ? ` (${unexpected.join(', ')})` : ''}, P0-P2 from any check ${dirty.length}${dirty.length ? ` (${[...new Set(dirty.map((f) => `${f.rule} ${f.severity}`))].join(', ')})` : ''}` : ''}`);
 }
 process.exit(failures ? 1 : 0);

@@ -85,6 +85,20 @@ export function parseNavigation(md) {
   return stripComments(section(md, 'Navigation')).split('\n').map((l) => l.match(/^\s*(?:\d+\.|[-*])\s+(.+)/)).filter(Boolean).map((m) => m[1].replace(/\*\*|`/g, '').replace(/\s*[(:—–-].*$/, '').trim()).filter(Boolean);
 }
 
+/**
+ * Key tasks from "## Key Tasks": "1. **Pay for an order** (must not fail): When …". The list
+ * number is the task's ID (T1, T2, …); critics score tasks by it and the gate checks every one.
+ */
+export function parseKeyTasks(md) {
+  const out = [];
+  for (const line of stripComments(section(md, 'Key Tasks')).split('\n')) {
+    const m = line.match(/^\s*(\d+)\.\s+\*\*([^*]+)\*\*\s*(?:\(([^)]*)\))?/);
+    if (!m) continue;
+    out.push({ id: `T${m[1]}`, name: m[2].trim(), critical: /must not fail|critical/i.test(m[3] || '') });
+  }
+  return out;
+}
+
 export function productModel(md) {
-  return { journeys: parseJourneys(md), concepts: parseConceptModel(md), scope: parseScope(md), features: parseFeatureMap(md), navigation: parseNavigation(md) };
+  return { keyTasks: parseKeyTasks(md), journeys: parseJourneys(md), concepts: parseConceptModel(md), scope: parseScope(md), features: parseFeatureMap(md), navigation: parseNavigation(md) };
 }

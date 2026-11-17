@@ -17,7 +17,7 @@ your brief.
    serves a key task, which of ideal, empty, error, partial, loading, offline and first run were
    seen? A state not seen is "not covered", and goes in `summary` as a capture request. Where a
    seen state is wrong (empty screen with no next step, error that loses input), it's a finding.
-   Check that figures agree across screens (`STATE-NUMBERS-AGREE`).
+   Check that figures agree across screens (`CONS-FIGURES`).
 3. **Deceptive patterns** (`ETHICS-*`; Gray et al. 2018, Mathur et al. 2019, Brignull 2023).
    The checks catch pre-ticked consent, lopsided accept/decline choices and confirmshaming on
    single screens. Across journeys, look for what they can't: cancelling or opting out harder

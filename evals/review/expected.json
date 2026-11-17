@@ -1,5 +1,5 @@
 {
-  "$comment": "Whole-product review eval. seeded must raise every rule in must; clean must raise none of the rules in watch. Rules come from checks/structure.json and checks/consistency.json.",
+  "$comment": "Whole-product review eval. seeded must raise every rule in must; clean must raise none of the rules in watch. Rules come from checks/structure.json and checks/consistency.json. The clean version must also have no P0-P2 finding from any check (checks/all.json), so a gate run on it passes the finding rule.",
   "watch": [
     "CHK-NO-WAY-BACK",
     "CHK-DEAD-END",
@@ -35,5 +35,43 @@
   },
   "clean": {
     "must": []
+  },
+  "lenses": {
+    "$comment": "Scored by npm run eval:lenses after /designcritique:review on seeded.yaml or clean.yaml. The checks already find every seeded flaw, so the lenses are scored on what only judgement adds: proposals, verdicts and cited principles. clean: no P0/P1 from any reviewer and no cut or move proposals.",
+    "seeded": {
+      "ia": {
+        "cites_any": [
+          "IA-DEPTH",
+          "IA-ORPHAN",
+          "IA-NAV-CONSISTENT"
+        ],
+        "needs": "moves"
+      },
+      "scope": {
+        "cites_any": [
+          "SCOPE-OUT"
+        ],
+        "needs": "scope-cut"
+      },
+      "system": {
+        "cites_any": [
+          "CONS-FIGURES",
+          "CONS-TERM",
+          "CONS-ICON",
+          "CONS-COMPONENT"
+        ]
+      },
+      "journeys": {
+        "journey": "card-lost",
+        "verdict_in": [
+          "blocked",
+          "at-risk"
+        ]
+      }
+    },
+    "clean": {
+      "max_major": 0,
+      "no_proposals": true
+    }
   }
 }

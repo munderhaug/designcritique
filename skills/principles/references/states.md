@@ -14,4 +14,3 @@ Impeccable's `harden` when installed.
 | `STATE-PARTIAL` | Partly filled screens look intentional and point to what's missing | Half-empty layouts that look broken; no prompt to complete |
 | `STATE-OFFLINE` | Without a connection the app says what still works (addition to Hurff) | Silent failures offline; urgent features that need the network |
 | `STATE-FIRST-RUN` | The first run shows value and how to start (addition to Hurff) | An empty home on first launch; onboarding that blocks the urgent path |
-| `STATE-NUMBERS-AGREE` | The same figure shows the same value everywhere it appears | A balance of 1,240 on one screen and 1,204 on another for the same account |

@@ -18,7 +18,7 @@ const gate = normalizeGate({
   ...(args.target != null ? { target_score: args.target } : {}),
 });
 const rv = merged.review || {};
-const r = evaluateGate({ findings: merged.findings, tasks: merged.tasks, critics: merged.coverage?.critics || [], journeys: rv.journeysJudged || [], coverage: rv.coverage || null, criticalJourneys: rv.criticalJourneys || [] }, gate);
+const r = evaluateGate({ findings: merged.findings, tasks: merged.tasks, critics: merged.coverage?.critics || [], journeys: rv.journeysJudged || [], coverage: rv.coverage || null, criticalJourneys: rv.criticalJourneys || [], keyTasks: merged.keyTasks || [] }, gate);
 for (const s of r.scores) console.log(`  ${String(s.score).padStart(4)}  ${s.task}`);
 for (const s of r.journeyScores || []) console.log(`  ${String(s.score).padStart(4)}  journey ${s.task}`);
 if (r.pass) { console.log(`Gate passed (fail on ${gate.fail_on}, target ${gate.target_score ?? 'none'}).`); process.exit(0); }

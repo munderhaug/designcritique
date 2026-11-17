@@ -21,8 +21,9 @@ still comes from the critique skill's critics; this skill only orchestrates roun
 
 ## Each round
 
-1. **Critique.** Run the critique skill in full, steps 3–6 (frame and references once, in the
-   first round). Fresh critic agents every round, briefed only as critic-brief.md says: never
+1. **Critique.** In the first round run the critique skill's steps 1–6; in later rounds steps 3,
+   5 and 6 (the frame and the references from round 1 are reused). If the person asked to
+   iterate on a whole-product review, run the review skill instead. Fresh critic agents every round, briefed only as critic-brief.md says: never
    tell them what was changed or what the last round found.
 2. **Save and gate.** `node PLUGIN_ROOT/scripts/report/rounds.mjs save --config mockups.yaml
    --round N --run <RUN_DIR>` snapshots the files this run judged. Then
@@ -34,7 +35,7 @@ still comes from the critique skill's critics; this skill only orchestrates roun
    copy, accessibility and tokens first; motion findings only once the static screens pass.
 5. **Fix**, in a fresh general-purpose agent that is not one of the critics. Give it the findings
    (id, screen, evidence, recommendation), `PRODUCT.md`, `DESIGN.md` with the rule in
-   `PLUGIN_ROOT/templates/CLAUDE-design-system.md`, the taste references if any, and the mockup
+   `PLUGIN_ROOT/templates/CLAUDE-design-system.md`, the direction images if any, and the mockup
    HTML paths. It edits only those files, uses only DESIGN.md tokens and components (or stops and
    asks), fixes what the findings say rather than re-designing (no other design skill sets the
    direction), and returns which finding ids it addressed and how.
@@ -48,8 +49,8 @@ fewest P2) and prints `BEST_ROUND=N`. If that isn't the last round, restore it w
 `rounds.mjs restore --config mockups.yaml --round N` and say so: the loop keeps its best result,
 not its last.
 
-**Structure and scope are proposals, never edits.** Findings at `level: journey` or `system`,
-with `move_to`, or in the categories `ia`, `scope` or `journey` change what the product is or
+**Structure and scope are proposals, never edits.** When iterating on a review, findings at
+`level: journey` or `system`, with `move_to`, or in the categories `ia`, `scope` or `journey` change what the product is or
 where things live. Don't give them to the builder. List them as proposals for the person
 (with the review's ids, such as M2 or S1) and let them decide with `/designcritique:decide`. Only
 proposals the person has accepted may be built, and only when they ask for it.
@@ -59,7 +60,7 @@ wrong, ask the person; if they agree, they record it with `/designcritique:decid
 
 ## Reply
 
-A table of rounds (P0 / P1 / P2 counts, lowest key-task score, taste score if any, gate), what
+A table of rounds (P0 / P1 / P2 counts, lowest key-task score, gate), what
 the builder changed, what is still open and why the loop stopped. Point to the
 `report.html` of the round you kept, and say how to restore any other round
 (`rounds.mjs restore --round N`; round 1 is the starting point).

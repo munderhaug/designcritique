@@ -13,5 +13,6 @@ mockups.yaml).
 | `CONS-COMPONENT` | Elements with the same role use the same component and style | Three styles of primary button; cards for the same object styled differently |
 | `CONS-ICON` | One icon, one meaning, everywhere | A star icon for both "favourite" and "rating"; two icons for one action |
 | `CONS-TERM` | One term per concept, as the glossary defines it | "Basket" and "Cart" for the same thing; a term the content guide says to avoid |
-| `CONS-FORMAT` | Numbers, dates, units and currency follow one format for the locale | "1500 kr", "kr 1 500" and "1 500,-" in one app |
+| `CONS-FORMAT` | Numbers, dates, units and currency follow one format for the locale | "1,500.00", "1500" and "1 500,-" for amounts in one app; dates as 03/04 and 4 March |
 | `CONS-PATTERN` | One problem is solved one way | Some lists swipe to delete, others need an edit mode |
+| `CONS-FIGURES` | The same figure shows the same value everywhere it appears (`NN-H4`; a figure that disagrees breaks the user's model, `NORMAN-MODEL`) | A balance of 1,240 on one screen and 1,204 on another for the same account |

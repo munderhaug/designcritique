@@ -7,7 +7,7 @@ Check the live guidelines for the current OS release; these are the stable conve
 
 | ID | Convention | Look for |
 |---|---|---|
-| `IOS-NAV-TABBAR` | Tab bar for top-level sections: bottom, 2–5 tabs, icon plus label, always visible at top level | A hamburger or drawer as primary navigation; tabs that change meaning; actions placed in the tab bar |
+| `IOS-NAV-TABBAR` | Tab bar for top-level sections: bottom, 2–5 tabs, icon plus label, always visible at top level | A hamburger or drawer as primary navigation; more than five tabs; actions placed in the tab bar |
 | `IOS-NAV-STACK` | Navigation bar with back button (chevron plus previous title) on pushed screens; large titles at top level | Pushed or task screens with no way back; custom back controls in odd places |
 | `IOS-MODAL` | Sheets for focused, self-contained tasks, with Cancel and Done/confirm in the navigation bar | Full-screen modals for small tasks; modals without a clear way out |
 | `IOS-CONTROLS` | Standard controls: switches for on/off, segmented controls, pickers, menus, action sheets | Web checkboxes or radio rows; custom toggles that don't look like switches |

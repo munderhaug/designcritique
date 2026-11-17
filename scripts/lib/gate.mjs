@@ -1,15 +1,27 @@
 // The pass/fail bar for a run: no open finding at or above `fail_on`, and every key task scored
-// at or above `target_score` by every critic that scored it (the lowest score counts, because
-// model judges tend to grade generously).
+// at or above `target_score` by every critic that walked the whole task (the lowest such score
+// counts, because model judges tend to grade generously). A critic that saw only some of a task's
+// screens (a batch reviewer) doesn't score it, and a key task no critic scored fails the gate.
 import { SEVERITIES, DEFAULT_GATE } from './config.mjs';
 
-/** Lowest score per task across critics. */
-export function taskScores(tasks) {
+const norm = (s) => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/** The key task a critic's task entry is about: its id, else its name. */
+export function keyTaskOf(t, keyTasks = []) {
+  if (t.id && keyTasks.some((k) => k.id === t.id)) return t.id;
+  return keyTasks.find((k) => norm(k.name) === norm(t.task))?.id || t.id || null;
+}
+
+/** Lowest whole-task score per task across critics; partial views (batches) don't score. */
+export function taskScores(tasks, keyTasks = []) {
   const by = new Map();
   for (const t of tasks) {
-    if (typeof t.score !== 'number') continue;
-    const prev = by.get(t.task);
-    if (!prev || t.score < prev.score) by.set(t.task, { task: t.task, score: t.score, source: t.source });
+    if (typeof t.score !== 'number' || t.coverage === 'partial') continue;
+    const id = keyTaskOf(t, keyTasks);
+    const key = id || norm(t.task);
+    const name = keyTasks.find((k) => k.id === id)?.name || t.task;
+    const prev = by.get(key);
+    if (!prev || t.score < prev.score) by.set(key, { id, task: name, score: t.score, source: t.source });
   }
   return [...by.values()];
 }
@@ -21,7 +33,7 @@ export function journeyScores(journeys) {
 
 const DEAD = new Set(['CHK-DEAD-END', 'CHK-NO-WAY-BACK', 'CHK-JOURNEY-BROKEN']);
 
-export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [] }, gate = DEFAULT_GATE) {
+export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [], keyTasks = [] }, gate = DEFAULT_GATE) {
   const reasons = [];
   // Review mode: the must-not-fail journeys have no dead end, no missing way back and no broken step.
   if (gate.no_dead_end_on_critical !== false && criticalJourneys.length) {
@@ -44,11 +56,16 @@ export function evaluateGate({ findings, tasks = [], critics = [], journeys = []
     const blocking = findings.filter((f) => SEVERITIES.indexOf(f.severity) <= limit);
     if (blocking.length) reasons.push(`${blocking.length} open finding(s) at ${gate.fail_on} or worse`);
   }
-  const scores = taskScores(tasks);
+  const scores = taskScores(tasks, keyTasks);
   if (gate.target_score != null) {
     if (!critics.length) reasons.push('no critic has run, so key tasks are unscored');
     else if (!scores.length) reasons.push('no critic scored the key tasks');
-    for (const s of scores) if (s.score < gate.target_score) reasons.push(`"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
+    else {
+      for (const k of keyTasks) {
+        if (!scores.some((s) => s.id === k.id)) reasons.push(`key task ${k.id} "${k.name}"${k.critical ? ' (must not fail)' : ''} was not scored by a critic that walked the whole task`);
+      }
+    }
+    for (const s of scores) if (s.score < gate.target_score) reasons.push(`${s.id ? `${s.id} ` : ''}"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
   }
   return { pass: reasons.length === 0, reasons, scores, journeyScores: journeyScores(journeys), gate };
 }

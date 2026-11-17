@@ -27,6 +27,8 @@ ios
 
 ## Key Tasks
 
+<!-- Ranked. The list number is the task's ID (T1, T2, …): critics score each task by it, and the
+gate fails while any key task is unscored. Renumbering changes the IDs. -->
 1. **<Task>** (must not fail): When <situation>, I want to <motivation>, so I can <outcome>.
 2. **<Task>**: When …, I want to …, so I can …
 

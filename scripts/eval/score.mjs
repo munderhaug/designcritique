@@ -15,10 +15,7 @@ if (!args.run) { console.error('Usage: score.mjs --run <runDir>'); process.exit(
 const runDir = path.resolve(args.run);
 const expected = readJson(path.resolve(args.expected || path.join(here, '../../evals/expected.json')));
 // Deterministic findings: the plugin's checks and the third-party detectors.
-const checks = [
-  ...readJson(path.join(runDir, 'checks', 'findings.json'), []),
-  ...readJson(path.join(runDir, 'checks', 'detectors.json'), []),
-];
+const checks = ['findings.json', 'detectors.json'].flatMap((f) => readJson(path.join(runDir, 'checks', f), []));
 
 const critiqueDir = path.join(runDir, 'critique');
 const criticFindings = [];

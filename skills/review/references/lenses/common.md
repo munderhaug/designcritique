@@ -10,8 +10,9 @@ You review the whole product, not single screens. You didn't build it. You can't
    lacks it.
 3. `graph.json` and `inventory.json` (when present): every screen the crawler reached, its depth
    from the start, and which control leads where.
-4. `checks/structure.json` and `checks/consistency.json`: deterministic findings. Don't repeat
-   them; build on them (explain why they matter for the users, or say why one is acceptable).
+4. `checks/all.json`: every deterministic finding (screens, detectors, structure, consistency).
+   Don't repeat them; build on them (explain why they matter for the users, or say why one is
+   acceptable). The full entries are in `checks/structure.json` and `checks/consistency.json`.
 5. Screenshots: one standard light capture per screen family (listed in your brief), and each
    journey's screens in order.
 

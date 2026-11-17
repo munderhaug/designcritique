@@ -16,7 +16,9 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
   },
   "tasks": [
     {
+      "id": "T1",
       "task": "Pay for the order",
+      "coverage": "whole",
       "user": "Primary user from PRODUCT.md",
       "verdict": "supported | at-risk | blocked | not-covered",
       "score": 4,
@@ -48,20 +50,22 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
   ],
   "comparisons": [
     { "group": "home-directions", "recommended": "home-b", "ranking": ["home-b", "home-a"], "reasons": "…tied to the users and tasks…" }
-  ],
-  "taste_check": {
-    "score": 7,
-    "summary": "Type and spacing follow the chosen references; the colour is flatter and the hero has none of their texture.",
-    "gaps": [{ "screen": "home", "reference": "taste/03-field-notes.png", "text": "Reference uses a warm paper ground and a hand-drawn map; the mockup uses a plain white card." }]
-  }
+  ]
 }
 ```
 
 Field rules:
 - `critic`: `anthropic-design` (design-reviewer agent), `impeccable` (converted Impeccable critique),
-  or `external-<name>` for an extra judge running on another model or tool (critic-brief.md).
+  `ia`, `scope` or `system` (the review lenses), or `external-<name>` for an extra judge running
+  on another model or tool (critic-brief.md).
 - `method`: optional; what the critic actually used, e.g. `fallback: principles index` when the Anthropic design plugin isn't installed.
-- `frame_check` and `tasks`: design-reviewer; Impeccable puts its scores in `frame_check.summary`. `comparisons`: only when screens share a `group`.
+- `frame_check` and `tasks`: the design-reviewer, Impeccable and external judges. Impeccable also
+  puts its own heuristic scores in `frame_check.summary`. The lens reviewers return neither.
+  `comparisons`: only when screens share a `group`.
+- `tasks[].id`: the key task's ID from PRODUCT.md (its list number: `T1`, `T2`, …). Score every
+  key task; the gate fails on a key task nobody scored. `tasks[].coverage`: `whole` when you had
+  every screen of the task, `partial` when you had only some (a batch reviewer). Partial scores
+  are reported but never count in the gate.
 - `screen`: a screen id from the manifest, or `"*"` for the whole set.
 - `rule`: the single most specific principle ID; `basis` lists all that apply, most specific first. IDs come from the principles library.
 - `category`: one of `task-fit, ux, content, visual, layout, typography, color, a11y, platform, tokens`,
@@ -71,18 +75,17 @@ Field rules:
   and list `affected_screens` (screen ids from the manifest); journey findings name the `journey`.
 - `move_to` (review): where a misplaced thing should go, as `{ item, from, to, reason }`. It is a
   proposal for the person, never an edit.
-- `severity`: `P0`–`P3`, per severity.md.
+- `severity`: `P0`–`P3`, per severity.md, for every critic: a tool's own scale goes in `evidence`.
 - `evidence`: what is visible and where, naming the screenshot file and variant. No evidence, no finding.
 - `impact`: which user, in which task, and how. Use the words of PRODUCT.md.
 - `confidence`: `low` when a static mockup can't show it (motion, real data, behaviour).
-- `taste_check`: only when the brief lists taste references. Separate from findings: closeness
-  to a reference never excuses a usability problem, and distance from one is not a finding.
 - Up to 15 findings per critic per 8 screens, most severe first. Zero findings is a valid result for a good screen.
 
 ## Scores (0–10)
 
-Score each key task (`tasks[].score`) and the set as a whole (`frame_check.score`). The report's
-gate uses the lowest score any critic gave a task, so score what you can defend, not what you hope.
+Score each key task (`tasks[].score`, by its `id`) and the set as a whole (`frame_check.score`).
+The report's gate uses the lowest score any critic that walked the whole task gave it, so score
+what you can defend, not what you hope.
 
 | Score | Means |
 |---|---|
@@ -107,10 +110,13 @@ between two scores, pick the lower and say why in `summary`.
 
 ## Review mode (/designcritique:review)
 
-Lens reviewers add, alongside `findings`:
+In review mode the design-reviewer and Impeccable also get the journeys lens and return:
 
 - `journeys`: one per journey they judged: `{ journey, verdict, score, summary, steps: [{ step,
   screen, action, verdict: ok | friction | blocked, note, finding_ids }] }`.
+
+The lens reviewers (`ia`, `scope`, `system`) return, alongside `findings`:
+
 - `moves`: proposed structural moves: `{ item, from, to, reason, impact, finding_id }`.
 - `scope`: feature against problem: `{ feature, verdict: keep | cut | add | move | defer |
   rethink, job, task, phase, reason, finding_id }`.

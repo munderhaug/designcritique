@@ -61,12 +61,14 @@ if [[ $INSTALL -eq 1 ]]; then
     echo "  copied $* from github.com/$repo ($(git -C "$dir" rev-parse --short HEAD)) into $SKILLS"
   }
 
-  echo "Installing Impeccable…"
-  if [[ $ONLY -eq 0 && $USER_SCOPE -eq 0 ]] && (cd "$PROJECT" && npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks); then
+  # The version is pinned in package.json only.
+  IMPECCABLE_VERSION="$(node -p 'require(process.argv[1]).dependencies.impeccable' "$ROOT/package.json")"
+  echo "Installing Impeccable $IMPECCABLE_VERSION…"
+  if [[ $ONLY -eq 0 && $USER_SCOPE -eq 0 ]] && (cd "$PROJECT" && npx -y "impeccable@$IMPECCABLE_VERSION" install -y --providers=claude --scope=project --no-hooks); then
     :
   else
     echo "  Impeccable's installer wasn't used or couldn't download; using its GitHub source."
-    from_github pbakaus/impeccable@cli-v4.9.2 .claude/skills impeccable
+    from_github "pbakaus/impeccable@cli-v$IMPECCABLE_VERSION" .claude/skills impeccable
   fi
 
   echo "Installing Anthropic's design plugin…"

@@ -114,9 +114,19 @@ export function loadConfig(configPath) {
 }
 
 export const SEVERITIES = ['P0', 'P1', 'P2', 'P3'];
+
+/** A dependency's version as pinned in the plugin's package.json: the one place pins live. */
+export function pinned(name) {
+  const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  return pkg.dependencies?.[name] || null;
+}
+/** Text with {pinned:name} replaced by that dependency's pinned version. */
+export const withPins = (text) => String(text).replace(/\{pinned:([\w@/.-]+)\}/g, (_, n) => pinned(n) || 'latest');
+/** Files in <run>/checks/ holding deterministic findings (run-all.mjs writes them, the report reads them). */
+export const CHECK_FILES = ['findings.json', 'motion.json', 'detectors.json', 'structure.json', 'consistency.json'];
 export const DEFAULT_GATE = { fail_on: 'P1', target_score: 8, journey_target_score: null, min_feature_coverage: 0.8, no_dead_end_on_critical: true };
 
-/** taste: a folder or a list of images (the 9-12 references you chose), resolved to image files. */
+/** taste: a folder or a list of images of the direction the person chose, resolved to image files. */
 export function expandImages(spec, baseDir) {
   if (!spec) return [];
   const out = [];

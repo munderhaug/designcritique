@@ -22,9 +22,12 @@ Principles index (IDs for rule/basis; cognitive-walkthrough.md for the task walk
 Companion guidance for the platform, if installed: <SKILL.md paths, or "none">
 Output format: <PLUGIN_ROOT>/skills/critique/references/output-format.md
 Severity rules: <PLUGIN_ROOT>/skills/critique/references/severity.md
-Deterministic findings already reported (don't repeat): <RUN_DIR>/checks/findings.json
+Deterministic findings already reported by the checks and detectors (don't repeat them;
+  build on them only to say why one matters for a key task): <RUN_DIR>/checks/all.json
 Reference screens from shipped apps: <RUN_DIR>/references.md, or "none"
-Taste references the person chose (judge closeness in taste_check, apart from findings):
+Key tasks to score, by ID: <T1 name, T2 name, … from framing.md>. Coverage: <"whole" when this
+  reviewer has every screen of every task; "partial" for a batch that has only some>
+Direction the person chose (context only; don't score closeness, never excuse a finding by it):
   <RUN_DIR>/taste/*, or "none"
 Decisions the person made on earlier findings: <project>/.designcritique/decisions.yaml, or "none"
 Gate: fail on <fail_on>, target score <target_score> (score honestly; the gate uses the lowest)
@@ -39,9 +42,14 @@ Variant groups to compare, if any: <group: id, id, …>
 Return only the JSON object described in the output format, with "critic": "anthropic-design".
 ```
 
-Spawn the agent with the model in `critics.judge_model` (mockups.yaml) when it's set, through
-the Agent tool's model setting. Otherwise pick a model other than the one that made the mockups,
-when you know which that was: the model that wrote the screens is the worst judge of them.
+Spawn every critic (this one, Impeccable, the lens reviewers) with the model in
+`critics.judge_model` (mockups.yaml) when it's set, through the Agent tool's model setting.
+Otherwise pick a model other than the one that made the mockups, when you know which that was:
+the model that wrote the screens is the worst judge of them.
+
+With more than 8 screens, run one design-reviewer per batch of 8 with `Coverage: partial`, and
+one more with every screen of the key tasks' flows and `Coverage: whole`: only whole-task scores
+count in the gate.
 
 List, for every screen, the standard light render first (and `__full` if present), then dark,
 large text and compact. For image inputs, the one image.
@@ -50,19 +58,23 @@ large text and compact. For image inputs, the one image.
 
 ```
 Run Impeccable's critique on these mobile mockups. Follow the Impeccable skill's critique
-reference exactly, including its rules for native platforms (ios / android / adaptive). Don't
-run its detector: designcritique already ran it as a check. Don't load other design skills.
-Don't edit any files. Skip the closing questions and write
+reference, including its rules for native platforms (ios / android / adaptive), plus any lens
+added below (review mode adds the journeys lens). Don't run its detector: designcritique already
+ran it as a check. Don't load other design skills. Don't edit any files. Skip the closing questions and write
 "Questions skipped: run inside designcritique".
 
 Product context (Impeccable reads it): <path to PRODUCT.md>
 Screens: <for each: screen id, HTML source path from RUN_DIR/manifest.json, and its
 standard-light screenshot path in RUN_DIR/screenshots>
+Already reported by the checks and detectors (don't repeat): <RUN_DIR>/checks/all.json
+Key tasks to score, by ID: <T1 name, T2 name, …>
 
 Afterwards, convert every Priority Issue, persona red flag and minor observation into the
 designcritique findings format (<PLUGIN_ROOT>/skills/critique/references/output-format.md),
-with "critic": "impeccable". Keep Impeccable's P0-P3 severity. Add a 0-10 score for each key
-task in PRODUCT.md, using the anchors in output-format.md, and an overall frame_check.score.
+with "critic": "impeccable". Set each finding's severity by <PLUGIN_ROOT>/skills/critique/references/severity.md
+(the same scale the other critic uses) and quote Impeccable's own priority in "evidence". Add a
+0-10 score for each key task by its ID ("id": "T1", "coverage": "whole"), using the anchors in
+output-format.md, and an overall frame_check.score.
 Don't raise findings dismissed in <decisions file, or "none"> without new evidence. Map each issue to the closest
 principle ID in <PLUGIN_ROOT>/skills/principles/references/ (Nielsen heuristics are NN-H1 to
 NN-H10) and quote Impeccable's own label in "evidence". Put its heuristic scores and Design

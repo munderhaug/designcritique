@@ -8,14 +8,15 @@ catalog. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to se
 
 | Tool | By | Role | Install |
 |---|---|---|---|
-| Impeccable | Paul Bakaus | `init` writes PRODUCT.md (used by the frame skill); `critique` is one of the two critics | `npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks` |
-| Anthropic design plugin | Anthropic (official) | `design-critique`, `accessibility-review`, `ux-copy` are the design-reviewer's methods; `user-research` for real research | `claude plugin marketplace add anthropics/knowledge-work-plugins` then `claude plugin install design@knowledge-work-plugins` |
+| Impeccable | Paul Bakaus | `init` writes PRODUCT.md (frame skill); `critique` is one of the two critics; its detector runs as a check; `harden` is the system lens's method for states (empty, loading, error, offline, extreme data) | `setup.sh --install-companions` (the version pinned in package.json, `--no-hooks`) |
+| Anthropic design plugin | Anthropic (official) | `design-critique`, `accessibility-review`, `ux-copy` are the design-reviewer's methods; `design-system` is the system lens's method; `user-research` for real research | `claude plugin marketplace add anthropics/knowledge-work-plugins` then `claude plugin install design@knowledge-work-plugins` |
+| Anthropic product-management plugin | Anthropic (official) | `product-brainstorming` and `write-spec` are the scope lens's methods (review mode) | `claude plugin install product-management@knowledge-work-plugins` |
 | Playwright | Microsoft | Renders HTML mockups at phone sizes, light, dark and large text | npm dependency |
 | axe-core | Deque | Accessibility rules engine | npm dependency |
 | DESIGN.md format | Google Labs | Token file the token checks read | template in `templates/` |
 
 `bash scripts/setup.sh --install-companions` installs Impeccable into the project and the
-Anthropic design plugin for the user, falling back to copying their skills from GitHub when an
+Anthropic design and product-management plugins for the user, falling back to copying their skills from GitHub when an
 installer can't run or reach its server. `--user` installs into `~/.claude/skills` for every
 project; `--companions-only` does only that, for cloud environment setup scripts.
 
@@ -36,8 +37,8 @@ overflow, tokens, looping motion) and taste-only rules without a cited principle
 
 | Engine | By, licence | Surface | Rules imported |
 |---|---|---|---|
-| Impeccable detect 4.9.2 | Paul Bakaus, Apache-2.0 | rendered (browser at phone size) and HTML/CSS/JSX source | AI colour palette and gradient text (`TELL-GRADIENT`), nested cards (`TELL-CARDS`), eyebrow labels (`TELL-EYEBROW`), marketing buzzwords (`TELL-BUZZWORDS`, English), skipped heading level (`WCAG-1.3.1`), low contrast on gradients (`WCAG-1.4.3`) |
-| unslopovich 3.0.0 | erkamyaman, MIT | source: SwiftUI, Compose, Android XML, React Native, Flutter, web | fixed text size (`IOS-TYPE`/`AND-TYPE`, `WCAG-1.4.4`), back gesture disabled (`IOS-NAV-STACK`/`AND-APPBAR`), safe area ignored and keyboard covering fields (`IOS-LAYOUT`/`AND-LAYOUT`), drawer navigation and hover-only (`TELL-WEB-IDIOMS`), zoom disabled, image without alt, clickable div, focus removed (`WCAG-1.4.4`, `1.1.1`, `4.1.2`, `2.4.7`), decorative pulse (`WCAG-2.2.2`), vague errors (`NN-H9`), and the tells (gradients, emoji icons, nested cards, eyebrow labels, buzzwords, invented numbers; English copy rules only for English products) |
+| Impeccable detect (pinned in package.json) | Paul Bakaus, Apache-2.0 | rendered (browser at phone size) and HTML/CSS/JSX source | AI colour palette and gradient text (`TELL-GRADIENT`), nested cards (`TELL-CARDS`), eyebrow labels (`TELL-EYEBROW`), marketing buzzwords (`TELL-BUZZWORDS`, English), skipped heading level (`WCAG-1.3.1`), low contrast on gradients (`WCAG-1.4.3`) |
+| unslopovich (pinned in package.json) | erkamyaman, MIT | source: SwiftUI, Compose, Android XML, React Native, Flutter, web | fixed text size (`IOS-TYPE`/`AND-TYPE`, `WCAG-1.4.4`), back gesture disabled (`IOS-NAV-STACK`/`AND-APPBAR`), safe area ignored and keyboard covering fields (`IOS-LAYOUT`/`AND-LAYOUT`), drawer navigation and hover-only (`TELL-WEB-IDIOMS`), zoom disabled, image without alt, clickable div, focus removed (`WCAG-1.4.4`, `1.1.1`, `4.1.2`, `2.4.7`), decorative pulse (`WCAG-2.2.2`), vague errors (`NN-H9`), and the tells (gradients, emoji icons, nested cards, eyebrow labels, buzzwords, invented numbers; English copy rules only for English products) |
 
 ## Design-system corpus
 
@@ -53,7 +54,7 @@ first, and its native ports aren't published yet.
 | Tool | By | Role |
 |---|---|---|
 | Mobbin MCP | Mobbin (official, paid) | Shipped iOS and web screens and flows for reference |
-| Refero MCP | Refero (official, paid for search) | Alternative reference source: websites and iOS apps. Install Refero's plugin (`/plugin marketplace add referodesign/refero_skill`, then `/plugin install refero@refero`) for the connector, or add the MCP server alone; sign in when prompted |
+| Refero MCP | Refero (official, paid for search) | Alternative reference source: websites and iOS apps. Add the connector alone: `claude mcp add --transport http refero https://api.refero.design/mcp`, then sign in from `/mcp`. Refero's plugin brings its `refero-design` skill too (see below) |
 | Figma MCP | Figma (official) | Figma frames as inputs; variables into DESIGN.md |
 | Claude artifact tools | Anthropic | Pull Claude artifacts into a run |
 | `material-3` skill | hamen | Companion guidance for Android screens |
@@ -81,7 +82,7 @@ Reviewed against the primary sources in the principles index. Re-check before ad
 | Refero's `refero-design` skill (shipped in Refero's plugin) | A method for building designs, not critiquing them: research, lock references, then implement. Its style research covers websites, not app screens, and its craft notes rarely cite sources. Its description claims priority over every other design skill and tells agents not to use them alongside it, which would undo the two independent critics. designcritique uses only Refero's connector; critics, reviewers and the iterate builder don't load this skill |
 | UXKIN (uxkin/agent): MCP server and seven skills | The skills (`no-ui-slop`, `build-ui`, `ios-screens`, `ui-states`, `design-md`, `ui-from-screenshot`, `uxkin-research`) are building workflows without primary sources; what they check is already covered by the principles index, the checks and the two critics, and `no-ui-slop` and `build-ui` also trigger on review requests, competing with the critique. The MCP server (iOS screens, journeys and website design systems; paid) could be a third reference source after Mobbin and Refero, but its search tool takes free text and has no documented platform filter: add it only once someone with a plan has checked its results and parameters |
 | unslopovich as a skill (its fix workflow and research notes) | Only its detector is used, as a pinned library. The skill's fixing workflow overlaps Impeccable and edits the app; its research notes are secondary sources, and the index cites the primary ones |
-| Impeccable `audit`, `polish`, `typeset`, `layout` | Fixing and building commands. Its `critique` is a critic and its detector a check; the rest edits the design, which designcritique leaves to the person or `/designcritique:iterate` |
+| Impeccable `audit`, `polish`, `typeset`, `layout` | Fixing and building commands. Its `critique` is a critic, its detector a check and `harden` a reference the system lens reads (never run to edit); the rest edits the design, which designcritique leaves to the person or `/designcritique:iterate` |
 | anti-slop (miqdadbadjuber) | A prompt list of AI tells without sources; the tells it names are in `ai-tells.md` or detected by the two engines above |
 | uxed (MK27MK) | A general UX prompt pack; duplicates the Anthropic design plugin's methods without citing primary sources |
 | open-design-agent-kit (feimacode) | Repackages open-design's design systems for agents. designcritique uses open-design itself (above), at a pinned commit |

@@ -13,8 +13,8 @@ against PRODUCT.md: the ranked key tasks and how often and how urgently each is 
 |---|---|---|
 | `IA-PLACEMENT` | Each feature sits where its users look for it, closer the more often and urgently it's needed | An urgent action (help, pay, undo) buried in a menu; a rare setting on the home screen |
 | `IA-DEPTH` | Frequent and urgent tasks are few taps from the start; depth costs more than breadth on phones | A key task 4+ taps deep; long chains of single-choice screens |
-| `IA-OBJECTS` | Screens are organised around the user's objects, and each object has one home (ORCA) | The same object edited in two places; an object with no screen of its own; screens that mirror the database, not the user's model |
+| `IA-OBJECTS` | Screens are organised around the user's objects, and each object has a home of its own (ORCA) | An object with no screen of its own; screens that mirror the database, not the user's model (two places for one thing is `IA-DUPLICATE`) |
 | `IA-DUPLICATE` | One thing in one place, unless a shortcut is deliberate and labelled the same | Two screens with the same title and job; the same setting in two menus |
 | `IA-ORPHAN` | Everything is reachable through the navigation | A screen reachable only from a notification or a hand-made state; a feature with no entry point |
-| `IA-NAV-CONSISTENT` | The same control leads to the same place from everywhere | "Overview" opening different screens from different places; tabs that change meaning |
-| `IA-LABEL` | Labels use the users' words and say what's behind them (information scent) | Internal jargon; vague labels ("Mer", "Diverse"); two labels for one place |
+| `IA-NAV-CONSISTENT` | The same control leads to the same place from everywhere | "Overview" opening different screens from different places; a tab whose destination changes with where you came from |
+| `IA-LABEL` | Labels use the users' words and say what's behind them (information scent) | Internal jargon; vague labels ("More", "Misc", "Other") (two terms for one thing is `CONS-TERM`) |

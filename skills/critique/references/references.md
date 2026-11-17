@@ -6,7 +6,7 @@ these sources, in this order. Never mix in screens from unnamed sources.
 | Source | Access | Coverage | Notes |
 |---|---|---|---|
 | **Mobbin MCP** (official) | `mcp__Mobbin__search_flows`, `mcp__Mobbin__search_screens` | iOS and web: 620,000+ screens, 150,000+ flows | Paid plans. No Android library |
-| **Refero MCP** (official) | `refero_search_screens`, `refero_search_flows`, `refero_get_screen`, `refero_get_flow` (clients may add a prefix) | Websites and iOS apps: 150,000+ screens, 6,000+ flows, plus styles (websites only) | Searching needs a paid plan; sign in with your Refero account (OAuth). Easiest install: Refero's own plugin. Use it when Mobbin isn't connected |
+| **Refero MCP** (official) | `refero_search_screens`, `refero_search_flows`, `refero_get_screen`, `refero_get_flow` (clients may add a prefix) | Websites and iOS apps: 150,000+ screens, 6,000+ flows, plus styles (websites only) | Searching needs a paid plan. Add the connector alone (`claude mcp add --transport http refero https://api.refero.design/mcp`, then sign in from `/mcp`), not Refero's plugin, which also installs a design skill that claims priority over the critics. Use it when Mobbin isn't connected |
 | **A local folder** | `references:` in mockups.yaml | Anything you've saved: Page Flows exports, your own screenshots, Figma exports | Page Flows covers Android too, but has no MCP; download and point at the files |
 | **Baymard Institute** (research, not screens) | cited by hand, or via its UX-Query assistant if you have access | E-commerce UX guidelines from large-scale testing | For checkout, product and cart flows, cite the relevant guideline in a finding's evidence. No MCP |
 

@@ -1,76 +1,45 @@
 # designcritique
 
-Human-centred design critique for mobile app mockups and prototypes, as a Claude Code plugin,
-built on proven tools: **Impeccable** and **Anthropic's design plugin** for the judgement,
-**Playwright** and **axe-core** for the evidence, **Mobbin** or **Refero** for references
-from shipped apps.
+Human-centred design critique for mobile app mockups and prototypes (iOS, Android and PWAs), as a
+Claude Code plugin. The judgement comes from proven tools: **Impeccable** and **Anthropic's
+design plugin**. The evidence comes from **Playwright**, **axe-core** and two pinned anti-pattern
+detectors, and the references from **Mobbin** or **Refero**.
 
-It starts with the problem the app solves and who it's for, then critiques the screens against
-that, and ends by recommending what to build with, from a cited catalog.
+It starts with the problem the app solves and who it's for, critiques the screens against that,
+and ends by recommending what to build with, from a cited catalog.
 
 ```
-1 Frame        2 References     3 Capture + checks      4 Two critiques            5 Report + build stack
-Impeccable     Mobbin / Refero  Playwright, axe-core,    Impeccable critique  ┐     report.html,
-init + HCD     shipped apps     mobile checks            Anthropic design     ┘     "To build this"
-                                                         plugin methods             from catalog/stack.yaml
+1 Frame        2 References     3 Capture + checks         4 Independent critics      5 Report + gate
+Impeccable     Mobbin / Refero  Playwright, axe-core,       Impeccable critique  ┐     report.html,
+init + HCD     shipped apps     detectors, motion scan      Anthropic design     ┘     "To build this"
+                                                            plugin methods             from catalog/stack.yaml
 ```
 
-## What comes from where
+## What this repo adds
 
-| Part | Provided by | This repo adds |
-|---|---|---|
-| Problem framing (PRODUCT.md) | Impeccable `init` (Paul Bakaus) | Problem, ranked Key Tasks and Success Criteria (ISO 9241-210/-11, jobs to be done), evidence tags |
-| References | Mobbin MCP or Refero MCP (official) | How to pick and cite comparable screens per key task |
-| Rendering | Playwright (Microsoft) | Phone sizes per platform; light, dark and large-text variants; zip, folder, artifact and phone-frame inputs; single-page app states reached by `steps:` and a `setup:` script |
-| Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, text overlapping text at large sizes (thresholds after AutoDesign's DOM audit), controls that stay hidden under fixed bars however far you scroll (WCAG 2.4.11), decorative animation that loops without end (WCAG 2.2.2), token drift against DESIGN.md |
-| Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
-| Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
-| Platform guidance | Material 3 skill (hamen), Expo skills, when installed | Routing the right guidance to the reviewer |
-| Anti-pattern detectors, two angles | Impeccable's detector (rendered page at phone size, and HTML/CSS) and unslopovich (app source: SwiftUI, Compose, Android XML, React Native, Flutter, web), both pinned in package.json | An allowlist of their rules mapped to principle IDs, `url:` for served PWAs and `source:` for app code, and one finding when the screen and its code show the same problem |
-| Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan, pinned in package.json | Running it and importing its findings for HTML mockups, mobile-aware severities |
-| Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials. The token reader is measured on open-design's 152 DESIGN.md files (`npm run eval:tokens`) |
-| Style starting points | open-design (nexu-io, Apache-2.0), pinned | `scripts/styles.mjs`: 52 generic style families as a first DESIGN.md for a phone app. They were made for websites, so only their visual language is kept (colour, font families, spacing, radii, voice); type sizes come from the platform, and layout, navigation, components and motion from the HIG or Material 3. With attribution; never a system modelled on a named company |
-| Merged report | | One finding per problem: the same problem from both critics (or a check and a critic) is merged and marked as higher confidence; a check failing on many screens is reported once with the screen list. Severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
-| Deceptive patterns | Gray et al. (CHI 2018), Mathur et al. (CSCW 2019), Brignull (2023), CJEU *Planet49* (2019), EDPB Guidelines 03/2022 | `ETHICS-*` principles; checks for pre-ticked consent, lopsided accept/decline choices and confirmshaming on every HTML screen, in the prototype's language; reviewers look for obstruction, sneaking, false urgency, forced actions and nagging |
-| Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved inside a run (exit 2) |
-| Independent judging | | The reviewer runs on a model you choose (`critics.judge_model`), ideally not the one that made the mockups; extra judges on other tools (`critics.external`, e.g. Codex) use the same brief and format |
-| Scores and gate | | Each critic scores every key task 0–10 against fixed anchors; the gate fails on open findings at `fail_on` or a key task below `target_score` (lowest critic counts). `gate.mjs` exits 2 for CI or a Stop hook |
-| Your decisions | | `.designcritique/decisions.yaml`: dismissed or re-rated findings stay that way across runs, critics see them, and `decide.mjs --list` shows where the critics are miscalibrated |
-| Taste | | Optional `taste:` references you chose; critics score closeness separately from usability |
-| Iterate | AutoDesign (Yaxin Luo): keep the best candidate, not the last | `/designcritique:iterate`: a builder fixes HTML mockups, fresh critics re-judge, until the gate passes or the round limit; every round is snapshotted and the loop ends on its best round (`rounds.mjs`) |
-| Build stack | `catalog/stack.yaml`: 26 entries, each with maker, trust level and sources | Picks per platform and stack, ranked by what the findings show |
-| Calibration | | Eval screens with planted problems and clean screens, and a scorer |
+The tools it builds on, with versions, sources and what was considered and left out, are in
+[companions.md](skills/critique/references/companions.md). On top of them, this repo adds:
 
-## Where "To build this, start with X" comes from
-
-Every critique report ends with **To build this**:
-1. design system and components
-2. tokens
-3. platform skills
-4. design-quality skills
-5. design inputs and references
-6. device checks
-
-The recommender (`scripts/lib/stack.mjs`) picks **only** from
-[`catalog/stack.yaml`](catalog/stack.yaml). It never invents tools:
-- Each entry records who makes it, whether it's official, practitioner or community, its install
-  command and the sources it was checked against, plus a `verified` date.
-- Picks are filtered by `## Platform` and `## Stack` in PRODUCT.md, and ranked by the categories
-  of findings in the run (accessibility, tokens, platform and so on).
-- If the stack is undecided, each step lists the options per stack.
-
-The catalog was compiled from the platform owners' docs (Apple, Google, Expo, Flutter, Figma,
-Anthropic) and established practitioners (Antoine van der Lee, Paul Hudson, Callstack, Paul
-Bakaus). Re-verify it when the date is more than about three months old.
-
-```bash
-node scripts/report/recommend-stack.mjs --product PRODUCT.md   # recommendations without a critique
-```
-
-When the critique ran on HTML mockups, the report adds **While you prototype in HTML**
-(transitions.dev skills and scanner). Items the catalog watches but doesn't recommend yet,
-like libraries.dev, are listed separately. For the build itself, `templates/CLAUDE-design-system.md`
-is a CLAUDE.md rule that keeps agents on your design system.
+- **Mobile capture.** Phone sizes per platform, light, dark and large text, the device's safe
+  areas; HTML, images, zips, folders, Claude artifacts, Figma frames, phone-frame canvases,
+  single-page-app states, served PWAs (`url:`) and app source (`source:`).
+- **Deterministic checks** where no tool exists for mockups: 44pt/48dp targets, safe areas, text
+  scaling and overlap, overflow, controls hidden under fixed bars, endless looping motion, dark
+  mode, token drift against DESIGN.md, the design system itself, and deceptive consent patterns.
+  One command runs them all ([checks.md](skills/critique/references/checks.md)).
+- **Independent critics** on a model other than the one that made the mockups, each citing a
+  principle ID from the [citation index](skills/principles/), so findings from different tools
+  merge into one per problem.
+- **A gate.** Every key task (T1, T2, … in PRODUCT.md) scored 0–10 by every critic that walked
+  it, with no open finding at `fail_on` or worse. `gate.mjs` exits 2 for CI or a Stop hook.
+- **Your decisions** (`.designcritique/decisions.yaml`), **run comparison** (fixed, new, still
+  open) and **iterate** (fix, re-critique cold, keep the best round).
+- **A build stack** chosen only from [`catalog/stack.yaml`](catalog/stack.yaml), where every
+  entry names its maker, trust level and sources.
+- **DESIGN.md starting points** from generic style families (`scripts/styles.mjs`), reduced to
+  what carries over to a phone app.
+- **Evals** with planted problems and clean screens, for the checks, the detectors, the token
+  reader and the critics.
 
 ## Install
 
@@ -86,127 +55,102 @@ bash <plugin-dir>/scripts/setup.sh --install-companions
 ```
 
 This installs script dependencies and a browser if needed, Impeccable into the project, and
-Anthropic's design plugin, then lists what it found. When an installer can't run or can't reach
-its server (common in cloud sessions), it copies the skills from the companions' GitHub
+Anthropic's design and product-management plugins, then lists what it found. When an installer
+can't run or reach its server (common in cloud sessions), it copies the skills from their GitHub
 repositories instead. Add `--user` to install them for every project (`~/.claude/skills`).
 
-For Claude Code on the web, put the companions in your cloud environment's setup script so every
-session starts with them (`--companions-only` skips everything the plugin itself installs later):
+For Claude Code on the web, put the companions in your cloud environment's setup script
+(`--companions-only` skips what the plugin installs later):
 
 ```bash
 git clone -q --depth 1 https://github.com/munderhaug/designcritique /tmp/dc-setup \
   && bash /tmp/dc-setup/scripts/setup.sh --companions-only --user \
   || echo "designcritique companions not installed"
 rm -rf /tmp/dc-setup
-``` Connect a reference source with
-`claude mcp add --transport http mobbin https://api.mobbin.com/mcp` (paid) or Refero's plugin
-(`/plugin marketplace add referodesign/refero_skill`, `/plugin install refero@refero`; paid for
-search). designcritique uses only Refero's connector, not its design skill. Node 20+ is required.
+```
+
+Connect a reference source with `claude mcp add --transport http mobbin https://api.mobbin.com/mcp`
+or `claude mcp add --transport http refero https://api.refero.design/mcp` (both paid for search;
+sign in from `/mcp`). Add Refero's connector alone, not its plugin: the plugin also installs a
+design skill that claims priority over the critics. Node 20+ is required.
 
 ## Two modes
 
-- **`/designcritique:critique`**: fast. Screens and their states, two critics, deterministic
-  checks, report and gate.
+- **`/designcritique:critique`**: screens and their states, the checks, two critics, report
+  and gate.
 - **`/designcritique:review`**: the whole product, several times the cost. It crawls the
-  prototype, replays journeys, and adds reviewers for journeys, structure (IA), concept and
-  scope, and system consistency.
-
-### What the review adds
-
-| Part | Grounded in | This repo adds |
-|---|---|---|
-| Crawl | Crawljax's state-flow crawling (Mesbah et al., 2012); DroidBot-style state IDs (Li et al., 2017) | `scripts/crawl/`: taps every control, records each screen, sheet and state from Playwright's accessibility snapshot, with guardrails; `inventory.json` with each state's path |
-| Journeys | Shostack's service blueprints (1984), Patton's story maps (2014), the cognitive walkthrough | `journeys:` in mockups.yaml, replayed tap by tap and captured; broken steps, dead ends, ways back and unclosed loops computed from the graph |
-| Problem frame | Jobs to be done, OOUX (Prater 2015), release slices | Journeys, Concept model, Scope, Feature map and Navigation in PRODUCT.md, derived from the project's documents |
-| Structure (IA) | Rosenfeld, Morville & Arango (2015), Covert (2014), OOUX | `ia-reviewer`; depth, orphans and navigation consistency computed; an IA map; "move X from A to B" proposals |
-| Concept and scope | Christensen (2016), Ulwick (2005), Torres (2021) | `scope-reviewer` using Anthropic's product-management skills; feature × problem matrix; cut/add proposals |
-| System | NN-H4, Covert, Podmajersky (2019), Frost (2016), Hurff's UI stack (2016) | `system-reviewer` with Anthropic's design-system and Impeccable's harden; a deterministic audit of button styles, icons with two meanings, glossary terms, number formats and figures that disagree; a state matrix |
-| Coverage | | What wasn't captured is reported as not covered, not missing; the gate needs a minimum share of the feature map |
-| Language | | Words the crawler and checks need (destructive controls, back labels, state words) come from `catalog/vocabulary.yaml` (en, de, fr, es, nb, sv, da) by the pages' language, extendable per project |
-
-Structure and scope changes are always proposals for you to decide (`/designcritique:decide M2
-accept`), never edits.
-
-## Use
+  prototype (after Crawljax, Mesbah et al., 2012), replays the journeys, checks structure and
+  consistency, and adds three lens reviewers (structure, scope, system). Their sources are in the
+  [lens briefs](skills/review/references/lenses/). Structure and scope changes are always
+  proposals for you to decide (`/designcritique:decide M2 accept`), never edits.
 
 ```text
 /designcritique:frame                      # PRODUCT.md via Impeccable init + problem, key tasks, success criteria
 /designcritique:critique mockups.yaml      # full critique
 /designcritique:critique exports/prototype.zip
-/designcritique:critique https://claude.ai/artifact/…
 /designcritique:decide 4 dismiss "out of scope for v1"   # your verdict, kept across runs
 /designcritique:iterate mockups.yaml --rounds 3          # fix and re-critique until the gate passes
-/designcritique:review mockups.yaml                      # the whole product: crawl, journeys, IA, scope, system
+/designcritique:review mockups.yaml                      # the whole product
 ```
 
-Inputs: HTML, PNG/JPG/WebP, `.zip` exports, folders, Claude artifacts, Figma frames, canvases
-with several phone frames (`phone_frame:`), and screenshots from a simulator or device. See [templates/mockups.yaml](templates/mockups.yaml).
-Each run writes to `.designcritique/runs/<timestamp>/`: screenshots, `framing.md`,
-`checks/findings.json`, `critique/*.json`, `findings.json`, `report.md`, `report.html`.
-
-## Compare runs
-
-Run the critique again after changing the design. The report compares with the previous run
-of the same mockups and lists what was fixed, what is new and what is still open.
-`node scripts/report/compare-runs.mjs --run <run> [--base <run>]` does it by hand.
-
-## Gate in CI or a hook
+Inputs are in [inputs.md](skills/critique/references/inputs.md) and
+[templates/mockups.yaml](templates/mockups.yaml). Each run writes to
+`.designcritique/runs/<timestamp>/`: screenshots, `framing.md`, `checks/`, `critique/*.json`,
+`findings.json`, `report.md` and `report.html`.
 
 ```bash
 node scripts/report/gate.mjs --run .designcritique/runs/<run>   # exit 2 with reasons when it fails
+node scripts/report/recommend-stack.mjs --product PRODUCT.md     # build stack without a critique
+node scripts/styles.mjs list                                     # DESIGN.md starting points
 ```
-
-`gate:` in mockups.yaml sets the bar (`fail_on: P1`, `target_score: 8` by default);
-`--fail-on` and `--target` override it.
 
 ## Evals and tests
 
 ```bash
-npm run eval     # capture, checks and scoring on the eval set (no model)
-npm run eval:noise -- prepare --run <run> --out <copy>   # then run the critics on the copy, and:
-npm run eval:noise -- compare --a <run> --b <copy>       # how much the critics' judgement varies between runs
-npm run eval:review   # whole-product review: crawl, journeys, structure and consistency on a seeded and a clean prototype
-npm test         # unit tests
+npm test               # unit tests
+npm run eval           # screens: capture, checks, detectors, scoring (no model)
+npm run eval:review    # whole product: crawl, journeys, structure, consistency; clean must pass every check
+npm run eval:source    # detectors on SwiftUI, Compose, Android XML and React Native source
+npm run eval:tokens    # token reader over open-design's 152 DESIGN.md files (fetched once, pinned)
+npm run eval:noise     # how much the critics' judgement varies between runs
 ```
 
 To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
-`npm run eval:score -- --run <run>`. See [evals/README.md](evals/README.md).
+`npm run eval:score -- --run <run>`; for the lens reviewers, `/designcritique:review
+evals/review/seeded.yaml`, then `npm run eval:lenses -- --run <run>`. Results and what each
+eval screen plants are in [evals/README.md](evals/README.md).
 
 ## Status
 
-Version 0.5, for mockups and prototypes. Tested: capture, checks (all planted problems found,
-no false alarms on clean screens), design-system checks, input types, report, run comparison,
-validation hook, gate, decisions and build-stack recommendations; the motion import against a
-sample scan. Critic results on the eval set are in [evals/README.md](evals/README.md).
-**Not yet run end to end:** the reference step, a live transitions-agent scan, external judges and
-`iterate` over several rounds.
-
-Running apps: simulator and device screenshots work as image inputs today. Next: driving
-MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI from capture.
-PWAs: point `url:` at the served app. Native apps: list the code under `source:` so the detectors
-read it alongside the screenshots. Not supported: single-file `.jsx` artifacts as rendered
-screens (export as HTML or images). Image inputs get critics
-only; deterministic checks need HTML. Large-text rendering is a proxy for Dynamic Type and font scale.
+For mockups and prototypes; the version is in `.claude-plugin/plugin.json`. Running apps:
+simulator and device screenshots work as image inputs (critics only); next is driving
+MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI from capture. Large-text rendering is a
+proxy for Dynamic Type and font scale. Not yet run end to end: external judges and `iterate` over
+several rounds.
 
 ## Layout
 
 ```
-catalog/stack.yaml     cited build-stack catalog
-catalog/styles.yaml    style families offered as DESIGN.md starting points
-catalog/vocabulary.yaml  words per language (consent, states, controls not to press)
+catalog/               stack.yaml (build stack), styles.yaml (style starting points), vocabulary.yaml (words per language)
 commands/              /designcritique:critique, :review, :frame, :iterate, :decide
 skills/frame/          problem framing on top of Impeccable init
-skills/critique/       orchestration, inputs, references, severity, output format, companions
-skills/iterate/        fix and re-critique in rounds until the gate passes
+skills/critique/       orchestration; references/: checks, inputs, references, severity, output format, critic briefs, companions
 skills/review/         whole-product review and its lens briefs (references/lenses/)
+skills/iterate/        fix and re-critique in rounds until the gate passes
 skills/principles/     citation index (IDs and primary sources)
 agents/                design-reviewer; ia-, scope- and system-reviewer (all read-only)
 hooks/                 validates critic JSON when it's saved
-scripts/               capture, checks, report, stack recommender, evals, setup, companion detection
-templates/             PRODUCT.md (Impeccable schema + HCD), DESIGN.md, mockups.yaml, CLAUDE design-system rule
+schemas/               critic output format (JSON Schema)
+scripts/capture/       rendering at phone sizes
+scripts/crawl/         state-flow crawler for the whole-product review
+scripts/checks/        run-all and each check: screens, motion, detectors, structure, consistency
+scripts/report/        report, gate, decisions, run comparison, iterate rounds, build stack
+scripts/lib/           shared plumbing (merge, gate, decisions, tokens, …), unit-tested
+scripts/eval/          eval runners and scorers
+templates/             PRODUCT.md, DESIGN.md, mockups.yaml, CLAUDE design-system rule
 tests/                 unit tests
 evals/                 calibration screens, expectations, fixtures
 ```
 
-MIT licensed. Impeccable (Apache 2.0) and Anthropic's design plugin are installed as
-dependencies, not copied into this repo.
+MIT licensed. Impeccable (Apache 2.0) and Anthropic's plugins are installed as dependencies, not
+copied into this repo.

@@ -376,7 +376,11 @@ for (const screen of manifest.screens) {
           seenIn: [tagOf(main)], key: rule,
         });
       };
-      scaleCheck('CHK-TOKEN-SPACE', mainData.spacing, tokens.spacing, 'spacing', (v) => v <= 2);
+      // Padding that adds the device's safe-area inset (env(safe-area-inset-*) + a token) is on
+      // the scale once the inset is taken away.
+      const insets = mainData.insets?.applied ? [mainData.insets.top, mainData.insets.bottom].filter((x) => x > 0) : [];
+      const insetPlusToken = (v) => insets.some((i) => Math.abs(v - i) <= 0.5 || onScale(v - i, tokens.spacing));
+      scaleCheck('CHK-TOKEN-SPACE', mainData.spacing, tokens.spacing, 'spacing', (v) => v <= 2 || insetPlusToken(v));
       scaleCheck('CHK-TOKEN-TYPE', mainData.fontSizes, tokens.fontSizes, 'font size');
       const pill = Math.max(...tokens.radii, 0) >= 100;
       scaleCheck('CHK-TOKEN-RADIUS', mainData.radii, tokens.radii, 'corner radius', (v) => v <= 2 || (pill && v >= 100));

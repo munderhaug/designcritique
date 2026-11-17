@@ -29,11 +29,7 @@ and (if the spec fixes it) Navigation, derived from the project's documents. The
 ```bash
 node PLUGIN_ROOT/scripts/crawl/crawl.mjs --config mockups.yaml --out <RUN_DIR>
 node PLUGIN_ROOT/scripts/capture/capture.mjs --config mockups.yaml --out <RUN_DIR> --inventory <RUN_DIR>/inventory.json
-node PLUGIN_ROOT/scripts/checks/run-checks.mjs --run <RUN_DIR>
-node PLUGIN_ROOT/scripts/checks/structure.mjs --run <RUN_DIR>
-node PLUGIN_ROOT/scripts/checks/consistency.mjs --run <RUN_DIR>
-node PLUGIN_ROOT/scripts/checks/motion.mjs scan --run <RUN_DIR>
-node PLUGIN_ROOT/scripts/checks/detectors.mjs --run <RUN_DIR>
+node PLUGIN_ROOT/scripts/checks/run-all.mjs --run <RUN_DIR> --review
 ```
 
 Read the crawl summary: if it hit the state limit, or a journey broke, fix `mockups.yaml` (steps,
@@ -43,8 +39,8 @@ Read the crawl summary: if it hit the state limit, or a journey broke, fix `mock
 ## 3. Independent reviewers, in parallel
 
 None sees another's output or how the prototype was made. Brief each with the run folder,
-`framing.md`, `coverage.json`, `graph.json`, `inventory.json`, `checks/structure.json`,
-`checks/consistency.json`, `consistency.json`, the decisions file, the principles index, one
+`framing.md`, `coverage.json`, `graph.json`, `inventory.json`, `checks/all.json` (every
+deterministic finding: don't repeat), `consistency.json`, the decisions file, the principles index, one
 standard light screenshot per screen family (from `coverage.json` → `states[].screens`), and each
 journey's screenshots in step order. Details: [lenses/common.md](references/lenses/common.md).
 
@@ -57,7 +53,9 @@ journey's screenshots in step order. Details: [lenses/common.md](references/lens
 | `system-reviewer` | [lenses/system.md](references/lenses/system.md), with design-system and Impeccable harden paths | `critique/system.json` |
 
 Run each on `critics.judge_model` when set (or a model other than the one that built the
-prototype), and add `critics.external` judges as in the critique skill. The hook validates each
+prototype), and add `critics.external` judges as in the critique skill. The design-reviewer and
+Impeccable score the key tasks and journeys; the lens reviewers don't. Other design skills in the
+session are never given to a reviewer. The hook validates each
 file as it's saved.
 
 ## 4. Report and gate

@@ -55,7 +55,7 @@ export function mergeAcrossSources(findings) {
   }
   for (const f of out) {
     const critics = f.raisedBy.filter((s) => !isDeterministic({ source: s }));
-    f.agreement = critics.length >= 2 ? 'both-critics'
+    f.agreement = critics.length >= 2 ? 'critics-agree'
       : critics.length && isCheck(f) ? 'check-and-critic'
         : (f.surfaces || []).length > 1 && f.raisedBy.length > 1 ? 'rendered-and-source' : null;
   }

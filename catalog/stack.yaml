@@ -299,7 +299,7 @@ entries:
     platforms: [ios, android, web]
     stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Design vocabulary and anti-pattern rules while building (shape, init, polish, harden, clarify, adapt), with native iOS and Android references."
-    install: "npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks"
+    install: "npx -y impeccable@{pinned:impeccable} install -y --providers=claude --scope=project --no-hooks"
     helps_with: [visual, ux, content, layout, typography]
     sources:
       - https://github.com/pbakaus/impeccable
@@ -354,7 +354,7 @@ entries:
     platforms: [ios, android, web]
     stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Real product screens and user flows from websites and iOS apps, plus curated website styles. Smaller than Mobbin; live search needs a paid plan."
-    install: "/plugin marketplace add referodesign/refero_skill && /plugin install refero@refero (or: claude mcp add --transport http refero https://api.refero.design/mcp), then sign in"
+    install: "claude mcp add --transport http refero https://api.refero.design/mcp, then sign in from /mcp (the connector alone; Refero's plugin also installs its design skill)"
     helps_with: [ux, task-fit, visual]
     sources:
       - https://doc.refero.design/mcp/getting-started

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 import { section } from './framing.mjs';
+import { withPins } from './config.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const CATALOG_PATH = path.resolve(here, '../../catalog/stack.yaml');
@@ -74,7 +75,7 @@ export function recommendStack({ productText, fallbackPlatform, findings = [], p
     const picks = catalog.entries.filter((e) => e.role === role && fits(e)).map((e) => {
       const because = (e.helps_with || []).filter((c) => need[c]).sort((a, b) => need[b] - need[a]);
       return {
-        id: e.id, name: e.name, by: e.by, trust: e.trust, why: e.why, install: e.install, sources: e.sources,
+        id: e.id, name: e.name, by: e.by, trust: e.trust, why: e.why, install: withPins(e.install), sources: e.sources,
         group: e.group || null, stacks: e.stacks,
         because: because.length ? `Addresses ${because.map((c) => `${c} findings`).join(', ')} in this critique` : null,
         score: because.reduce((n, c) => n + need[c], 0) + (e.trust === 'official' ? 0.5 : e.trust === 'practitioner' ? 0.25 : 0),

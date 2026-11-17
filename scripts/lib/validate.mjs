@@ -30,7 +30,7 @@ export function principleIds() {
  * @param opts.screens optional Set of screen ids in the run
  * @returns {{ errors: string[], warnings: string[], badFindings: Set<string> }}
  */
-export function validateCritique(data, { screens } = {}) {
+export function validateCritique(data, { screens, keyTasks } = {}) {
   const errors = [];
   const warnings = [];
   const badFindings = new Set();
@@ -60,7 +60,10 @@ export function validateCritique(data, { screens } = {}) {
       }
     }
   });
+  const known = new Map((keyTasks || []).map((k) => [k.id, k]));
   for (const t of data.tasks || []) {
+    if (known.size && !t.id) warnings.push(`task "${t.task}": no id; use the key task's ID from PRODUCT.md (${[...known.keys()].join(', ')})`);
+    else if (known.size && !known.has(t.id)) warnings.push(`task "${t.task}": id ${t.id} is not a key task in PRODUCT.md (${[...known.keys()].join(', ')})`);
     // Scores and verdicts follow the anchors in output-format.md; flag the ones that disagree.
     if (typeof t.score === 'number') {
       if (t.verdict === 'blocked' && t.score > 4) warnings.push(`task "${t.task}": verdict blocked but score ${t.score} (blocked scores 0-4)`);
@@ -72,6 +75,14 @@ export function validateCritique(data, { screens } = {}) {
     }
   }
   return { errors, warnings, badFindings };
+}
+
+/** Key tasks of the run that holds a critique file (RUN_DIR/framing.md). */
+export async function keyTasksForCritiqueFile(file) {
+  const framing = path.join(path.dirname(path.dirname(path.resolve(file))), 'framing.md');
+  if (!fs.existsSync(framing)) return undefined;
+  const { parseKeyTasks } = await import('./product.mjs');
+  return parseKeyTasks(fs.readFileSync(framing, 'utf8'));
 }
 
 /** Screens of the run that holds a critique file (RUN_DIR/critique/x.json → RUN_DIR/manifest.json). */

@@ -16,8 +16,9 @@
   .muted { color: var(--muted); font-size: 0.875rem; }
   button { font: inherit; min-height: 2.75rem; border: 0; border-radius: 0.75rem; padding: 0 1rem; background: var(--container); color: var(--on-surface); text-align: left; }
   button.primary { background: var(--primary); color: var(--on-primary); text-align: center; font-weight: 600; }
+  input { width: 100%; min-width: 0; font: inherit; color: inherit; min-height: 2.75rem; padding: 0 0.75rem; border: 1px solid var(--muted); border-radius: 0.5rem; background: var(--surface); }
   button.icon { display: flex; align-items: center; gap: 0.5rem; }
-  button.icon svg { width: 1.5rem; height: 1.5rem; }
+  button.icon svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
   nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--container); padding-bottom: env(safe-area-inset-bottom); }
   nav button { flex: 1; background: none; text-align: center; border-radius: 0; min-height: 3.5rem; }
   nav button[aria-current="page"] { color: var(--primary); font-weight: 700; }

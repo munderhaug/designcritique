@@ -18,10 +18,13 @@ explains each one.
    it write or update `PRODUCT.md`, including `## Platform` (`ios`, `android` or `adaptive`) and
    `## Stack`. If it isn't installed, write the same sections yourself from
    [the template](../../templates/PRODUCT.md), interviewing the user in the same way, and suggest
-   installing Impeccable (`npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks`).
+   installing Impeccable (`bash PLUGIN_ROOT/scripts/setup.sh --install-companions`, which uses the
+   version pinned in the plugin's package.json and installs no hooks).
 2. **Add the human-centred layer** to the same file. Impeccable keeps extra headings.
    - `## Problem`: what goes wrong for the primary user today, stated without the solution.
-   - `## Key Tasks`: two to five job stories, ranked by criticality, one marked "must not fail".
+   - `## Key Tasks`: two to five job stories as a numbered list, ranked by criticality, one
+     marked "must not fail". The number is the task's ID (T1, T2, …) that critics score and the
+     gate checks.
    - `## Success Criteria`: effectiveness, efficiency and satisfaction, in terms a reviewer can
      judge from screens.
    Ask at most three questions at a time, only for what the repository and the user haven't

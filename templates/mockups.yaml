@@ -3,7 +3,7 @@ platform: ios                 # ios | android | adaptive (checked against both)
 product: PRODUCT.md           # problem frame; create with /designcritique:frame
 design: DESIGN.md             # optional design tokens (YAML front matter)
 references: []                # optional images of what good looks like (Mobbin, Figma, screenshots)
-taste: []                     # optional: 9-12 images of the direction you chose (folder or list)
+taste: []                     # optional: images of the visual direction you chose (context for critics, not scored)
 requires:
   darkMode: true              # report a missing dark appearance as a finding
 content: content-guide.md    # optional: content guide with a glossary (Term | … | Avoid) for term checks
@@ -18,7 +18,7 @@ critics:
   external: []                # extra judges on other tools, e.g. [codex]; see critic-brief.md
 gate:
   fail_on: P1                 # not passed while any open finding is this severe (P0-P3, none)
-  target_score: 8             # not passed while any key task scores lower (0-10, lowest critic)
+  target_score: 8             # not passed while a key task (T1, T2, …) is unscored or scores lower (0-10, lowest critic that walked it)
   journey_target_score: 8     # review: not passed while a journey scores lower (lowest critic)
   min_feature_coverage: 0.8   # review: not passed while less of the feature map was captured
   no_dead_end_on_critical: true  # review: not passed with a dead end on a must-not-fail journey

@@ -11,7 +11,7 @@
 | Claude artifact | `artifact: https://claude.ai/artifact/...` | Pull it first (below). Capture reads `.designcritique/sources/<id>/` |
 | Figma frame | `file:` the exported PNG | Export with the Figma MCP server (`get_screenshot`), save it next to the config, treat it as an image |
 | Simulator or device screenshot | `file:` the saved PNG | A screen of the running app, taken with whichever tool is connected: MobileBuildMCP or Xcode Previews (iOS), Android CLI preview PNGs or emulator screenshots, Expo MCP `automation_take_screenshot`, mobile-mcp or agent-device. Save one PNG per screen and state (and a dark-mode or large-text one if you can switch the device setting). Critics only: the deterministic checks need HTML |
-| Taste references | `taste: taste/` (folder or list) | 9–12 images of the direction the person chose. Copied into the run; critics judge closeness in `taste_check`, apart from usability findings |
+| Direction images | `taste: taste/` (folder or list) | Images of the visual direction the person chose. Copied into the run; critics see them as context for the intended direction. Closeness isn't scored and never excuses a finding |
 
 ## Pulling a Claude artifact
 
@@ -82,7 +82,7 @@ rendered angle sees what the user sees, the source angle sees what the screen ig
 user's text size, the back gesture, the safe area). The report merges a problem found from both
 angles into one finding marked "found on the rendered screen and in its source".
 
-## Not supported in version 1
+## Not supported yet
 
 - Single-file React (`.jsx` / `.tsx`) artifacts as rendered screens. Export them as HTML, or
   render a screenshot; list the source under `source:` so the detectors still read it.
