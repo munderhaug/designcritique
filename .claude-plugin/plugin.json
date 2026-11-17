@@ -1,0 +1,10 @@
+{
+  "name": "designcritique",
+  "version": "0.1.0",
+  "description": "Human-centred design critique for mobile app mockups and prototypes: frame the problem, capture screens at phone sizes, run accessibility and token checks, then independent UX and UI critics grounded in established design principles.",
+  "author": { "name": "munderhaug" },
+  "homepage": "https://github.com/munderhaug/designcritique",
+  "repository": "https://github.com/munderhaug/designcritique",
+  "license": "MIT",
+  "keywords": ["design", "critique", "ux", "ui", "mobile", "accessibility", "heuristics"]
+}

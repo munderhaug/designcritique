@@ -1,0 +1,11 @@
+{
+  "name": "designcritique",
+  "owner": { "name": "munderhaug" },
+  "plugins": [
+    {
+      "name": "designcritique",
+      "source": "./",
+      "description": "Human-centred design critique for mobile app mockups and prototypes."
+    }
+  ]
+}

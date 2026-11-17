@@ -1,0 +1,4 @@
+node_modules/
+.designcritique/
+evals/.runs/
+.DS_Store

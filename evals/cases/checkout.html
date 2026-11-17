@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout</title>
+<style>
+  :root { --primary: #2457D6; --on-primary: #FFFFFF; --surface: #FFFFFF; --on-surface: #16181D; --muted: #5B6170; --container: #F3F5F9; --outline: #D5D9E2; --error: #C62828; }
+  @media (prefers-color-scheme: dark) { :root { --primary: #8FB0FF; --on-primary: #0B1F55; --surface: #121418; --on-surface: #ECEEF3; --muted: #A8AEBB; --container: #1E2128; --outline: #363B46; --error: #FF8A80; } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--surface); color: var(--on-surface); font-size: 1.0625rem; line-height: 1.4; padding: 4rem 1rem 3rem; }
+  button, input { font: inherit; color: inherit; border: 0; background: none; }
+  h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; }
+  .summary { background: var(--container); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem; }
+  .line { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+  .line.total { font-weight: 700; border-top: 1px solid var(--outline); margin-top: 0.5rem; padding-top: 0.75rem; }
+  h2 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem; }
+  input { width: 100%; min-height: 2.75rem; border: 1px solid var(--outline); border-radius: 0.75rem; padding: 0 0.75rem; margin-bottom: 0.75rem; }
+  input::placeholder { color: var(--muted); }
+  .row { display: flex; gap: 0.75rem; }
+  .error { color: var(--error); font-size: 0.9375rem; margin: 0.25rem 0 1rem; }
+  .actions { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 2rem; }
+  .filled { min-height: 3rem; border-radius: 0.75rem; background: var(--primary); color: var(--on-primary); font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>Checkout</h1>
+  <div class="summary">
+    <div class="line"><span>Trail runners</span><span>€129.00</span></div>
+    <div class="line"><span>Merino socks ×2</span><span>€24.00</span></div>
+    <div class="line"><span>Shipping</span><span>€4.90</span></div>
+    <div class="line total"><span>Total</span><span>€157.90</span></div>
+  </div>
+
+  <h2>Shipping address</h2>
+  <input aria-label="Full name" placeholder="Full name">
+  <input aria-label="Street address" placeholder="Street address">
+  <div class="row"><input aria-label="Postal code" placeholder="Postal code"><input aria-label="City" placeholder="City"></div>
+
+  <h2>Payment</h2>
+  <input aria-label="Card number" placeholder="Card number" value="4111 1111 1111 1112">
+  <div class="row"><input aria-label="Expiry" placeholder="MM/YY"><input aria-label="Security code" placeholder="CVC"></div>
+  <p class="error" role="alert">Something went wrong. Please try again.</p>
+
+  <div class="actions">
+    <button class="filled">Pay now</button>
+    <button class="filled">Delete order</button>
+  </div>
+</body>
+</html>

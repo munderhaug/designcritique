@@ -1,0 +1,14 @@
+{
+  "critic": "ux",
+  "frame_check": { "fit": "partial", "summary": "FORMAT EXAMPLE, hand-written to test report rendering. Not a real critique.", "assumptions_relied_on": ["[assumption] Often one-handed and on the move"] },
+  "tasks": [
+    { "task": "Pay for an order", "user": "Adults on their own phone", "verdict": "blocked", "summary": "Example: no way back, and the destructive action looks like Pay.",
+      "steps": [ { "screen": "checkout", "action": "Tap Pay now", "q1": true, "q2": true, "q3": false, "q4": false, "finding_ids": ["ux-1"] } ] }
+  ],
+  "findings": [
+    { "id": "ux-1", "screen": "checkout", "rule": "IOS-DESTRUCTIVE", "basis": ["IOS-DESTRUCTIVE", "NN-H5", "GESTALT-SIMILARITY"], "category": "ux", "severity": "P1",
+      "title": "Example: Delete order is styled exactly like Pay now", "evidence": "checkout__ios-standard__light.png: two identical filled buttons at the bottom.",
+      "impact": "Example impact text.", "recommendation": "Example fix text.", "confidence": "high", "task": "Pay for an order", "element": { "region": "bottom actions", "selector": null } }
+  ],
+  "strengths": [ { "screen": "checkout", "text": "Example strength: order summary at the top.", "basis": ["NN-H6"] } ]
+}

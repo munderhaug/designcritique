@@ -1,0 +1,304 @@
+#!/usr/bin/env node
+// Deterministic checks over a capture run. No model involved: same input, same findings.
+// Writes <run>/checks/findings.json and <run>/checks/notes.json.
+//
+// Usage: node scripts/checks/run-checks.mjs --run <runDir>
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { parseArgs, readJson, writeJson, MIN_TARGET, MIN_TEXT } from '../lib/config.mjs';
+import { loadTokens, nearestColor, onScale, parseColor } from '../lib/tokens.mjs';
+
+const args = parseArgs(process.argv.slice(2));
+if (!args.run) { console.error('Usage: run-checks.mjs --run <runDir>'); process.exit(2); }
+const runDir = path.resolve(args.run);
+const manifest = readJson(path.join(runDir, 'manifest.json'));
+const tokens = loadTokens(manifest.design);
+
+const findings = [];
+const notes = [];
+const PLATFORM_UNIT = { ios: 'pt', android: 'dp' };
+
+const AXE_SEVERITY = { critical: 'P1', serious: 'P1', moderate: 'P2', minor: 'P3' };
+const AXE_FIX = {
+  'color-contrast': 'Raise contrast to at least 4.5:1 for normal text and 3:1 for large text (24px, or 19px bold). Use the on-surface / on-surface-variant tokens instead of light greys.',
+  'button-name': 'Give icon-only buttons an accessible name (aria-label here; accessibilityLabel / contentDescription in the app).',
+  'link-name': 'Give the link text or an accessible name that says where it goes.',
+  'image-alt': 'Add alt text, or mark the image decorative (alt="") if it carries no information.',
+  label: 'Give every field a visible label, not just a placeholder.',
+  'aria-required-children': 'Fix the role structure so assistive technology can read the group.',
+  'nested-interactive': 'Do not put a tappable control inside another tappable control.',
+  'heading-order': 'Use headings in order so screen reader users can scan the screen.',
+};
+
+const hash = (s) => crypto.createHash('sha1').update(s).digest('hex').slice(0, 8);
+const tagOf = (c) => `${c.platform}-${c.device}/${c.variant}`;
+const load = (rel) => (rel ? readJson(path.join(runDir, rel)) : null);
+
+// The principles each check rests on (IDs from skills/principles).
+const BASIS = {
+  'CHK-TARGET': (p) => [p === 'ios' ? 'IOS-TARGET' : 'AND-TARGET', 'WCAG-2.5.8', 'LAW-FITTS'],
+  'CHK-TEXT-MIN': (p) => [p === 'ios' ? 'IOS-TYPE' : 'AND-TYPE', 'VIS-TYPE'],
+  'CHK-TEXT-SCALE': (p) => ['WCAG-1.4.4', p === 'ios' ? 'IOS-TYPE' : 'AND-TYPE'],
+  'CHK-TEXT-CLIP': () => ['WCAG-1.4.4', 'NN-H6'],
+  'CHK-OVERFLOW': () => ['WCAG-1.4.10'],
+  'CHK-SAFE-AREA': (p) => [p === 'ios' ? 'IOS-LAYOUT' : 'AND-LAYOUT'],
+  'CHK-DARK': (p) => [p === 'ios' ? 'IOS-COLOR' : 'AND-COLOR'],
+  'CHK-TOKEN-COLOR': () => ['NN-H4', 'VIS-COLOR'],
+  'CHK-TOKEN-SPACE': () => ['NN-H4', 'VIS-SPACING'],
+  'CHK-TOKEN-TYPE': () => ['NN-H4', 'VIS-TYPE'],
+  'CHK-TOKEN-RADIUS': (p) => ['NN-H4', p === 'ios' ? 'IOS-LAYOUT' : 'AND-SHAPE'],
+};
+const AXE_BASIS = {
+  'color-contrast': ['WCAG-1.4.3'], 'button-name': ['WCAG-4.1.2'], 'link-name': ['WCAG-2.4.4', 'WCAG-4.1.2'],
+  'image-alt': ['WCAG-1.1.1'], label: ['WCAG-3.3.2', 'WCAG-1.3.1'], 'heading-order': ['WCAG-1.3.1'],
+  'nested-interactive': ['WCAG-4.1.2'], 'aria-required-children': ['WCAG-1.3.1'],
+};
+
+function add(f) {
+  const id = `chk-${f.screen}-${f.rule}-${hash(f.key || f.element?.selector || '')}`;
+  delete f.key;
+  const basis = f.rule.startsWith('AXE-')
+    ? (AXE_BASIS[f.rule.slice(4)] || (f.wcag?.length ? f.wcag : ['WCAG-4.1.2']))
+    : (BASIS[f.rule] ? BASIS[f.rule](f.platform) : []);
+  delete f.wcag;
+  findings.push({ id, source: 'check', confidence: 'high', basis, ...f });
+}
+
+function primaryCapture(screen, platform) {
+  const caps = screen.captures.filter((c) => c.platform === platform && c.variant === 'light');
+  return caps.find((c) => c.device === 'standard') || caps.find((c) => c.device === 'frame') || caps[0];
+}
+
+for (const screen of manifest.screens) {
+  if (screen.kind !== 'html') {
+    notes.push({ screen: screen.id, note: 'Static image: deterministic checks skipped, critic only.' });
+    continue;
+  }
+  const platforms = [...new Set(screen.captures.map((c) => c.platform))];
+  for (const platform of platforms) {
+    const base = { screen: screen.id, mockup: screen.mockupId, platform };
+    const main = primaryCapture(screen, platform);
+    if (!main) continue;
+    const mainData = load(main.data);
+    const caps = screen.captures.filter((c) => c.platform === platform);
+    const unit = PLATFORM_UNIT[platform];
+
+    // --- axe-core violations, merged across light and dark ---
+    const axeByRule = new Map();
+    for (const c of caps.filter((c) => c.axe)) {
+      for (const v of load(c.axe)) {
+        const e = axeByRule.get(v.id) || { v, nodes: new Map(), seenIn: new Set() };
+        e.seenIn.add(tagOf(c));
+        for (const n of v.nodes) if (!e.nodes.has(n.target)) e.nodes.set(n.target, { ...n, variant: c.variant });
+        axeByRule.set(v.id, e);
+      }
+    }
+    for (const [rule, { v, nodes, seenIn }] of axeByRule) {
+      const list = [...nodes.values()];
+      const darkOnly = [...seenIn].every((t) => t.endsWith('/dark'));
+      add({
+        ...base, rule: `AXE-${rule}`, category: 'a11y', severity: AXE_SEVERITY[v.impact] || 'P2',
+        title: `${v.help}${darkOnly ? ' (dark mode only)' : ''}`,
+        element: { selector: list[0].target },
+        evidence: list.slice(0, 5).map((n) => `${n.target} [${n.variant}]: ${n.summary.split('\n').slice(1, 2).join(' ').trim() || n.html}`).join('\n') + (list.length > 5 ? `\n…and ${list.length - 5} more` : ''),
+        recommendation: AXE_FIX[rule] || `See ${v.helpUrl}`,
+        seenIn: [...seenIn], count: list.length, key: rule,
+        wcag: v.tags.filter((t) => /^wcag\d{3,}$/.test(t)).map((t) => { const d = t.slice(4); return `WCAG-${d[0]}.${d[1]}.${d.slice(2)}`; }),
+      });
+    }
+
+    // --- touch targets ---
+    const min = MIN_TARGET[platform];
+    const small = mainData.interactive.filter((el) => !el.disabled && !el.inlineInText && (el.box.w < min - 0.5 || el.box.h < min - 0.5));
+    for (const el of small.slice(0, 8)) {
+      const worst = Math.min(el.box.w, el.box.h);
+      add({
+        ...base, rule: 'CHK-TARGET', category: 'a11y', severity: worst < min * 0.75 ? 'P1' : 'P2',
+        title: `Tap target ${el.box.w}×${el.box.h} is below ${min}×${min} ${unit}`,
+        element: { selector: el.selector, name: el.name, box: el.box },
+        evidence: `${el.tag}${el.name ? ` "${el.name}"` : ' (no name)'} is ${el.box.w}×${el.box.h} on ${main.deviceName}.`,
+        recommendation: `Make the tappable area at least ${min}×${min} ${unit}. The visible shape can stay smaller if the hit area is padded.`,
+        seenIn: [tagOf(main)],
+      });
+    }
+    if (small.length > 8) notes.push({ screen: screen.id, note: `${small.length - 8} more small tap targets not listed.` });
+
+    // --- minimum text size ---
+    const minText = MIN_TEXT[platform];
+    const tiny = mainData.texts.filter((t) => t.fontSize < minText - 0.25);
+    if (tiny.length) {
+      const smallest = Math.min(...tiny.map((t) => t.fontSize));
+      add({
+        ...base, rule: 'CHK-TEXT-MIN', category: 'typography', severity: smallest < minText - 2 ? 'P1' : 'P2',
+        title: `Text below ${minText} ${unit} (smallest ${smallest})`,
+        element: { selector: tiny[0].selector, text: tiny[0].text, box: tiny[0].box },
+        evidence: tiny.slice(0, 4).map((t) => `${t.fontSize}px "${t.text}"`).join('\n'),
+        recommendation: `Use at least ${minText} ${unit} even for legal and caption text; ${platform === 'ios' ? 'Caption 2 (11pt) is the smallest iOS style' : 'Label Small (11sp) is reserved for short labels'}.`,
+        seenIn: [tagOf(main)],
+      });
+    }
+
+    // --- text scaling (proxy for Dynamic Type / font scale) ---
+    for (const lt of caps.filter((c) => c.variant === 'large-text')) {
+      const ref = caps.find((c) => c.variant === 'light' && c.device === lt.device);
+      if (!ref) continue;
+      const a = load(ref.data).texts;
+      const b = new Map(load(lt.data).texts.map((t) => [t.selector, t]));
+      const pairs = a.filter((t) => b.has(t.selector));
+      if (pairs.length < 3) continue;
+      const fixed = pairs.filter((t) => b.get(t.selector).fontSize / t.fontSize < 1.1);
+      const share = fixed.length / pairs.length;
+      if (share >= 0.1) {
+        add({
+          ...base, rule: 'CHK-TEXT-SCALE', category: 'a11y', severity: share >= 0.5 ? 'P1' : 'P2',
+          title: share >= 0.9 ? 'Text does not scale with the user\'s text size' : `${Math.round(share * 100)}% of text does not scale with the user's text size`,
+          element: { selector: fixed[0].selector, text: fixed[0].text },
+          evidence: `${fixed.length} of ${pairs.length} text elements kept their size when text was enlarged 135%. Examples: ${fixed.slice(0, 3).map((t) => `"${t.text}" ${t.fontSize}px`).join(', ')}.`,
+          recommendation: platform === 'ios'
+            ? 'Size type relative to the root (rem in mockups; Dynamic Type text styles in SwiftUI) so it follows the user\'s setting.'
+            : 'Size type relative to the root (rem in mockups; sp in Compose) so it follows the user\'s font scale.',
+          seenIn: [tagOf(lt)], key: 'scale',
+        });
+        break;
+      }
+    }
+
+    // --- clipped text ---
+    const clipped = new Map();
+    for (const c of caps.filter((c) => c.variant !== 'dark')) {
+      for (const t of load(c.data).texts.filter((t) => t.clipped)) {
+        const e = clipped.get(t.selector) || { t, seenIn: new Set() };
+        e.seenIn.add(tagOf(c));
+        clipped.set(t.selector, e);
+      }
+    }
+    if (clipped.size) {
+      const list = [...clipped.values()];
+      const atDefault = list.some((e) => e.seenIn.has(tagOf(main)));
+      add({
+        ...base, rule: 'CHK-TEXT-CLIP', category: 'layout', severity: atDefault ? 'P3' : 'P2',
+        title: atDefault ? `${list.length} text element(s) truncated at default size` : `${list.length} text element(s) truncate at large text or small screens`,
+        element: { selector: list[0].t.selector, text: list[0].t.text },
+        evidence: list.slice(0, 4).map((e) => `"${e.t.text}" in ${[...e.seenIn].join(', ')}`).join('\n'),
+        recommendation: 'Let important text wrap to two lines, or make sure the full text is reachable (detail view, accessibility label). Check the layout at the largest text size.',
+        seenIn: [...new Set(list.flatMap((e) => [...e.seenIn]))], key: 'clip',
+      });
+    }
+
+    // --- horizontal overflow ---
+    const over = caps.filter((c) => c.variant !== 'dark').map((c) => ({ c, d: load(c.data) })).filter(({ d }) => d.scrollWidth > d.viewport.width + 1);
+    if (over.length) {
+      const { c, d } = over[0];
+      const wide = !d.hasViewportMeta || d.scrollWidth > 600;
+      add({
+        ...base, rule: 'CHK-OVERFLOW', category: 'layout', severity: 'P1',
+        title: `Content is ${d.scrollWidth - d.viewport.width}px wider than the screen`,
+        element: d.overflowing[0] ? { selector: d.overflowing[0].selector, box: d.overflowing[0].box } : null,
+        evidence: `Page is ${d.scrollWidth}px wide on a ${d.viewport.width}px screen (${c.deviceName}). Overflowing: ${d.overflowing.map((o) => o.selector).join('; ') || 'unknown'}.`,
+        recommendation: wide && !screen.phoneFrame
+          ? 'If this is a canvas showing phone frames, set phone_frame: to the frame selector in mockups.yaml. Otherwise remove fixed widths so the layout fits 360–430px screens.'
+          : 'Remove fixed widths; let rows wrap or stack so the layout fits 360–430px screens.',
+        seenIn: over.map(({ c }) => tagOf(c)), key: 'overflow',
+      });
+    }
+
+    // --- safe areas (status bar / Dynamic Island, home indicator / gesture bar) ---
+    const sa = [];
+    for (const el of mainData.interactive.filter((e) => !e.disabled && e.box.y < mainData.viewport.height)) {
+      if (el.box.y < main.safeTop && el.box.y + el.box.h > 0) sa.push({ el, where: platform === 'ios' ? 'status bar / Dynamic Island' : 'status bar' });
+      else if (el.fixed && el.box.y + el.box.h > mainData.viewport.height - main.safeBottom + 1) sa.push({ el, where: platform === 'ios' ? 'home indicator' : 'gesture navigation bar' });
+    }
+    for (const where of [...new Set(sa.map((s) => s.where))]) {
+      const els = sa.filter((s) => s.where === where).map((s) => s.el);
+      add({
+        ...base, rule: 'CHK-SAFE-AREA', category: 'platform', severity: 'P2',
+        title: `${els.length} control(s) sit in the ${where} area`,
+        element: { selector: els[0].selector, name: els[0].name, box: els[0].box },
+        evidence: els.slice(0, 5).map((el) => `${el.tag}${el.name ? ` "${el.name}"` : ''} at y=${el.box.y}, h=${el.box.h}`).join('\n') +
+          `\nSafe insets on ${main.deviceName}: ${main.safeTop} top / ${main.safeBottom} bottom.`,
+        recommendation: 'Keep controls inside the safe area: pad bars by the top and bottom insets (safeAreaInset / WindowInsets).',
+        seenIn: [tagOf(main)], key: where,
+      });
+    }
+
+    // --- dark appearance ---
+    const dark = caps.find((c) => c.variant === 'dark');
+    if (dark) {
+      const lightColors = Object.keys(mainData.colors).sort().join();
+      const darkColors = Object.keys(load(dark.data).colors).sort().join();
+      if (lightColors === darkColors) {
+        if (manifest.requires?.darkMode) {
+          add({
+            ...base, rule: 'CHK-DARK', category: 'color', severity: 'P2',
+            title: 'No dark appearance',
+            element: null,
+            evidence: 'The screen renders identically with the system in dark mode.',
+            recommendation: 'Add dark values for every colour role (prefers-color-scheme in mockups; dynamic system colours / dark theme in the app).',
+            seenIn: [tagOf(dark)], key: 'dark',
+          });
+        } else notes.push({ screen: screen.id, note: 'No dark appearance (not required by mockups.yaml).' });
+      }
+    }
+
+    // --- tokens ---
+    if (tokens) {
+      const darkData = dark ? load(dark.data) : null;
+      if (tokens.colors.size) {
+        const used = new Map();
+        for (const d of [mainData, darkData].filter(Boolean)) {
+          for (const [key, v] of Object.entries(d.colors)) {
+            if (key.includes('@')) continue; // translucent overlays are usually derived; skip
+            const e = used.get(key) || { count: 0, examples: new Set() };
+            e.count += v.count; v.examples.forEach((x) => e.examples.add(x));
+            used.set(key, e);
+          }
+        }
+        const off = [...used].filter(([hex]) => {
+          const n = nearestColor(hex, tokens.colors);
+          return !n || n.d > 3;
+        }).sort((a, b) => b[1].count - a[1].count);
+        if (off.length) {
+          add({
+            ...base, rule: 'CHK-TOKEN-COLOR', category: 'tokens', severity: 'P2',
+            title: `${off.length} colour(s) not in the design tokens`,
+            element: { selector: [...off[0][1].examples][0] },
+            evidence: off.slice(0, 6).map(([hex, e]) => {
+              const n = nearestColor(hex, tokens.colors);
+              return `${hex} ×${e.count} (e.g. ${[...e.examples][0]}); nearest token ${n.name} ${n.hex}`;
+            }).join('\n'),
+            recommendation: 'Replace hard-coded colours with colour tokens, or add the colour to DESIGN.md if it is a deliberate new role.',
+            seenIn: [tagOf(main)].concat(darkData ? [tagOf(dark)] : []), key: 'color',
+          });
+        }
+      }
+      const scaleCheck = (rule, map, scale, label, ignore = () => false) => {
+        if (!scale.length) return;
+        const off = Object.entries(map).map(([v, e]) => [parseFloat(v), e]).filter(([v]) => !ignore(v) && !onScale(v, scale)).sort((a, b) => b[1].count - a[1].count);
+        if (!off.length) return;
+        add({
+          ...base, rule, category: 'tokens', severity: 'P3',
+          title: `${off.length} ${label} value(s) off the scale`,
+          element: { selector: off[0][1].examples[0] },
+          evidence: off.slice(0, 6).map(([v, e]) => `${v}px ×${e.count} (e.g. ${e.examples[0]})`).join('\n') + `\nScale: ${scale.join(', ')}`,
+          recommendation: `Snap ${label} to the token scale.`,
+          seenIn: [tagOf(main)], key: rule,
+        });
+      };
+      scaleCheck('CHK-TOKEN-SPACE', mainData.spacing, tokens.spacing, 'spacing', (v) => v <= 2);
+      scaleCheck('CHK-TOKEN-TYPE', mainData.fontSizes, tokens.fontSizes, 'font size');
+      const pill = Math.max(...tokens.radii, 0) >= 100;
+      scaleCheck('CHK-TOKEN-RADIUS', mainData.radii, tokens.radii, 'corner radius', (v) => v <= 2 || (pill && v >= 100));
+    }
+  }
+}
+
+if (!tokens) notes.push({ screen: '*', note: manifest.design ? `No tokens found in ${manifest.design}; token checks skipped.` : 'No DESIGN.md configured; token checks skipped.' });
+
+const order = { P0: 0, P1: 1, P2: 2, P3: 3 };
+findings.sort((a, b) => order[a.severity] - order[b.severity] || a.screen.localeCompare(b.screen) || a.rule.localeCompare(b.rule));
+writeJson(path.join(runDir, 'checks', 'findings.json'), findings);
+writeJson(path.join(runDir, 'checks', 'notes.json'), notes);
+const counts = findings.reduce((m, f) => ((m[f.severity] = (m[f.severity] || 0) + 1), m), {});
+console.log(`Checks: ${findings.length} findings ${JSON.stringify(counts)}; ${notes.length} notes`);
+console.log(`Wrote ${path.join(runDir, 'checks', 'findings.json')}`);

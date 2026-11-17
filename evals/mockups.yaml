@@ -1,0 +1,34 @@
+# Eval set: seeded-flaw and clean mockups with known expected findings (see expected.json).
+platform: ios
+product: PRODUCT.md
+design: DESIGN.md
+requires:
+  darkMode: true
+output: .runs
+mockups:
+  - id: login
+    title: Login
+    file: cases/login.html
+    notes: "Task 2, log in. Single screen."
+  - id: feed
+    title: Feed
+    file: cases/feed.html
+    notes: "Task 4, catch up on posts."
+    platform: android
+  - id: settings
+    title: Settings
+    file: cases/settings.html
+    notes: "Task 3, change a notification setting."
+  - id: trips
+    title: Home
+    file: cases/trips.html
+    notes: "Task 5, check my next trip."
+    platform: android
+  - id: welcome
+    title: Welcome
+    file: cases/welcome.html
+    notes: "Task 6, first-run welcome screen."
+  - id: checkout
+    title: Checkout
+    file: cases/checkout.html
+    notes: "Task 1, pay for the order. Reached from the cart; the error shows after a declined card."

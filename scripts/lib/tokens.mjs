@@ -1,0 +1,100 @@
+// Reads design tokens from DESIGN.md (YAML front matter) or a DTCG / Style Dictionary JSON file.
+// The parser is deliberately forgiving: it walks every value and classifies it by its key path,
+// so it works with Google's DESIGN.md layout and most hand-written token files.
+import fs from 'node:fs';
+import path from 'node:path';
+import YAML from 'yaml';
+
+const COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const RGB_RE = /^rgba?\(([^)]+)\)$/i;
+
+export function parseColor(v) {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  let m = s.match(COLOR_RE);
+  if (m) {
+    let h = m[1];
+    if (h.length <= 4) h = [...h].map((c) => c + c).join('');
+    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16), a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1 };
+  }
+  m = s.match(RGB_RE);
+  if (m) {
+    const [r, g, b, a = '1'] = m[1].split(/[\s,/]+/).filter(Boolean);
+    return { r: +r, g: +g, b: +b, a: parseFloat(a) };
+  }
+  return null;
+}
+
+export const toHex = (c) => '#' + [c.r, c.g, c.b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+
+function toPx(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return null;
+  const m = v.trim().match(/^(-?\d*\.?\d+)\s*(px|pt|dp|sp|rem|em)?$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  const unit = (m[2] || 'px').toLowerCase();
+  return unit === 'rem' || unit === 'em' ? n * 16 : n;
+}
+
+function frontMatter(text) {
+  const m = text.match(/^---\s*\n([\s\S]*?)\n---\s*(\n|$)/);
+  return m ? YAML.parse(m[1]) : null;
+}
+
+export function loadTokens(file) {
+  if (!file || !fs.existsSync(file)) return null;
+  const text = fs.readFileSync(file, 'utf8');
+  const data = path.extname(file).toLowerCase() === '.json' ? JSON.parse(text) : frontMatter(text);
+  if (!data) return null;
+
+  const colors = new Map();
+  const spacing = new Set();
+  const fontSizes = new Set();
+  const radii = new Set();
+
+  const visit = (node, keys) => {
+    if (node == null) return;
+    if (Array.isArray(node)) { node.forEach((v) => visit(v, keys)); return; }
+    if (typeof node === 'object') {
+      if ('$value' in node) { visit(node.$value, keys.concat(node.$type ? [node.$type] : [])); return; }
+      for (const [k, v] of Object.entries(node)) if (!k.startsWith('$')) visit(v, keys.concat(k));
+      return;
+    }
+    const pathStr = keys.join('.').toLowerCase();
+    const color = parseColor(String(node));
+    if (color) { colors.set(toHex(color), keys.join('.')); return; }
+    const px = toPx(node);
+    if (px == null) return;
+    if (/spac|space|gap|margin|padding|inset|gutter/.test(pathStr)) spacing.add(px);
+    else if (/(typ|font|text)/.test(pathStr) && /size|scale/.test(pathStr)) fontSizes.add(px);
+    else if (/round|radius|radii|corner|shape/.test(pathStr)) radii.add(px);
+  };
+  visit(data, []);
+
+  return {
+    source: file,
+    colors,
+    spacing: [...spacing].sort((a, b) => a - b),
+    fontSizes: [...fontSizes].sort((a, b) => a - b),
+    radii: [...radii].sort((a, b) => a - b),
+  };
+}
+
+export function colorDistance(a, b) {
+  return Math.sqrt((a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2);
+}
+
+export function nearestColor(hex, palette) {
+  const c = parseColor(hex);
+  let best = null;
+  for (const [tokHex, name] of palette) {
+    const d = colorDistance(c, parseColor(tokHex));
+    if (!best || d < best.d) best = { hex: tokHex, name, d };
+  }
+  return best;
+}
+
+export function onScale(value, scale, tolerance = 0.5) {
+  return scale.some((s) => Math.abs(s - value) <= tolerance);
+}

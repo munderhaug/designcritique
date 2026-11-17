@@ -1,0 +1,36 @@
+# designcritique config. Paths are relative to this file.
+platform: ios                 # ios | android | adaptive (checked against both)
+product: PRODUCT.md           # problem frame; create with /designcritique:frame
+design: DESIGN.md             # optional design tokens (YAML front matter)
+references: []                # optional images of what good looks like (Mobbin, Figma, screenshots)
+requires:
+  darkMode: true              # report a missing dark appearance as a finding
+# devices: [compact, standard]          # default; phone sizes per platform
+# variants: [light, dark, large-text]   # default
+# output: .designcritique/runs          # default
+
+mockups:
+  - id: login                 # letters, digits, - and _
+    title: Log in
+    file: mockups/login.html  # .html, .png/.jpg/.webp, .zip or a folder
+    flow: onboarding          # optional: screens of one flow, ordered by step
+    step: 1
+    notes: "Returning user, task 1 in PRODUCT.md"
+
+  # A Claude artifact: the critique skill pulls it into .designcritique/sources/<id>/ first.
+  # - id: home
+  #   artifact: https://claude.ai/artifact/XXXXXXXX
+  #   phone_frame: ".phone"   # if the page shows several phone frames side by side
+
+  # A zip or folder export: every HTML page (or image) becomes a screen.
+  # - id: prototype
+  #   file: exports/prototype.zip
+  #   entry: index.html       # optional: use just this page
+
+  # Two directions of the same screen, compared by the UI critic.
+  # - id: home-a
+  #   file: mockups/home-a.html
+  #   group: home-directions
+  # - id: home-b
+  #   file: mockups/home-b.html
+  #   group: home-directions

@@ -1,0 +1,12 @@
+# Smoke test for input types: zip, phone-frame canvas, image. Not scored.
+platform: ios
+output: ../.runs
+mockups:
+  - id: onboarding
+    file: onboarding.zip
+    flow: onboarding
+  - id: canvas
+    file: canvas.html
+    phone_frame: ".phone"
+  - id: exported
+    file: checkout-export.png

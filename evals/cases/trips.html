@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home</title>
+<style>
+  :root {
+    --primary: #2457D6; --on-primary: #FFFFFF; --surface: #FFFFFF; --on-surface: #16181D;
+    --on-surface-variant: #5B6170; --container: #F3F5F9; --outline: #D5D9E2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #8FB0FF; --on-primary: #0B1F55; --surface: #121418; --on-surface: #ECEEF3;
+      --on-surface-variant: #A8AEBB; --container: #1E2128; --outline: #363B46;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: var(--surface); color: var(--on-surface); font-size: 1rem; line-height: 1.5; padding-bottom: 8rem; }
+  button { font: inherit; color: inherit; background: none; border: 0; }
+  .appbar { display: flex; align-items: center; gap: 0.25rem; padding: 2rem 0.25rem 0.5rem 1rem; }
+  .appbar h1 { flex: 1; font-size: 1.375rem; font-weight: 400; }
+  .icon-btn { width: 3rem; height: 3rem; border-radius: 999px; display: grid; place-items: center; }
+  .icon-btn svg { width: 1.5rem; height: 1.5rem; }
+  .icon-btn svg circle, .icon-btn svg rect { fill: var(--on-surface-variant); }
+  .chips { display: flex; gap: 0.5rem; padding: 0.5rem 1rem 1rem; }
+  .chip { min-height: 3rem; padding: 0 1rem; border-radius: 0.5rem; border: 1px solid var(--outline); font-size: 0.875rem; }
+  .chip[aria-pressed="true"] { background: var(--container); }
+  .card { margin: 0 1rem 0.75rem; padding: 1rem; border-radius: 0.75rem; background: var(--container); }
+  .card h2 { font-size: 1rem; font-weight: 600; }
+  .card p { font-size: 0.875rem; color: var(--on-surface-variant); margin-top: 0.25rem; }
+  .card .actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
+  .text-btn { min-height: 3rem; padding: 0 0.75rem; border-radius: 999px; color: var(--primary); font-size: 0.875rem; font-weight: 600; }
+  .fab { position: fixed; right: 1rem; bottom: 7.5rem; width: 3.5rem; height: 3.5rem; border-radius: 1rem; background: var(--primary); display: grid; place-items: center; }
+  .fab svg { width: 1.5rem; height: 1.5rem; }
+  .fab svg rect { fill: var(--on-primary); }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--container); padding: 0.75rem 0 1.5rem; }
+  nav button { flex: 1; min-height: 3.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; color: var(--on-surface-variant); }
+  nav .pill { width: 4rem; height: 2rem; border-radius: 999px; display: grid; place-items: center; }
+  nav button[aria-current="page"] { color: var(--on-surface); }
+  nav button[aria-current="page"] .pill { background: var(--outline); }
+  nav svg { width: 1.5rem; height: 1.5rem; }
+  nav svg rect { fill: currentColor; }
+</style>
+</head>
+<body>
+  <div class="appbar">
+    <h1>Trips</h1>
+    <button class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/></svg></button>
+    <button class="icon-btn" aria-label="Account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></button>
+  </div>
+  <div class="chips" role="group" aria-label="Filter">
+    <button class="chip" aria-pressed="true">Upcoming</button>
+    <button class="chip" aria-pressed="false">Past</button>
+  </div>
+  <article class="card">
+    <h2>Lisbon, 12–16 Mar</h2>
+    <p>Flight TP 1347 departs 07:40. Check-in opens tomorrow.</p>
+    <div class="actions"><button class="text-btn">Details</button><button class="text-btn">Share</button></div>
+  </article>
+  <article class="card">
+    <h2>Oslo, 2–4 Apr</h2>
+    <p>Hotel booked. Add a flight to complete this trip.</p>
+    <div class="actions"><button class="text-btn">Add flight</button></div>
+  </article>
+  <button class="fab" aria-label="New trip"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="11" y="4" width="2" height="16"/><rect x="4" y="11" width="16" height="2"/></svg></button>
+  <nav aria-label="Main">
+    <button aria-current="page"><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/></svg></span>Trips</button>
+    <button><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="8"/></svg></span>Explore</button>
+    <button><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span>Saved</button>
+  </nav>
+</body>
+</html>
