@@ -177,5 +177,23 @@
     "critic": {
       "max_major": 0
     }
+  },
+  "activity": {
+    "checks": {
+      "must": [
+        "CHK-OBSCURED",
+        "CHK-LOOPING-MOTION"
+      ],
+      "must_not": [
+        "CHK-TARGET",
+        "CHK-SAFE-AREA",
+        "CHK-TEXT-SCALE",
+        "CHK-DARK",
+        "CHK-OVERFLOW"
+      ]
+    },
+    "critic": {
+      "must": []
+    }
   }
 }

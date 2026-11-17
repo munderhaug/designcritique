@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity</title>
+<style>
+  :root {
+    --primary: #2457D6; --on-primary: #FFFFFF; --surface: #FFFFFF; --on-surface: #16181D;
+    --on-surface-variant: #5B6170; --container: #F3F5F9; --outline: #D5D9E2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #8FB0FF; --on-primary: #0B1F55; --surface: #121418; --on-surface: #ECEEF3;
+      --on-surface-variant: #A8AEBB; --container: #1E2128; --outline: #363B46;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: var(--surface); color: var(--on-surface); font-size: 1rem; line-height: 1.5; }
+  button { font: inherit; color: inherit; background: none; border: 0; text-align: left; }
+  header { padding: 3rem 1rem 0.5rem; }
+  h1 { font-size: 1.75rem; font-weight: 700; }
+  .status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--on-surface-variant); }
+  .dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--primary); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.5); } }
+  ul { list-style: none; padding: 0.5rem 0; }
+  .row { width: 100%; min-height: 4rem; padding: 0.5rem 1rem; display: grid; grid-template-columns: 1fr auto; column-gap: 0.75rem; border-bottom: 1px solid var(--outline); }
+  .who { font-weight: 600; }
+  .what { grid-column: 1; font-size: 0.875rem; color: var(--on-surface-variant); }
+  .when { grid-column: 2; grid-row: 1; font-size: 0.875rem; color: var(--on-surface-variant); }
+  .more { display: block; margin: 1rem; width: calc(100% - 2rem); min-height: 3rem; border-radius: 0.75rem; background: var(--primary); color: var(--on-primary); font-weight: 600; text-align: center; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--container); padding: 0.5rem 0 2.5rem; border-top: 1px solid var(--outline); }
+  nav button { flex: 1; min-height: 3rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; color: var(--on-surface-variant); text-align: center; }
+  nav button[aria-current="page"] { color: var(--primary); }
+  nav svg { width: 1.5rem; height: 1.5rem; }
+  nav svg rect { fill: currentColor; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Activity</h1>
+    <p class="status"><span class="dot" aria-hidden="true"></span>Updated just now</p>
+  </header>
+  <ul>
+    <li><button class="row"><span class="who">Maja Lind</span><span class="what">Shared a list with you</span><span class="when">09:12</span></button></li>
+    <li><button class="row"><span class="who">Team planning</span><span class="what">3 new comments</span><span class="when">08:55</span></button></li>
+    <li><button class="row"><span class="who">Jonas Berg</span><span class="what">Replied to your note</span><span class="when">08:40</span></button></li>
+    <li><button class="row"><span class="who">Weekly summary</span><span class="what">Ready to read</span><span class="when">07:30</span></button></li>
+    <li><button class="row"><span class="who">Ana Sousa</span><span class="what">Added you to a group</span><span class="when">Yesterday</span></button></li>
+    <li><button class="row"><span class="who">Reminders</span><span class="what">2 due today</span><span class="when">Yesterday</span></button></li>
+    <li><button class="row"><span class="who">Leo Martin</span><span class="what">Liked your photo</span><span class="when">Yesterday</span></button></li>
+    <li><button class="row"><span class="who">Design review</span><span class="what">Moved to Friday</span><span class="when">Mon</span></button></li>
+    <li><button class="row"><span class="who">Priya Shah</span><span class="what">Sent a file</span><span class="when">Mon</span></button></li>
+    <li><button class="row"><span class="who">Book club</span><span class="what">New event: 14 Mar</span><span class="when">Sun</span></button></li>
+    <li><button class="row"><span class="who">Tom Weber</span><span class="what">Mentioned you</span><span class="when">Sun</span></button></li>
+    <li><button class="row"><span class="who">Storage</span><span class="what">80% used</span><span class="when">Sat</span></button></li>
+    <li><button class="row"><span class="who">Eva Novak</span><span class="what">Accepted your invite</span><span class="when">Sat</span></button></li>
+    <li><button class="row"><span class="who">Monthly report</span><span class="what">Ready to read</span><span class="when">Fri</span></button></li>
+    <li><button class="row"><span class="who">Sam Olsen</span><span class="what">Started following you</span><span class="when">Fri</span></button></li>
+    <li><button class="row"><span class="who">Garden group</span><span class="what">5 new posts</span><span class="when">Thu</span></button></li>
+  </ul>
+  <button class="more">Show older activity</button>
+  <nav aria-label="Main">
+    <button><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/></svg>Home</button>
+    <button aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="8"/></svg>Activity</button>
+    <button><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Profile</button>
+  </nav>
+</body>
+</html>

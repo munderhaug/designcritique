@@ -40,3 +40,7 @@ mockups:
     title: Choices
     file: cases/choices.html
     notes: "Task 7, choose what to share."
+  - id: activity
+    title: Activity
+    file: cases/activity.html
+    notes: "Task 4, catch up on what happened."

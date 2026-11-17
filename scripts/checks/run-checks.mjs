@@ -54,6 +54,8 @@ const BASIS = {
   'CHK-TOKEN-SPACE': () => ['NN-H4', 'VIS-SPACING'],
   'CHK-TOKEN-TYPE': () => ['NN-H4', 'VIS-TYPE'],
   'CHK-TOKEN-RADIUS': (p) => ['NN-H4', p === 'ios' ? 'IOS-LAYOUT' : 'AND-SHAPE'],
+  'CHK-LOOPING-MOTION': (p) => ['WCAG-2.2.2', 'VIS-MOTION', p === 'ios' ? 'IOS-MOTION' : 'AND-MOTION'],
+  'CHK-OBSCURED': (p) => ['WCAG-2.4.11', p === 'ios' ? 'IOS-LAYOUT' : 'AND-LAYOUT'],
   'CHK-PRESELECTED-CONSENT': () => ['ETHICS-PRESELECTED', 'NN-H3'],
   'CHK-ASYMMETRIC-CHOICE': () => ['ETHICS-ASYMMETRY', 'VIS-HIERARCHY'],
   'CHK-CONFIRMSHAMING': () => ['ETHICS-CONFIRMSHAMING', 'NN-H2'],
@@ -276,6 +278,31 @@ for (const screen of manifest.screens) {
           `\nSafe insets on ${main.deviceName}: ${main.safeTop} top / ${main.safeBottom} bottom.`,
         recommendation: 'Keep controls inside the safe area: pad bars by the top and bottom insets (safeAreaInset / WindowInsets).',
         seenIn: [tagOf(main)], key: where,
+      });
+    }
+
+    // --- controls hidden under fixed bars, even scrolled as far as the page goes ---
+    for (const el of mainData.obscured || []) {
+      add({
+        ...base, rule: 'CHK-OBSCURED', category: 'layout', severity: el.entirely || el.filled ? 'P1' : 'P2',
+        title: `${el.name ? `"${el.name}"` : `A ${el.tag}`} stays ${el.entirely ? 'hidden' : 'partly hidden'} under fixed content`,
+        element: { selector: el.selector, name: el.name },
+        evidence: `Scrolled as far as the page allows on ${main.deviceName}, the ${el.tag}${el.name ? ` "${el.name}"` : ''} is ${el.entirely ? 'entirely' : 'partly (its centre)'} covered by ${el.by} (${el.byBox.w}×${el.byBox.h} at y=${el.byBox.y}).`,
+        recommendation: 'Pad the scrolling content by the height of the fixed bar (and the bottom inset), so the last controls can scroll clear of it.',
+        seenIn: [tagOf(main)], key: el.selector,
+      });
+    }
+
+    // --- looping motion that can't be paused (WCAG 2.2.2); loading indicators are exempt ---
+    const loops = (mainData.looping || []).filter((l) => !l.busy && !vocab.states.loading.test(l.label));
+    if (loops.length) {
+      add({
+        ...base, rule: 'CHK-LOOPING-MOTION', category: 'visual', severity: 'P2',
+        title: `${loops.length} element(s) animate in an endless loop`,
+        element: { selector: loops[0].selector, box: loops[0].box },
+        evidence: loops.slice(0, 5).map((l) => `${l.selector} (${l.animation})${l.label ? ` near "${l.label.slice(0, 40)}"` : ''}`).join('\n'),
+        recommendation: 'Stop decorative loops after a few cycles (under 5 seconds), or give a way to pause them, and remove them under reduce motion. Keep endless motion for loading indicators, marked as such (role="progressbar" or aria-busy).',
+        seenIn: [tagOf(main)], key: 'looping',
       });
     }
 

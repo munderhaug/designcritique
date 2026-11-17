@@ -75,6 +75,8 @@ const GROUP_TITLES = {
   'CHK-TOKEN-SPACE': 'Spacing off the token scale',
   'CHK-TOKEN-TYPE': 'Font sizes off the token scale',
   'CHK-TOKEN-RADIUS': 'Corner radii off the token scale',
+  'CHK-OBSCURED': 'Controls stay hidden under fixed bars',
+  'CHK-LOOPING-MOTION': 'Decorative animation loops without end',
 };
 
 /** One finding per check rule (and cause, for safe areas), listing every screen it fails on. */

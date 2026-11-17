@@ -22,7 +22,7 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Problem framing (PRODUCT.md) | Impeccable `init` (Paul Bakaus) | Problem, ranked Key Tasks and Success Criteria (ISO 9241-210/-11, jobs to be done), evidence tags |
 | References | Mobbin MCP or Refero MCP (official) | How to pick and cite comparable screens per key task |
 | Rendering | Playwright (Microsoft) | Phone sizes per platform; light, dark and large-text variants; zip, folder, artifact and phone-frame inputs; single-page app states reached by `steps:` and a `setup:` script |
-| Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, text overlapping text at large sizes (thresholds after AutoDesign's DOM audit), token drift against DESIGN.md |
+| Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, text overlapping text at large sizes (thresholds after AutoDesign's DOM audit), controls that stay hidden under fixed bars however far you scroll (WCAG 2.4.11), decorative animation that loops without end (WCAG 2.2.2), token drift against DESIGN.md |
 | Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
 | Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
 | Platform guidance | Material 3 skill (hamen), Expo skills, when installed | Routing the right guidance to the reviewer |

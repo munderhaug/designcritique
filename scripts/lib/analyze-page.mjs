@@ -228,6 +228,72 @@ export function analyzePage({ frameAttr }) {
     }
   }
 
+  // Looping motion (WCAG 2.2.2). Capture freezes animation timing, but the computed iteration
+  // count survives, so an infinite animation is still visible here. Loading indicators are
+  // exempt: a progressbar, a busy region, or a status region.
+  const looping = [];
+  const busy = (el) => !!el.closest('[role=progressbar],[aria-busy=true],[role=status],progress');
+  const labelOf = (el) => (el.getAttribute('aria-label') || el.closest('[aria-label]')?.getAttribute('aria-label') || el.textContent || el.parentElement?.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+  for (const el of all) {
+    const s = getComputedStyle(el);
+    const infinite = s.animationName && s.animationName !== 'none' && s.animationIterationCount.split(',').some((c) => c.trim() === 'infinite');
+    const svgLoop = el.tagName.toLowerCase().startsWith('animate') && el.getAttribute('repeatCount') === 'indefinite';
+    const marquee = el.tagName === 'MARQUEE';
+    if (!infinite && !svgLoop && !marquee) continue;
+    const target = svgLoop ? (el.closest('svg') || el.parentElement) : el;
+    if (!visible(target)) continue;
+    looping.push({ selector: cssPath(target), box: box(target), animation: svgLoop ? 'svg animate' : marquee ? 'marquee' : s.animationName, label: labelOf(target), busy: busy(target), fixed: fixedAncestor(target) });
+    if (looping.length >= 20) break;
+  }
+
+  // Controls hidden under fixed or sticky content (tab bars, headers, floating buttons) even
+  // when scrolled as far as the page allows (WCAG 2.4.11, platform safe layout). Each control is
+  // scrolled to the middle of the screen, then hit-tested. An overlay covering most of the screen
+  // (a dialog's scrim) hides what's behind it on purpose and is ignored.
+  const obscured = [];
+  if (!frameAttr) {
+    const scrollers = all.filter((e) => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1).map((e) => [e, e.scrollTop, e.scrollLeft]);
+    const winX = window.scrollX; const winY = window.scrollY;
+    const vw = window.innerWidth; const vh = window.innerHeight;
+    const fixedRoot = (el) => {
+      let found = null;
+      for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+        const p = getComputedStyle(e).position;
+        if (p === 'fixed' || p === 'sticky') found = e;
+      }
+      return found;
+    };
+    const candidates = [...root.querySelectorAll(INTERACTIVE)].filter((el) => visible(el) && !fixedAncestor(el) && !el.closest('[aria-hidden=true],[inert]')).slice(0, 150);
+    for (const el of candidates) {
+      el.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const r = el.getBoundingClientRect();
+      const points = [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]]
+        .map(([fx, fy]) => [r.left + r.width * fx, r.top + r.height * fy])
+        .filter(([x, y]) => x >= 0 && y >= 0 && x < vw && y < vh);
+      if (!points.length) continue;
+      let covered = 0; let by = null; let centreCovered = false;
+      points.forEach(([x, y], i) => {
+        const top = document.elementFromPoint(x, y);
+        if (!top || top === el || el.contains(top) || top.contains(el)) return;
+        const cover = fixedRoot(top);
+        if (!cover) return;
+        const cr = cover.getBoundingClientRect();
+        if (cr.width * cr.height > vw * vh * 0.4) return;
+        covered++;
+        if (i === 0) centreCovered = true;
+        by = by || cover;
+      });
+      if (!centreCovered) continue;
+      const s = getComputedStyle(el);
+      const filled = parseColor(s.backgroundColor)?.a >= 0.99 && colorKey(s.backgroundColor) !== effectiveBg(el.parentElement || document.body);
+      let name = el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('placeholder') || '';
+      obscured.push({ selector: cssPath(el), tag: el.tagName.toLowerCase(), name: name.trim().replace(/\s+/g, ' ').slice(0, 80), entirely: covered === points.length, filled, by: cssPath(by), byBox: box(by) });
+      if (obscured.length >= 10) break;
+    }
+    for (const [e, t, l] of scrollers) { e.scrollTop = t; e.scrollLeft = l; }
+    window.scrollTo(winX, winY);
+  }
+
   const hasViewportMeta = !!document.querySelector('meta[name=viewport]');
   // Pages that pad with env(safe-area-inset-*) handle insets themselves, but a desktop browser
   // reports those insets as 0, so the safe-area check can't judge them from a render.
@@ -256,5 +322,7 @@ export function analyzePage({ frameAttr }) {
     fontSizes,
     radii,
     overflowing,
+    looping,
+    obscured,
   };
 }

@@ -31,6 +31,9 @@
   .card p { font-size: 0.875rem; color: var(--on-surface-variant); margin-top: 0.25rem; }
   .card .actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
   .text-btn { min-height: 3rem; padding: 0 0.75rem; border-radius: 999px; color: var(--primary); font-size: 0.875rem; font-weight: 600; }
+  .loading { display: flex; align-items: center; gap: 0.75rem; margin: 0 1rem; font-size: 0.875rem; color: var(--on-surface-variant); }
+  .spinner { width: 1.5rem; height: 1.5rem; border-radius: 999px; border: 2px solid var(--outline); border-top-color: var(--primary); animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .fab { position: fixed; right: 1rem; bottom: 7.5rem; width: 3.5rem; height: 3.5rem; border-radius: 1rem; background: var(--primary); display: grid; place-items: center; }
   .fab svg { width: 1.5rem; height: 1.5rem; }
   .fab svg rect { fill: var(--on-primary); }
@@ -63,6 +66,7 @@
     <p>Hotel booked. Add a flight to complete this trip.</p>
     <div class="actions"><button class="text-btn">Add flight</button></div>
   </article>
+  <div class="loading"><div class="spinner" role="progressbar" aria-label="Loading past trips"></div>Loading past trips</div>
   <button class="fab" aria-label="New trip"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="11" y="4" width="2" height="16"/><rect x="4" y="11" width="16" height="2"/></svg></button>
   <nav aria-label="Main">
     <button aria-current="page"><span class="pill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/></svg></span>Trips</button>

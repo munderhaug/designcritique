@@ -1,6 +1,6 @@
 # Evals
 
-Calibration set for designcritique. Six single screens from different apps with known
+Calibration set for designcritique. Nine single screens from different apps with known
 problems (or none), plus input-type fixtures.
 
 ```bash
@@ -24,7 +24,12 @@ mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 - **checkout**: Seeded flaws (critic): no way back from the checkout, placeholder-only form fields, a vague error message, the order total far from the pay button, and "Delete order" styled exactly like "Pay now". Tokens, contrast, targets and type scaling are all fine, so checks should stay quiet.
 - **login**: Seeded flaws (checks): px-only type (no text scaling), 28px close button with no label in the status-bar area, 24px icon-only password toggle, low-contrast helper and legal text, 10px legal text, off-token orange and greys, off-scale spacing, a 420px social row that overflows, no dark mode.
 - **welcome**: Seeded flaws (critic): generic purple-blue gradient hero, emoji used as feature icons, everything centred in identical cards, three competing primary buttons, made-up stats, a hamburger menu as primary navigation on iOS, and a web-style footer link row.
-- **settings**, **trips**: clean. Token-compliant, accessible, dark mode, scalable type.
+- **settings**, **trips**: clean. Token-compliant, accessible, dark mode, scalable type. Trips
+  also shows a loading spinner (an endless animation marked as a progress bar), which must not
+  count as looping motion.
+- **activity**: Seeded flaws (checks): a long list under a fixed tab bar with no bottom padding,
+  so its last button can never scroll clear of the bar, and a small dot pulsing without end next to
+  the status line.
 - **signup**: Seeded flaws (checks): marketing and data-sharing switches already on, a large filled
   "accept all" button against a small grey decline link, and a decline option worded to shame.
 - **choices**: clean. The same choices, off by default, with equal-weight accept and reject.
