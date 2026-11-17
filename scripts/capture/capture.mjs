@@ -33,6 +33,7 @@ const manifest = {
   baseDir: cfg.baseDir,
   product: existing(cfg.product),
   design: existing(cfg.design),
+  content: existing(cfg.content),
   references: cfg.references.filter((r) => fs.existsSync(r)),
   requires: cfg.requires,
   critics: cfg.critics,
@@ -259,6 +260,7 @@ function stepLabel(st) {
 if (manifest.product) { fs.copyFileSync(manifest.product, path.join(runDir, 'framing.md')); manifest.framingSnapshot = 'framing.md'; }
 else manifest.warnings.push('No PRODUCT.md: run the frame skill first so the critique can judge task fit.');
 if (manifest.design) { fs.copyFileSync(manifest.design, path.join(runDir, 'DESIGN.md')); manifest.designSnapshot = 'DESIGN.md'; }
+if (manifest.content) { fs.copyFileSync(manifest.content, path.join(runDir, 'content.md')); manifest.contentSnapshot = 'content.md'; }
 
 // The references you chose for the direction (taste), copied so critics read them inside the run.
 if (cfg.taste.length) {

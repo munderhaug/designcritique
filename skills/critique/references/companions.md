@@ -55,6 +55,11 @@ Reviewed against the primary sources in the principles index. Re-check before ad
 | ui-ux-pro-max (nextlevelbuilder) | A generator over large CSV data, most rows without sources; runs Python and writes into the project. Its accurate rules are already in the index |
 | ux-ui-agent-skills (plugin87) | Hooks on every Write/Edit and a blocking Stop hook; brand design systems scraped from websites, some with failing contrast pairs |
 | sumi (Phazur Labs), interface-design (Dammyjay93), mobile-app-ui-design (ceorkm) | Web-first, duplicate Impeccable's critique, or unlicensed and unsourced |
+| `@google/design.md` linter (Google Labs) | Alpha, 92 transitive packages, and its schema rejects the forgiving token formats designcritique reads (it parses this plugin's own template as having no colours). designcritique's token checks cover contrast and roles |
+| Vale (errata-ai) | A Go binary, not installable with npm; the glossary check reads the same idea (term, avoid) from the content guide instead |
+| Crawljax, DroidBot, TESTAR | Java or Python and Android-only or heavyweight; their methods (state-flow crawling, two-level state IDs, replay to backtrack) are reimplemented in scripts/crawl/ with citations |
+| LLM browser agents (Playwright MCP, agent-browser, Stagehand, browser-use) | Explore one action at a time, nondeterministically, at model cost; no exhaustive state graph |
+| IA, OOUX, JTBD, opportunity-tree and state-matrix skills on GitHub | 0–8 stars, no credible author or sources; the lenses cite the primary sources directly |
 
 ## Why the principles index exists
 

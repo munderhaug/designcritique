@@ -1,6 +1,39 @@
 {
   "$comment": "Whole-product review eval. seeded must raise every rule in must; clean must raise none of the rules in watch. Rules come from checks/structure.json and checks/consistency.json.",
-  "watch": ["CHK-NO-WAY-BACK", "CHK-DEAD-END", "CHK-NAV-INCONSISTENT", "CHK-ORPHAN", "CHK-DEPTH", "CHK-LOOP-OPEN", "CHK-SPEC-NAV-ORDER", "CHK-SCOPE-OUT", "CHK-JOURNEY-BROKEN", "CHK-JOURNEY-END"],
-  "seeded": { "must": ["CHK-NO-WAY-BACK", "CHK-DEAD-END", "CHK-NAV-INCONSISTENT", "CHK-ORPHAN", "CHK-DEPTH", "CHK-LOOP-OPEN", "CHK-SPEC-NAV-ORDER", "CHK-SCOPE-OUT"] },
-  "clean": { "must": [] }
+  "watch": [
+    "CHK-NO-WAY-BACK",
+    "CHK-DEAD-END",
+    "CHK-NAV-INCONSISTENT",
+    "CHK-ORPHAN",
+    "CHK-DEPTH",
+    "CHK-LOOP-OPEN",
+    "CHK-SPEC-NAV-ORDER",
+    "CHK-SCOPE-OUT",
+    "CHK-JOURNEY-BROKEN",
+    "CHK-JOURNEY-END",
+    "CHK-COMPONENT-VARIANTS",
+    "CHK-ICON-MEANING",
+    "CHK-TERM",
+    "CHK-FIGURES-DISAGREE",
+    "CHK-FORMAT"
+  ],
+  "seeded": {
+    "must": [
+      "CHK-NO-WAY-BACK",
+      "CHK-DEAD-END",
+      "CHK-NAV-INCONSISTENT",
+      "CHK-ORPHAN",
+      "CHK-DEPTH",
+      "CHK-LOOP-OPEN",
+      "CHK-SPEC-NAV-ORDER",
+      "CHK-SCOPE-OUT",
+      "CHK-COMPONENT-VARIANTS",
+      "CHK-ICON-MEANING",
+      "CHK-TERM",
+      "CHK-FIGURES-DISAGREE"
+    ]
+  },
+  "clean": {
+    "must": []
+  }
 }

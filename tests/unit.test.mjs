@@ -391,3 +391,37 @@ test('vocabulary: per-language words, English always, project additions', () => 
   assert.ok(de.states.partial.test('2 von 5'));
   assert.deepEqual(loadVocabulary(['en', 'xx']).unknown, ['xx']);
 });
+
+import { componentVariants, iconMeanings, parseGlossary, termUses, amountFormats, figuresThatDisagree } from '../scripts/lib/consistency.mjs';
+
+test('consistency: component variants, icon meanings, glossary, formats, figures', () => {
+  const accent = '#2457D6';
+  const ctl = (screen, name, style, icon = null) => ({ screen, name, style, icon });
+  const filled = { bg: '#2457d6', color: '#ffffff', border: null, radius: 12, weight: '600' };
+  const v = componentVariants([
+    ctl('a', 'Pay', filled), ctl('b', 'Save', filled),
+    ctl('c', 'Open', { ...filled, radius: 999, weight: '700' }),
+    ctl('d', 'Save', { bg: null, color: '#2457d6', border: '#2457d6', radius: 4, weight: '600' }),
+    ctl('e', 'Menu', { bg: '#f3f5f9', color: '#16181d', border: null, radius: 12, weight: '400' }),
+  ], accent);
+  assert.equal(v.length, 3);
+  assert.equal(v[0].count, 2);
+  const icons = iconMeanings([ctl('a', 'Security', null, 'use:#shield'), ctl('b', 'Card lost', null, 'use:#shield'), ctl('c', 'Security', null, 'use:#shield'), ctl('d', 'Home', null, 'use:#home')]);
+  assert.equal(icons.length, 1);
+  assert.deepEqual(icons[0].meanings.map((m) => m.name), ['Security', 'Card lost']);
+  const g = parseGlossary('# Guide\n\n## Glossary\n| Term | Meaning | Avoid |\n|---|---|---|\n| Account | Money | Wallet, Pocket |\n\n## Vale\nswap:\n  basket: cart\n');
+  assert.deepEqual(g, [{ term: 'Account', avoid: ['Wallet', 'Pocket'] }, { term: 'cart', avoid: ['basket'] }]);
+  assert.deepEqual(termUses([{ id: 'x', text: 'Open a wallet' }, { id: 'y', text: 'Accounts' }], g), [{ avoid: 'Wallet', use: 'Account', screens: ['x'] }]);
+  const f = amountFormats([{ screen: 'a', text: 'Balance 1,240.00' }, { screen: 'b', text: 'Total 1 240,00 kr' }, { screen: 'c', text: 'Since 2024, card ends in 4821' }]);
+  assert.deepEqual(f.map((x) => x.format).sort(), ['grouping comma, decimal dot', 'grouping space, decimal comma']);
+  assert.deepEqual(f.find((x) => x.format.startsWith('grouping comma')).examples, ['1,240.00']);
+  const d = figuresThatDisagree([
+    { screen: 'home', family: 'h', text: 'Your money\nBalance 1,240.00\n3 accounts' },
+    { screen: 'acc', family: 'a', text: 'Balance 1,204.00' },
+    { screen: 'acc2', family: 'a', text: 'Balance 1,204.00' },
+    { screen: 'x', family: 'x', text: 'Step 2' },
+    { screen: 'y', family: 'y', text: 'Step 3' },
+  ]);
+  assert.equal(d.length, 1, 'small counters like "Step 2" may differ');
+  assert.deepEqual(d[0].values.map((x) => x.value), ['1,240.00', '1,204.00']);
+});

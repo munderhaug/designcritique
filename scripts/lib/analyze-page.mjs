@@ -77,6 +77,25 @@ export function analyzePage({ frameAttr }) {
 
   const all = [...root.querySelectorAll('*')].filter((el) => !['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'TITLE', 'NOSCRIPT', 'TEMPLATE'].includes(el.tagName));
 
+  // Which icon a control shows: an SVG symbol it uses, a hash of its inline SVG, an image, or a
+  // leading emoji. Used to find one icon with two meanings.
+  const iconSignature = (el) => {
+    const svg = el.querySelector('svg');
+    if (svg) {
+      const use = svg.querySelector('use');
+      if (use) return `use:${use.getAttribute('href') || use.getAttribute('xlink:href')}`;
+      const src = svg.innerHTML.replace(/\s+/g, ' ').trim();
+      if (!src) return null;
+      let h = 0;
+      for (let i = 0; i < src.length; i++) h = (h * 31 + src.charCodeAt(i)) | 0;
+      return `svg:${(h >>> 0).toString(16)}`;
+    }
+    const img = el.querySelector('img');
+    if (img) return `img:${(img.getAttribute('src') || '').split('/').pop().split('?')[0]}`;
+    const m = (el.textContent || '').trim().match(/^\p{Extended_Pictographic}/u);
+    return m ? `emoji:${m[0]}` : null;
+  };
+
   // Interactive targets
   const INTERACTIVE = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=tab],[role=switch],[role=checkbox],[role=radio],[role=menuitem],[role=option],[onclick],[tabindex]:not([tabindex="-1"])';
   const interactive = [];
@@ -100,6 +119,12 @@ export function analyzePage({ frameAttr }) {
       inlineInText: s.display === 'inline' && parentText,
       fixed: fixedAncestor(el),
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
+      style: {
+        bg: colorKey(s.backgroundColor), color: colorKey(s.color),
+        border: parseFloat(s.borderTopWidth) > 0 && s.borderTopStyle !== 'none' ? colorKey(s.borderTopColor) : null,
+        radius: Math.round(parseFloat(s.borderTopLeftRadius) || 0), weight: s.fontWeight, size: Math.round(parseFloat(s.fontSize)),
+      },
+      icon: iconSignature(el),
     });
   }
 

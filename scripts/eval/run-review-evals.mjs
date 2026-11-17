@@ -23,6 +23,7 @@ for (const variant of ['seeded', 'clean']) {
   run('scripts/capture/capture.mjs', ['--config', config, '--out', out, '--inventory', path.join(out, 'inventory.json'), '--offline']);
   run('scripts/checks/run-checks.mjs', ['--run', out]);
   run('scripts/checks/structure.mjs', ['--run', out]);
+  run('scripts/checks/consistency.mjs', ['--run', out]);
   const found = ['structure.json', 'consistency.json'].flatMap((f) => {
     const p = path.join(out, 'checks', f);
     return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : [];

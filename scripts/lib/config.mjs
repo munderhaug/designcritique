@@ -40,6 +40,7 @@ export function loadConfig(configPath) {
     platform,
     product: rel(raw.product),
     design: rel(raw.design),
+    content: rel(raw.content),
     references: (raw.references || []).map(rel),
     devices: raw.devices || DEFAULT_DEVICES,
     variants: raw.variants || DEFAULT_VARIANTS,

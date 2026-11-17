@@ -40,6 +40,24 @@ export const COMPANIONS = {
     install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins',
     by: 'Anthropic, official',
   },
+  'design-system': {
+    skill: 'design-system',
+    use: 'Review (system lens): consistency audit method (Anthropic design plugin).',
+    install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins',
+    by: 'Anthropic, official',
+  },
+  'product-brainstorming': {
+    skill: 'product-brainstorming',
+    use: 'Review (scope lens): jobs to be done and opportunity solution trees, used as tests (Anthropic product-management plugin).',
+    install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install product-management@knowledge-work-plugins',
+    by: 'Anthropic, official',
+  },
+  'write-spec': {
+    skill: 'write-spec',
+    use: 'Review (scope lens): scope, non-goals and scope creep (Anthropic product-management plugin).',
+    install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install product-management@knowledge-work-plugins',
+    by: 'Anthropic, official',
+  },
   impeccable: {
     skill: 'impeccable',
     use: 'Core: init writes PRODUCT.md (frame skill); critique is one of the two critics.',

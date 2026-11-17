@@ -22,6 +22,7 @@ const checkFindings = [
   ...readJson(path.join(runDir, 'checks', 'findings.json'), []),
   ...readJson(path.join(runDir, 'checks', 'motion.json'), []),
   ...readJson(path.join(runDir, 'checks', 'structure.json'), []),
+  ...readJson(path.join(runDir, 'checks', 'consistency.json'), []),
 ];
 const notes = [
   ...readJson(path.join(runDir, 'checks', 'notes.json'), []),

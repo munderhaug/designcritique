@@ -10,8 +10,8 @@
   "properties": {
     "critic": {
       "type": "string",
-      "description": "anthropic-design, impeccable, or external-<name> for an extra judge (see critic-brief.md)",
-      "pattern": "^(anthropic-design|impeccable|external-[a-z0-9-]+)$"
+      "description": "anthropic-design, impeccable, the review lenses ia, scope and system, or external-<name> for an extra judge",
+      "pattern": "^(anthropic-design|impeccable|ia|scope|system|external-[a-z0-9-]+)$"
     },
     "frame_check": {
       "type": "object",

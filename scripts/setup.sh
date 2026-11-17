@@ -76,6 +76,15 @@ if [[ $INSTALL -eq 1 ]]; then
     echo "  The plugin installer wasn't available or failed; copying the design skills from GitHub."
     from_github anthropics/knowledge-work-plugins design/skills design-critique accessibility-review ux-copy user-research design-system
   fi
+
+  echo "Installing Anthropic's product-management plugin (scope lens of /designcritique:review)…"
+  if [[ $ONLY -eq 0 ]] && command -v claude >/dev/null 2>&1 \
+    && claude plugin install product-management@knowledge-work-plugins; then
+    :
+  else
+    echo "  The plugin installer wasn't available or failed; copying the skills from GitHub."
+    from_github anthropics/knowledge-work-plugins product-management/skills product-brainstorming write-spec
+  fi
 fi
 
 if [[ $ONLY -eq 1 ]]; then
