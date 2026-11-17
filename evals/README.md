@@ -50,7 +50,10 @@ of systems where the reader finds colours, an action, surface and text role, a t
 spacing scale drops below the thresholds in the script, or when the reader produces values no
 design system holds (a font size under 6px, a negative step). Systems that describe spacing only
 in words ("comfortable density mode") are fair misses. The corpus is eval data: nothing from it
-is copied into this repo, and brand-named systems are never offered as starting points.
+is copied into this repo, and brand-named systems are never offered as starting points. Each
+offered style is also converted into a phone-app starting point for iOS and Android, which must
+keep its colours and surface role, carry exactly the platform's type scale, and have no website
+layout left (grids, max widths, breakpoints).
 
 At 2026-11-17: parsed 152/152, colours 152, action role 135, surface 150, text 148, type scale
 131, spacing scale 123. Checks flagged: essentials 134, spacing not 4-based 72, roles 61,

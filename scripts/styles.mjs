@@ -5,8 +5,10 @@
 //   node scripts/styles.mjs list [--dir <open-design checkout>]
 //   node scripts/styles.mjs use <id> --platform ios|android [--out DESIGN.md] [--force]
 //
-// `use` writes the style's DESIGN.md with an attribution notice, adds the platform's own type
-// scale when the style has no numeric one, and prints the design-system checks for it.
+// The styles were written for websites. `use` keeps what carries over to a phone app (intent,
+// colour, font families, spacing scale, corner radii, voice), replaces the type sizes with the
+// platform's, points layout, navigation, components and motion at the HIG or Material 3, adds an
+// attribution notice and prints the design-system checks (scripts/lib/styles.mjs).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,18 +18,12 @@ import { parseArgs } from './lib/config.mjs';
 import { loadTokens } from './lib/tokens.mjs';
 import { designSystemFindings } from './checks/design-system.mjs';
 import { OPEN_DESIGN, openDesignSystems } from './lib/corpus.mjs';
+import { mobileStartingPoint } from './lib/styles.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalog = YAML.parse(fs.readFileSync(path.join(ROOT, 'catalog', 'styles.yaml'), 'utf8'));
 const args = parseArgs(process.argv.slice(2));
 const [cmd, id] = args._;
-
-// Platform text styles at the default size, from the primary sources: Apple HIG, Typography,
-// Dynamic Type sizes (Large); Material 3, Type scale (display, headline, title, body, label).
-export const PLATFORM_TYPE = {
-  ios: { scale: [11, 12, 13, 15, 16, 17, 20, 22, 28, 34], source: 'Apple Human Interface Guidelines, Typography: Dynamic Type sizes at the default (Large) setting' },
-  android: { scale: [11, 12, 14, 16, 22, 24, 28, 32, 36, 45, 57], source: 'Material Design 3, Type scale: label, body, title, headline and display roles' },
-};
 
 const allowed = new Map(Object.entries(catalog.families).flatMap(([family, ids]) => ids.map((x) => [x, family])));
 if (catalog.source.commit !== OPEN_DESIGN.commit) {
@@ -67,28 +63,21 @@ if (cmd === 'use') {
   const out = path.resolve(args.out || 'DESIGN.md');
   if (fs.existsSync(out) && !args.force) { console.error(`${out} exists; pass --force to replace it, or --out another path.`); process.exit(2); }
   const src = path.join(systems(), id, 'DESIGN.md');
-  const original = fs.readFileSync(src, 'utf8');
+  const { text, kept, dropped } = mobileStartingPoint(fs.readFileSync(src, 'utf8'), platform);
   const notice = [
     '<!--',
     `Starting point: the "${id}" style family (${allowed.get(id)}) from open-design, ${catalog.source.repo}`,
     `(${catalog.source.path.replace('<id>', id)} at commit ${catalog.source.commit.slice(0, 7)}), by ${catalog.source.by},`,
-    `licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0).`,
-    'Changes: this notice was added' + '%TYPE%' + '. Adapt everything else to your product.',
+    'licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0).',
+    `Changes for ${platform === 'ios' ? 'an iOS' : 'an Android'} app: kept ${kept.join(', ') || 'nothing'}; removed ${dropped.join(', ') || 'nothing'};`,
+    'removed web type sizes, grids and breakpoints; added the platform type scale and a pointer to its guidelines.',
     '-->',
     '',
   ].join('\n');
-  let body = original;
-  const tokens0 = loadTokens(src);
-  let typeNote = '';
-  if (!tokens0 || tokens0.fontSizes.length < 3) {
-    const p = PLATFORM_TYPE[platform];
-    body = `${original.trimEnd()}\n\n## Platform type scale\n\n- **Type scale:** ${p.scale.join('/')}\n- Source: ${p.source}. Use the platform text styles so text follows the user's text size setting.\n`;
-    typeNote = `, and a "Platform type scale" section (${platform}) because the style has no numeric type scale`;
-  }
-  fs.writeFileSync(out, notice.replace('%TYPE%', typeNote) + body);
+  fs.writeFileSync(out, notice + text);
   const found = checks(out);
-  console.log(`Wrote ${out} from the "${id}" style family (${allowed.get(id)}).`);
-  if (typeNote) console.log(`Added the ${platform} type scale (${PLATFORM_TYPE[platform].scale.join('/')}).`);
+  console.log(`Wrote ${out} from the "${id}" style family (${allowed.get(id)}), for ${platform}.`);
+  console.log(`Kept: ${kept.join(', ')}. Removed (website-specific): ${dropped.join(', ') || 'none'}.`);
   if (found.length) {
     console.log('\nFix these in the new DESIGN.md before critiquing against it:');
     for (const f of found) console.log(`  ${f.severity} ${f.title}\n     ${f.recommendation}`);

@@ -616,3 +616,27 @@ test('styles catalog: style families only, no id both offered and excluded, same
   assert.equal(cat.source.commit, OPEN_DESIGN.commit);
   assert.equal(cat.source.license, 'Apache-2.0');
 });
+
+test('styles: a web style becomes a phone-app starting point', async () => {
+  const { mobileStartingPoint } = await import('../scripts/lib/styles.mjs');
+  const md = [
+    '# Calm', '> Category: Starter', '> Quiet and warm.',
+    '## 1. Visual Theme & Atmosphere', 'Calm and unhurried.', 'Desktop-first layouts with wide margins.',
+    '## 2. Color', '- **Primary:** `#2F6FEB`', '- **Surface:** `#FFFFFF`', '- **Text:** `#111111`',
+    '## 3. Typography', '- **Families:** primary=Söhne, mono=JetBrains Mono', '- **Scale:** 12/14/16/20/28/40/56/80',
+    '| Role | Size |', '|---|---|', '| Hero | 72px |',
+    '## 4. Spacing & Grid', '- **Spacing scale:** 4/8/12/16/24/32', '- 12-column grid, 1200px max-width',
+    '## 5. Components', '- Buttons: 12px radius, 20px padding', '- Hover: lift the card',
+    '## 6. Responsive Behavior', '- Breakpoints at 768px and 1280px',
+    '## 7. Voice & Brand', '- Plain and kind.',
+  ].join('\n');
+  const { text, kept, dropped } = mobileStartingPoint(md, 'android');
+  assert.deepEqual(kept, ['Visual Theme & Atmosphere', 'Color', 'Typography', 'Spacing & Grid', 'Voice & Brand']);
+  assert.deepEqual(dropped, ['Components', 'Responsive Behavior']);
+  assert.match(text, /Söhne/);
+  assert.doesNotMatch(text, /72px|56\/80|max-width|Breakpoints|Hover|Desktop-first/);
+  assert.match(text, /Spacing scale:\*\* 4\/8\/12\/16\/24\/32/);
+  assert.match(text, /12px radius/, 'radii from components carry over');
+  assert.match(text, /Type scale:\*\* 11\/12\/14\/16\/22\/24\/28\/32\/36\/45\/57/);
+  assert.match(text, /Material Design 3/);
+});

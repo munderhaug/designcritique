@@ -43,7 +43,7 @@ overflow, tokens, looping motion) and taste-only rules without a cited principle
 
 | Source | By, licence | Used for |
 |---|---|---|
-| open-design `design-systems/` at a pinned commit | nexu-io, Apache-2.0 | `npm run eval:tokens`: the token reader and design-system checks run over its 152 DESIGN.md files. `scripts/styles.mjs`: 52 generic style families (`catalog/styles.yaml`) as DESIGN.md starting points, written with their attribution. Systems modelled on a named company, product, game or person are eval data only |
+| open-design `design-systems/` at a pinned commit | nexu-io, Apache-2.0 | `npm run eval:tokens`: the token reader and design-system checks run over its 152 DESIGN.md files. `scripts/styles.mjs`: 52 generic style families (`catalog/styles.yaml`) as DESIGN.md starting points for a phone app: their visual language only (they were written for websites), the platform's type scale, and the HIG or Material 3 for layout and components, written with their attribution. Systems modelled on a named company, product, game or person are eval data only |
 
 libraries.dev (Jakub Antalik) is on the catalog's watch list, not used: it's React for the web
 first, and its native ports aren't published yet.

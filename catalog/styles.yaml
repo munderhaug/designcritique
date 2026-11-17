@@ -3,8 +3,11 @@
 # From open-design's design-systems (nexu-io, Apache-2.0) at a pinned commit. Only generic style
 # families are listed: a look anyone may use, not a company's identity. Systems "inspired by" a
 # named company, product, game or person are eval data only (npm run eval:tokens) and never
-# offered. A starting point is not a recommendation: it is checked like any DESIGN.md, and its
-# results are shown before you use it. Re-check entries when the pinned commit changes.
+# offered. The styles were written for websites, so a starting point keeps only what carries over
+# to a phone app (intent, colour, font families, spacing scale, corner radii, voice); type sizes,
+# layout, navigation, components and motion come from the HIG or Material 3 (scripts/lib/styles.mjs).
+# A starting point is not a recommendation: it is checked like any DESIGN.md, and its results are
+# shown before you use it. Re-check entries when the pinned commit changes.
 source:
   name: open-design
   by: nexu-io

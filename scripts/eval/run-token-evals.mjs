@@ -12,7 +12,9 @@ import { loadTokens } from '../lib/tokens.mjs';
 import { designSystemFindings } from '../checks/design-system.mjs';
 import fs from 'node:fs';
 import YAML from 'yaml';
+import os from 'node:os';
 import { OPEN_DESIGN, openDesignSystems, designFiles } from '../lib/corpus.mjs';
+import { mobileStartingPoint, PLATFORM } from '../lib/styles.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const args = parseArgs(process.argv.slice(2));
@@ -73,6 +75,31 @@ const missingStyles = styleIds.filter((x) => !known.has(x));
 if (styles.source.commit !== OPEN_DESIGN.commit) { failed = true; console.log('\ncatalog/styles.yaml pins a different commit than scripts/lib/corpus.mjs'); }
 console.log(`\nStyle starting points: ${styleIds.length - missingStyles.length}/${styleIds.length} present${missingStyles.length ? `; missing ${missingStyles.join(', ')}` : ''}`);
 if (missingStyles.length) failed = true;
+
+// Each style, made into a phone-app starting point, must keep its colours and roles, take the
+// platform's type scale, and carry no website layout (grids, max widths, breakpoints).
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-styles-'));
+const badStyles = [];
+for (const id of styleIds.filter((x) => known.has(x))) {
+  for (const platform of ['ios', 'android']) {
+    const { text } = mobileStartingPoint(fs.readFileSync(path.join(path.dirname(systems[0].file), '..', id, 'DESIGN.md'), 'utf8'), platform);
+    const file = path.join(tmpDir, `${id}-${platform}.md`);
+    fs.writeFileSync(file, text);
+    const t = loadTokens(file);
+    const names = t ? [...t.colorByName.keys()] : [];
+    const problems = [
+      !t?.colors.size && 'no colours',
+      !names.some((n) => ROLE.surface.test(n)) && 'no surface role',
+      t && PLATFORM[platform].type.some((v) => !t.fontSizes.includes(v)) && 'type scale not the platform one',
+      t && t.fontSizes.some((v) => !PLATFORM[platform].type.includes(v)) && 'web type sizes left',
+      /\b(max-?width|breakpoint|12-col|desktop)\b/i.test(text.replace(/^## Visual Theme[\s\S]*?(?=^## )/m, '')) && 'website layout left',
+    ].filter(Boolean);
+    if (problems.length) badStyles.push(`${id} (${platform}): ${problems.join(', ')}`);
+  }
+}
+fs.rmSync(tmpDir, { recursive: true, force: true });
+console.log(`Phone-app starting points: ${styleIds.length * 2 - badStyles.length}/${styleIds.length * 2} clean${badStyles.length ? `\n  ${badStyles.join('\n  ')}` : ''}`);
+if (badStyles.length) failed = true;
 if (insane.length) { failed = true; console.log(`\nReader errors:\n  ${insane.slice(0, 10).join('\n  ')}`); }
 if (args.list && misses[args.list]) console.log(`\nMissing ${args.list}: ${misses[args.list].join(', ')}`);
 process.exit(failed ? 1 : 0);

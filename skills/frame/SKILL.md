@@ -34,8 +34,10 @@ explains each one.
    naming the source document for each line; then ask only about what's missing, at most three
    questions at a time. If mockups.yaml has no `journeys:`, offer to write them from `## Journeys`.
 5. **No DESIGN.md yet?** Offer, once, a starting point from a generic style family:
-   `node PLUGIN_ROOT/scripts/styles.mjs list`, then `use <id> --platform <ios|android>`. It writes
-   DESIGN.md with its attribution, adds the platform's type scale if the style has none, and
+   `node PLUGIN_ROOT/scripts/styles.mjs list`, then `use <id> --platform <ios|android>`. The
+   styles were made for websites, so it keeps only their visual language (colour, font families,
+   spacing, corner radii, voice), uses the platform's type scale, and leaves layout, navigation,
+   components and motion to the HIG or Material 3. It writes DESIGN.md with its attribution and
    prints the design-system checks to fix. Only style families are offered, never a system
    modelled on a named company. Skip this if the person has a design system or brand already.
 6. **Point at research when it's thin.** If key tasks rest on assumptions, suggest Anthropic's
