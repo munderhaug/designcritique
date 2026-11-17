@@ -1,4 +1,6 @@
-// Reads design tokens from DESIGN.md (YAML front matter) or a DTCG / Style Dictionary JSON file.
+// Reads design tokens from DESIGN.md (YAML front matter, or Markdown tables and "- name: value"
+// lists under headings such as Colours, Spacing, Typography and Radius) or a DTCG / Style
+// Dictionary JSON file.
 // The parser is deliberately forgiving: it walks every value and classifies it by its key path,
 // so it works with Google's DESIGN.md layout and most hand-written token files.
 import fs from 'node:fs';
@@ -42,13 +44,61 @@ function frontMatter(text) {
   return m ? YAML.parse(m[1]) : null;
 }
 
+const VALUE_RE = /#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})\b|rgba?\([^)]*\)|-?\d*\.?\d+\s*(?:px|pt|dp|sp|rem|em)\b/gi;
+const clean = (cell) => cell.replace(/`|\*\*|<[^>]+>/g, '').trim();
+
+/**
+ * Tokens written as Markdown: tables (first column the token name, other columns its values;
+ * a column headed "dark" gives the dark value) and "- name: value" list items, each under the
+ * nearest heading. Returns [{ keys, value, name }].
+ */
+export function markdownTokens(md) {
+  const out = [];
+  let heading = '';
+  let header = null;
+  const lines = md.replace(/<!--[\s\S]*?-->/g, '').split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const h = line.match(/^#{1,6}\s+(.+)/);
+    if (h) { heading = clean(h[1]).toLowerCase(); header = null; continue; }
+    if (/^\s*\|/.test(line)) {
+      const cells = line.trim().replace(/^\||\|$/g, '').split('|').map(clean);
+      if (!header) {
+        if (/^\s*\|?[\s:-]+\|/.test(lines[i + 1] || '')) { header = cells.map((c) => c.toLowerCase()); i++; }
+        continue;
+      }
+      const name = cells[0]?.toLowerCase().replace(/\s+/g, '-');
+      if (!name) continue;
+      cells.slice(1).forEach((cell, j) => {
+        const col = header[j + 1] || '';
+        if (/descr|usage|use|note|purpose|example|role/.test(col) && !/colou?r|value|hex|size/.test(col)) return;
+        const values = cell.match(VALUE_RE) || [];
+        values.forEach((value, k) => {
+          const token = /dark/.test(col) ? `dark-${name}` : k ? `${name}-${k + 1}` : name;
+          out.push({ keys: [heading, token, col], value, name: token });
+        });
+      });
+      continue;
+    }
+    header = null;
+    const item = line.match(/^\s*[-*]\s+([^:]+):\s*(.+)$/);
+    if (item) {
+      const name = clean(item[1]).toLowerCase().replace(/\s+/g, '-');
+      (clean(item[2]).match(VALUE_RE) || []).forEach((value, k) => out.push({ keys: [heading, k ? `${name}-${k + 1}` : name], value, name: k ? `${name}-${k + 1}` : name }));
+    }
+  }
+  return out;
+}
+
 export function loadTokens(file) {
   if (!file || !fs.existsSync(file)) return null;
   const text = fs.readFileSync(file, 'utf8');
   const isJson = path.extname(file).toLowerCase() === '.json';
-  const data = isJson ? JSON.parse(text) : frontMatter(text);
-  if (!data) return null;
+  const front = isJson ? JSON.parse(text) : frontMatter(text);
   const body = isJson ? '' : text.replace(/^---\s*\n[\s\S]*?\n---\s*(\n|$)/, '');
+  const fromMarkdown = isJson ? [] : markdownTokens(body);
+  if (!front && !fromMarkdown.length) return null;
+  const data = front || {};
 
   const colors = new Map();
   const colorByName = new Map();
@@ -57,6 +107,7 @@ export function loadTokens(file) {
   const fontSizes = new Set();
   const radii = new Set();
 
+  let tokenName = null;
   const visit = (node, keys) => {
     if (node == null) return;
     if (Array.isArray(node)) { node.forEach((v) => visit(v, keys)); return; }
@@ -73,7 +124,7 @@ export function loadTokens(file) {
     const color = parseColor(String(node));
     if (color) {
       colors.set(toHex(color), keys.join('.'));
-      colorByName.set(keys[keys.length - 1].toLowerCase(), toHex(color));
+      colorByName.set((tokenName || keys[keys.length - 1]).toLowerCase(), toHex(color));
       return;
     }
     const px = toPx(node);
@@ -83,9 +134,12 @@ export function loadTokens(file) {
     else if (/round|radius|radii|corner|shape/.test(pathStr)) radii.add(px);
   };
   visit(data, []);
+  for (const t of fromMarkdown) { tokenName = t.name; visit(t.value, t.keys); }
+  tokenName = null;
 
   return {
     source: file,
+    from: [front ? 'front matter' : null, fromMarkdown.length ? 'Markdown' : null].filter(Boolean),
     body,
     colorByName,
     fontFamilies: [...fontFamilies],

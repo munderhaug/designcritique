@@ -58,9 +58,10 @@ that screen. Animations are frozen before the steps run, so states settle immedi
 `appearance: dark-only` (or `light-only`), on a mockup or a state, marks a screen that has one
 appearance on purpose, such as a crisis screen, so a missing dark mode isn't reported.
 
-Pages that pad with `env(safe-area-inset-*)` handle insets themselves, but a browser reports the
-insets as 0, so the safe-area check skips those pages and says so in the notes: check them on a
-device or simulator.
+Capture emulates each device's system-bar insets (status bar or Dynamic Island, home indicator
+or gesture bar), so pages that pad with `env(safe-area-inset-*)` are judged as on a phone. As on
+iOS and Android, the insets apply only when the viewport meta has `viewport-fit=cover`; without
+it they stay 0, the controls are flagged, and a note says why.
 
 ## Phone-frame canvases
 

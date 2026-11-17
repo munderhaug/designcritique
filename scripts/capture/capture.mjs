@@ -74,18 +74,34 @@ async function launch() {
   throw new Error(`Could not start a browser. Run: npx playwright install chromium\n${last?.message?.split('\n')[0]}`);
 }
 
-async function preparePage(context, url, variant, screen = {}) {
+async function preparePage(context, url, variant, screen = {}, insets = null) {
   const page = await context.newPage();
   if (args.offline) {
     await page.route('**/*', (route) => (route.request().url().startsWith('file:') || route.request().url().startsWith('data:') ? route.continue() : route.abort()));
   }
   await page.goto(url, { waitUntil: 'load', timeout: 30000 });
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  if (insets) page.dcInsets = await emulateSafeArea(page, insets);
   await runSetupAndSteps(page, screen, variant);
   await injectStyles(page, variant);
   await page.evaluate(() => document.fonts && document.fonts.ready);
   await page.waitForTimeout(150);
   return page;
+}
+
+// The device's system-bar insets for env(safe-area-inset-*). As on iOS and Android, a page gets
+// them only with viewport-fit=cover; without it env() stays 0. Chromium's DevTools protocol
+// sets them (Emulation.setSafeAreaInsetsOverride); older browsers fall back to 0 with a note.
+async function emulateSafeArea(page, { top, bottom }) {
+  const cover = await page.evaluate(() => /viewport-fit\s*=\s*cover/i.test(document.querySelector('meta[name=viewport]')?.content || ''));
+  if (!cover) return { applied: false, reason: 'no viewport-fit=cover' };
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top, bottom, left: 0, right: 0 } });
+    return { applied: true, top, bottom };
+  } catch (e) {
+    return { applied: false, reason: `browser can't emulate insets (${e.message.split('\n')[0]})` };
+  }
 }
 
 // Capture's own CSS (frozen animation, enlarged text). Added once per document, so it is
@@ -206,7 +222,7 @@ async function captureHtml(browser, screen) {
           colorScheme: step.variant === 'dark' ? 'dark' : 'light',
           hasTouch: true,
         });
-        const page = await preparePage(ctx, url, step.variant, sub);
+        const page = await preparePage(ctx, url, step.variant, sub, frameMode ? null : { top: preset.safeTop, bottom: preset.safeBottom });
         const tag = `${sub.id}__${platform}-${step.device}__${step.variant}`;
         const shotPath = path.join(runDir, 'screenshots', `${tag}.png`);
         fs.mkdirSync(path.dirname(shotPath), { recursive: true });
@@ -225,6 +241,7 @@ async function captureHtml(browser, screen) {
         }
 
         const data = await page.evaluate(analyzePage, { frameAttr });
+        data.insets = page.dcInsets || null;
         let fullPath = null;
         if (!frameMode && data.scrollHeight > preset.height * 1.1) {
           fullPath = path.join(runDir, 'screenshots', `${tag}__full.png`);

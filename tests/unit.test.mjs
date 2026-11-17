@@ -241,3 +241,40 @@ test('text-size fix follows the stack', () => {
   assert.match(textScaleAdvice('ios', []), /SwiftUI/);
   assert.match(textScaleAdvice('android', ['compose']), /sp in Compose/);
 });
+
+test('tokens: read from Markdown tables and lists when there is no front matter', () => {
+  const file = tmp('DESIGN.md', `# Kit
+
+## Colours
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| \`surface\` | #FFFFFF | #121418 | Page background, 16px padding is not a token |
+| on-surface | #16181D | #ECEEF3 | Body text |
+| primary | rgb(36, 87, 214) | #8FB0FF | Buttons |
+
+## Spacing
+- xs: 4px
+- s: 8px
+- m: 16 px
+
+## Typography
+| Style | Size | Weight |
+|---|---|---|
+| Body | 17pt | Regular |
+| Caption | 12pt | Regular |
+
+## Radius
+| Name | Value |
+|--|--|
+| card | 12px |
+`);
+  const t = loadTokens(file);
+  assert.deepEqual(t.from, ['Markdown']);
+  assert.equal(t.colorByName.get('surface'), '#ffffff');
+  assert.equal(t.colorByName.get('dark-surface'), '#121418');
+  assert.equal(t.colorByName.get('primary'), '#2457d6');
+  assert.deepEqual(t.spacing, [4, 8, 16]);
+  assert.deepEqual(t.fontSizes, [12, 17]);
+  assert.deepEqual(t.radii, [12]);
+  assert.equal(loadTokens(tmp('DESIGN.md', '# Kit\n\nNo tokens here.\n')), null);
+});

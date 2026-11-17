@@ -245,15 +245,16 @@ for (const screen of manifest.screens) {
     }
 
     // --- safe areas (status bar / Dynamic Island, home indicator / gesture bar) ---
-    // A page that pads with env(safe-area-inset-*) handles insets itself, but the browser
-    // reports them as 0, so its controls would look misplaced here. Skip it, with a note.
+    // Capture emulates the device's insets for env(safe-area-inset-*) when the page sets
+    // viewport-fit=cover, as a phone does, so pages that pad by the insets are judged as on a device.
     const sa = [];
-    if (mainData.safeAreaCss) {
-      notes.push({ screen: screen.id, note: mainData.viewportFitCover
-        ? 'Uses env(safe-area-inset-*) with viewport-fit=cover; safe areas not checked in the browser (insets read as 0). Check on a device or simulator.'
-        : 'Uses env(safe-area-inset-*) but the viewport meta lacks viewport-fit=cover, so on iOS the insets stay 0 in a web view. Check on a device or simulator.' });
+    if (mainData.safeAreaCss && !mainData.viewportFitCover) {
+      notes.push({ screen: screen.id, note: 'Uses env(safe-area-inset-*) without viewport-fit=cover in the viewport meta, so on a phone the insets are 0 and the padding does nothing.' });
+    } else if (mainData.safeAreaCss && mainData.insets && !mainData.insets.applied) {
+      notes.push({ screen: screen.id, note: `Safe areas not checked: ${mainData.insets.reason}. Check on a device or simulator.` });
     }
-    for (const el of mainData.safeAreaCss ? [] : mainData.interactive.filter((e) => !e.disabled && e.box.y < mainData.viewport.height)) {
+    const skipSafeArea = mainData.safeAreaCss && mainData.viewportFitCover && mainData.insets && !mainData.insets.applied;
+    for (const el of skipSafeArea ? [] : mainData.interactive.filter((e) => !e.disabled && e.box.y < mainData.viewport.height)) {
       if (el.box.y < main.safeTop && el.box.y + el.box.h > 0) sa.push({ el, where: platform === 'ios' ? 'status bar / Dynamic Island' : 'status bar' });
       else if (el.fixed && el.box.y + el.box.h > mainData.viewport.height - main.safeBottom + 1) sa.push({ el, where: platform === 'ios' ? 'home indicator' : 'gesture navigation bar' });
     }
@@ -344,7 +345,7 @@ for (const screen of manifest.screens) {
 }
 
 if (tokens) findings.push(...designSystemFindings(tokens, manifest.design));
-if (!tokens) notes.push({ screen: '*', note: manifest.design ? `No tokens found in ${manifest.design}; token checks skipped.` : 'No DESIGN.md configured; token checks skipped.' });
+if (!tokens) notes.push({ screen: '*', note: manifest.design ? `No tokens found in ${manifest.design}; token checks skipped. Put tokens in YAML front matter, or in Markdown tables or "- name: value" lists under headings such as Colours, Spacing, Typography and Radius (see templates/DESIGN.md).` : 'No DESIGN.md configured; token checks skipped.' });
 
 const order = { P0: 0, P1: 1, P2: 2, P3: 3 };
 findings.sort((a, b) => order[a.severity] - order[b.severity] || a.screen.localeCompare(b.screen) || a.rule.localeCompare(b.rule));

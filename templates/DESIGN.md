@@ -29,7 +29,9 @@ rounded: [8, 12, 16, 999]
 
 Tokens live in the YAML front matter above, following the shape of Google's DESIGN.md format
 (github.com/google-labs-code/design.md). designcritique reads any colour, spacing, font-size and
-radius values it finds there, whatever the exact key names.
+radius values it finds there, whatever the exact key names. It also reads Markdown tables and
+"- name: value" lists under headings such as Colours, Spacing, Typography and Radius: the first
+column is the token name, and a column headed "Dark" holds the dark value.
 
 ## Intent
 
