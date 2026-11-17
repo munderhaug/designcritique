@@ -3,8 +3,18 @@ platform: ios                 # ios | android | adaptive (checked against both)
 product: PRODUCT.md           # problem frame; create with /designcritique:frame
 design: DESIGN.md             # optional design tokens (YAML front matter)
 references: []                # optional images of what good looks like (Mobbin, Figma, screenshots)
+taste: []                     # optional: 9-12 images of the direction you chose (folder or list)
 requires:
   darkMode: true              # report a missing dark appearance as a finding
+critics:
+  judge_model:                # model for the design-reviewer, e.g. fable or opus; best one other
+                              # than the model that made the mockups (empty: chosen per run)
+  external: []                # extra judges on other tools, e.g. [codex]; see critic-brief.md
+gate:
+  fail_on: P1                 # not passed while any open finding is this severe (P0-P3, none)
+  target_score: 8             # not passed while any key task scores lower (0-10, lowest critic)
+iterate:
+  max_rounds: 3               # /designcritique:iterate stops after this many rounds
 # devices: [compact, standard]          # default; phone sizes per platform
 # variants: [light, dark, large-text]   # default
 # output: .designcritique/runs          # default

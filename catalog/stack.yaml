@@ -310,11 +310,26 @@ entries:
     trust: official
     platforms: [ios]
     stacks: [swiftui, expo, react-native, flutter]
-    why: "Build, run, tap and screenshot on the iOS Simulator so the agent can check its own UI."
+    why: "Build, run, tap and screenshot on the iOS Simulator so the agent can check its own UI. Note: sends Sentry error telemetry by default (opt-out); renamed from XcodeBuildMCP in v2.7.1 (Sep 2026), so move old .xcodebuildmcp/ configs by hand; the maintainer since Cameron Cooke left Sentry is inferred from release signatures, not announced."
     install: "claude mcp add MobileBuildMCP -- npx -y mobilebuildmcp@latest mcp"
     helps_with: [visual, a11y]
     sources:
       - https://github.com/getsentry/MobileBuildMCP
+      - https://github.com/getsentry/MobileBuildMCP/releases
+
+  - id: xcode-mcp
+    role: verify
+    name: "Xcode 26.3+ built-in MCP (Claude Agent SDK integration)"
+    by: "Apple"
+    trust: official
+    platforms: [ios]
+    stacks: [swiftui]
+    why: "Xcode's own MCP bridge: Claude Code captures Xcode Previews, searches Apple documentation and iterates on builds without leaving the CLI. Agentic features need macOS 26.2 or later; early versions showed a per-process access prompt and some 401 sign-in issues."
+    install: "Xcode 26.3 or later (Settings > Intelligence), then connect Claude Code over MCP as Apple's announcement describes"
+    helps_with: [visual, platform]
+    sources:
+      - https://www.apple.com/newsroom/2026/02/xcode-26-point-3-unlocks-the-power-of-agentic-coding/
+      - https://anthropic.com/news/apple-xcode-claude-agent-sdk
 
   - id: android-cli-verify
     role: verify
@@ -383,6 +398,21 @@ entries:
     sources:
       - https://github.com/mobile-next/mobile-mcp
 
+  - id: agent-device
+    role: verify
+    group: cross-platform-ui
+    name: "agent-device"
+    by: "Callstack"
+    trust: practitioner
+    platforms: [ios, android]
+    stacks: [expo, react-native]
+    why: "CLI with an MCP mode for iOS and Android: snapshot and ref-based taps, React DevTools profiling, and it handles React Native debug overlays. Strong for React Native and Expo QA flows."
+    install: "claude mcp add --transport stdio --scope project agent-device -- agent-device mcp"
+    helps_with: [ux, a11y, task-fit]
+    sources:
+      - https://oss.callstack.com/agent-device/docs/agent-setup
+      - https://github.com/callstackincubator/agent-skills/blob/main/docs/ai-assistant-integration.md
+
   # ---------- While prototyping in HTML (shown only when the critique ran on HTML mockups) ----------
   - id: transitions-dev
     role: prototype
@@ -397,6 +427,19 @@ entries:
     sources:
       - https://transitions.dev
       - https://github.com/Jakubantalik/transitions.dev
+
+  - id: frontend-design
+    role: prototype
+    name: "frontend-design skill"
+    by: "Anthropic"
+    trust: official
+    platforms: [ios, android]
+    stacks: [html]
+    why: "Makes the agent commit to an explicit aesthetic direction (type, colour, motion, layout) before coding, steering away from generic AI defaults. Written for the web: use it for HTML prototypes only, and don't carry web idioms into SwiftUI or Compose."
+    install: "/plugin install frontend-design@claude-plugins-official"
+    helps_with: [visual, typography, color]
+    sources:
+      - https://github.com/anthropics/skills
 
   - id: transitions-agent
     role: prototype

@@ -44,6 +44,10 @@ export function loadConfig(configPath) {
     devices: raw.devices || DEFAULT_DEVICES,
     variants: raw.variants || DEFAULT_VARIANTS,
     requires: { darkMode: false, ...(raw.requires || {}) },
+    taste: expandImages(raw.taste, baseDir),
+    critics: normalizeCritics(raw.critics),
+    gate: normalizeGate(raw.gate),
+    iterate: { max_rounds: Number(raw.iterate?.max_rounds ?? 3) },
     output: rel(raw.output || '.designcritique/runs'),
     mockups: [],
   };
@@ -89,6 +93,40 @@ export function loadConfig(configPath) {
   }
   if (!cfg.mockups.length) throw new Error('No mockups listed in config');
   return cfg;
+}
+
+export const SEVERITIES = ['P0', 'P1', 'P2', 'P3'];
+export const DEFAULT_GATE = { fail_on: 'P1', target_score: 8 };
+
+/** taste: a folder or a list of images (the 9-12 references you chose), resolved to image files. */
+export function expandImages(spec, baseDir) {
+  if (!spec) return [];
+  const out = [];
+  for (const item of Array.isArray(spec) ? spec : [spec]) {
+    const abs = path.resolve(baseDir, String(item));
+    if (!fs.existsSync(abs)) throw new Error(`taste: not found: ${abs}`);
+    if (fs.statSync(abs).isDirectory()) {
+      for (const f of fs.readdirSync(abs).sort()) if (IMAGE_EXT.has(path.extname(f).toLowerCase())) out.push(path.join(abs, f));
+    } else if (IMAGE_EXT.has(path.extname(abs).toLowerCase())) out.push(abs);
+    else throw new Error(`taste: ${abs} is not an image (.png, .jpg, .webp) or folder`);
+  }
+  return out;
+}
+
+function normalizeCritics(raw = {}) {
+  const external = raw.external || [];
+  if (!Array.isArray(external) || external.some((e) => !/^[a-z0-9-]+$/.test(String(e)))) {
+    throw new Error('critics.external must be a list of names (lowercase letters, digits, -), e.g. [codex]');
+  }
+  return { judge_model: raw.judge_model ? String(raw.judge_model) : null, external: external.map(String) };
+}
+
+export function normalizeGate(raw = {}) {
+  const gate = { ...DEFAULT_GATE, ...(raw || {}) };
+  if (!SEVERITIES.includes(gate.fail_on) && gate.fail_on !== 'none') throw new Error(`gate.fail_on must be P0-P3 or none (got ${gate.fail_on})`);
+  gate.target_score = gate.target_score == null ? null : Number(gate.target_score);
+  if (gate.target_score != null && !(gate.target_score >= 0 && gate.target_score <= 10)) throw new Error('gate.target_score must be 0-10');
+  return gate;
 }
 
 export function kindOf(file) {

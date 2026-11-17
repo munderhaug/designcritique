@@ -10,6 +10,7 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
   "method": "design-critique + accessibility-review + ux-copy + cognitive walkthrough",
   "frame_check": {
     "fit": "strong | partial | weak | unknown",
+    "score": 6,
     "summary": "One or two sentences: do these screens serve the problem and users in PRODUCT.md?",
     "assumptions_relied_on": ["[assumption] lines from PRODUCT.md that this judgement depends on"]
   },
@@ -18,6 +19,7 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
       "task": "Pay for the order",
       "user": "Primary user from PRODUCT.md",
       "verdict": "supported | at-risk | blocked | not-covered",
+      "score": 4,
       "summary": "Why, in one or two sentences.",
       "steps": [
         { "screen": "checkout", "action": "Tap Pay now", "q1": true, "q2": true, "q3": true, "q4": false, "finding_ids": ["ad-4"] }
@@ -46,12 +48,18 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
   ],
   "comparisons": [
     { "group": "home-directions", "recommended": "home-b", "ranking": ["home-b", "home-a"], "reasons": "…tied to the users and tasks…" }
-  ]
+  ],
+  "taste_check": {
+    "score": 7,
+    "summary": "Type and spacing follow the chosen references; the colour is flatter and the hero has none of their texture.",
+    "gaps": [{ "screen": "home", "reference": "taste/03-field-notes.png", "text": "Reference uses a warm paper ground and a hand-drawn map; the mockup uses a plain white card." }]
+  }
 }
 ```
 
 Field rules:
-- `critic`: `anthropic-design` (design-reviewer agent) or `impeccable` (converted Impeccable critique).
+- `critic`: `anthropic-design` (design-reviewer agent), `impeccable` (converted Impeccable critique),
+  or `external-<name>` for an extra judge running on another model or tool (critic-brief.md).
 - `method`: optional; what the critic actually used, e.g. `fallback: principles index` when the Anthropic design plugin isn't installed.
 - `frame_check` and `tasks`: design-reviewer; Impeccable puts its scores in `frame_check.summary`. `comparisons`: only when screens share a `group`.
 - `screen`: a screen id from the manifest, or `"*"` for the whole set.
@@ -61,4 +69,24 @@ Field rules:
 - `evidence`: what is visible and where, naming the screenshot file and variant. No evidence, no finding.
 - `impact`: which user, in which task, and how. Use the words of PRODUCT.md.
 - `confidence`: `low` when a static mockup can't show it (motion, real data, behaviour).
+- `taste_check`: only when the brief lists taste references. Separate from findings: closeness
+  to a reference never excuses a usability problem, and distance from one is not a finding.
 - Up to 15 findings per critic per 8 screens, most severe first. Zero findings is a valid result for a good screen.
+
+## Scores (0–10)
+
+Score each key task (`tasks[].score`) and the set as a whole (`frame_check.score`). The report's
+gate uses the lowest score any critic gave a task, so score what you can defend, not what you hope.
+
+| Score | Means |
+|---|---|
+| 10 | Every walkthrough step passes all four questions; nothing to fix on this task |
+| 9 | Passes; only P3 polish left |
+| 7–8 | Passes, with P2 friction some users will feel (`at-risk` if it's on the main path) |
+| 5–6 | A P1 on the path: many users will err or need help |
+| 3–4 | A step fails for the described user, or a must-not-fail step has a P1 |
+| 0–2 | The task can't be done with these screens, or a P0 blocks it |
+
+A score must agree with the findings and verdict: a task with an open P1 on its path can't
+score above 6, and `blocked` can't score above 4. Model judges tend to grade generously; when
+between two scores, pick the lower and say why in `summary`.

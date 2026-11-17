@@ -15,7 +15,7 @@ export function findPreviousRun(runDir) {
 }
 
 const words = (s) => new Set(String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2));
-function similarity(a, b) {
+export function similarity(a, b) {
   const A = words(a); const B = words(b);
   if (!A.size || !B.size) return 0;
   let inter = 0;

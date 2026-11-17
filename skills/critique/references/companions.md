@@ -51,7 +51,9 @@ tools can be merged, de-duplicated and scored against the eval set. The index
 (`skills/principles/`) summarises primary sources: Nielsen, Norman, Wharton et al., WCAG 2.2, the
 HIG and Material 3. It's a citation index, not a separate method.
 
-## Next version (running apps)
+## Running apps
 
-MobileBuildMCP (Sentry), Maestro MCP (mobile.dev), Expo MCP, Android CLI (Google), mobile-mcp,
-and Apple's Xcode 27 skills, feeding real simulator screens into the same checks, critics and report.
+Today: screenshots taken with MobileBuildMCP or Xcode Previews, Android CLI, Expo MCP,
+mobile-mcp or Callstack's agent-device are image inputs (critics only, see inputs.md).
+Next: driving those tools from capture, so live screens and their accessibility trees go through
+the same checks, critics and report. Apple's Xcode 27 skills then apply to the SwiftUI source.

@@ -10,7 +10,8 @@
   "properties": {
     "critic": {
       "type": "string",
-      "description": "anthropic-design or impeccable"
+      "description": "anthropic-design, impeccable, or external-<name> for an extra judge (see critic-brief.md)",
+      "pattern": "^(anthropic-design|impeccable|external-[a-z0-9-]+)$"
     },
     "frame_check": {
       "type": "object",
@@ -31,6 +32,12 @@
           "items": {
             "type": "string"
           }
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Overall 0-10, per the anchors in output-format.md"
         }
       }
     },
@@ -91,6 +98,12 @@
                 }
               }
             }
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "0-10 for this key task, per the anchors in output-format.md"
           }
         }
       }
@@ -246,6 +259,45 @@
     },
     "method": {
       "type": "string"
+    },
+    "taste_check": {
+      "type": "object",
+      "description": "How close the screens are to the references the person chose (manifest taste). Judged apart from usability findings.",
+      "required": [
+        "score",
+        "summary"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "summary": {
+          "type": "string"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "screen",
+              "text"
+            ],
+            "properties": {
+              "screen": {
+                "type": "string"
+              },
+              "reference": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

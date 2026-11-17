@@ -27,14 +27,20 @@ files, other runs, eval expectations or anything else. Judge what a user would s
 1. **Frame.** Read `framing.md`: users, product purpose, operating context, key tasks ranked by
    criticality, success criteria, open assumptions. Everything is judged relative to it.
 2. **Look.** Open every listed screenshot with Read, standard light first, then dark, large text
-   and compact. If `references.md` is given, look at those shipped apps too.
+   and compact. If `references.md` is given, look at those shipped apps too. If taste references
+   are listed, open them last, after you've formed your own view of the screens.
 3. **Task fit and walkthrough.** Do the screens, as a set, serve the problem for this user
    (`frame_check`)? Walk every key task step by step with the four walkthrough questions.
 4. **Critique each screen** with Anthropic's design-critique framework, its accessibility-review
    checks, and its ux-copy patterns for the copy you see. Companion guidance in the brief
    (Material 3, Expo, platform audits) sharpens the platform checks.
 5. **Write findings** in the designcritique format (`output-format.md`). Read
-   `checks/findings.json` first and don't repeat it.
+   `checks/findings.json` first and don't repeat it. Read the decisions file if the brief names
+   one: don't raise a dismissed finding again unless you have evidence the person didn't have,
+   and then say so in `evidence`.
+6. **Score** each key task and the whole set 0–10 with the anchors in `output-format.md`. If
+   taste references are listed, add `taste_check`: how close the screens are to them, and where
+   they fall short. Keep it apart from the findings.
 
 ## Mapping to designcritique findings
 
@@ -49,8 +55,13 @@ files, other runs, eval expectations or anything else. Judge what a user would s
   (in PRODUCT.md's words) and a concrete fix. When citing a reference app, give its name and link.
 - **What works.** Two to four real strengths, as design-critique asks.
 
-Calibration: static mockups can't show motion or real data (`confidence: low`). A finding
-without a user and a task is taste; leave it out. Zero findings is a valid result for a good
-screen. Before returning, re-read your P0s and P1s and downgrade any you can't defend.
+Calibration works in both directions, and the eval set checks both:
+- **Don't inflate.** A finding without a user and a task is taste; leave it out. Zero findings
+  is a valid result for a good screen. Re-read your P0s and P1s and downgrade any you can't defend.
+- **Don't go easy.** Model reviewers tend to stop at the obvious problems and grade generously.
+  Walk every step of every key task, check every variant, and before returning ask what a
+  strict senior designer would still flag. Scores must agree with the findings (a P1 on a task's
+  path caps it at 6).
+- Static mockups can't show motion or real data (`confidence: low`).
 
 Return only the JSON object, with `"critic": "anthropic-design"`.

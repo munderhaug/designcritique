@@ -37,6 +37,10 @@ const manifest = {
   design: existing(cfg.design),
   references: cfg.references.filter((r) => fs.existsSync(r)),
   requires: cfg.requires,
+  critics: cfg.critics,
+  gate: cfg.gate,
+  iterate: cfg.iterate,
+  taste: [],
   devices: cfg.devices,
   variants: cfg.variants,
   screens: [],
@@ -222,6 +226,15 @@ if (manifest.product) { fs.copyFileSync(manifest.product, path.join(runDir, 'fra
 else manifest.warnings.push('No PRODUCT.md: run the frame skill first so the critique can judge task fit.');
 if (manifest.design) { fs.copyFileSync(manifest.design, path.join(runDir, 'DESIGN.md')); manifest.designSnapshot = 'DESIGN.md'; }
 
+// The references you chose for the direction (taste), copied so critics read them inside the run.
+if (cfg.taste.length) {
+  fs.mkdirSync(path.join(runDir, 'taste'), { recursive: true });
+  cfg.taste.forEach((src, i) => {
+    const name = `${String(i + 1).padStart(2, '0')}-${path.basename(src)}`;
+    fs.copyFileSync(src, path.join(runDir, 'taste', name));
+    manifest.taste.push(`taste/${name}`);
+  });
+}
 writeJson(path.join(runDir, 'manifest.json'), manifest);
 for (const w of manifest.warnings) process.stderr.write(`warning: ${w}\n`);
 const captures = manifest.screens.reduce((n, s) => n + s.captures.length, 0);

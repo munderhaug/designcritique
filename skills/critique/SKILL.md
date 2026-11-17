@@ -38,8 +38,10 @@ Problem and ranked Key Tasks. It runs Impeccable's `init` and adds the human-cen
 Create or update `mockups.yaml` (template: `PLUGIN_ROOT/templates/mockups.yaml`). Inputs are
 covered in [inputs.md](references/inputs.md): HTML, images, `.zip`, folders, Claude artifacts
 (pulled into `.designcritique/sources/<id>/`), Figma frames (exported through the Figma MCP),
-and canvases with several phone frames (`phone_frame:`). Order flows with `flow:` and `step:`,
-and put each screen's intent in `notes:`.
+canvases with several phone frames (`phone_frame:`), and screenshots from a simulator or device
+(MobileBuildMCP, Android CLI, Expo MCP, mobile-mcp). Order flows with `flow:` and `step:`, and
+put each screen's intent in `notes:`. If the person has chosen a direction, put its 9–12
+reference images under `taste:`.
 
 ## 3. Capture and check (deterministic)
 
@@ -75,18 +77,22 @@ describes. This writes `RUN_DIR/references.md`.
 
 ## 5. Two independent critiques, in parallel
 
-Neither sees the other's output or how the screens were made.
+Neither sees the other's output or how the screens were made. Both briefs name the decisions
+file (`.designcritique/decisions.yaml`), the taste references and the gate.
 
-- **design-reviewer** (this plugin's read-only agent). Fill in [critic-brief.md](references/critic-brief.md)
+- **design-reviewer** (this plugin's read-only agent), on the model in `critics.judge_model`, or
+  a model other than the one that made the mockups. Fill in [critic-brief.md](references/critic-brief.md)
   with the Anthropic design-plugin SKILL.md paths from step 0, plus companion guidance for the
   platform (Material 3, Expo or platform-audit skills, when installed). With more than 8 screens,
   run one reviewer per batch of 8, and give one of them the whole flow for the walkthrough.
 - **Impeccable critique**, in a fresh general-purpose agent, using the Impeccable brief in
   critic-brief.md. On `ios`, `android` and `adaptive` platforms Impeccable runs its design review
   without its web detector, by its own rules. Skip this critic if Impeccable isn't installed.
+- **External judges**, one per name in `critics.external` (for example `codex`), as described at
+  the end of critic-brief.md. Skip any that isn't installed and say so.
 
-Save each JSON reply unchanged to `RUN_DIR/critique/anthropic-design.json` (`-2`, … for batches)
-and `RUN_DIR/critique/impeccable.json`. This plugin's hook validates each file as it's saved
+Save each JSON reply unchanged to `RUN_DIR/critique/anthropic-design.json` (`-2`, … for batches),
+`RUN_DIR/critique/impeccable.json` and `RUN_DIR/critique/external-<name>.json`. This plugin's hook validates each file as it's saved
 (schema, screen ids, principle IDs) and reports problems back; fix them, asking the critic
 again if needed. `node PLUGIN_ROOT/scripts/report/validate-critique.mjs <file>` does the same by hand.
 
@@ -104,12 +110,22 @@ PRODUCT.md. Every pick comes from `PLUGIN_ROOT/catalog/stack.yaml` with its sour
 what the findings show. Never add tools that aren't in the catalog; propose catalog additions
 separately, with sources.
 
+The report applies the person's decisions and states whether the run passes the **gate**
+(`gate:` in mockups.yaml: no open finding at `fail_on` or worse, every key task at or above
+`target_score` by the lowest critic's score). `node PLUGIN_ROOT/scripts/report/gate.mjs --run
+<RUN_DIR>` exits 2 with the reasons when it fails, for CI or a Stop hook.
+
 ## 7. Reply
 
-The problem in one line, plus open assumptions; what changed since the last run, if there was
-one; the verdict for each key task; the top P0/P1
+The problem in one line, plus open assumptions; the gate result; what changed since the last
+run, if there was one; the verdict and lowest score for each key task; the taste score, if any; the top P0/P1
 findings (five at most, each with its principle and the user it affects); what works; the first
-two build-stack steps; which critics ran and which were missing. Point to `report.html`. Don't
-edit the mockups unless asked.
+two build-stack steps; which critics ran, on which models, and which were missing. Point to
+`report.html`. Don't edit the mockups unless asked; `/designcritique:iterate` fixes and
+re-critiques in rounds.
+
+When the person disagrees with a finding (a false alarm, out of scope, wrong severity), record it
+with `node PLUGIN_ROOT/scripts/report/decide.mjs` (or `/designcritique:decide`) rather than only
+noting it in chat, then re-render the report.
 
 Severity: [severity.md](references/severity.md). Output format: [output-format.md](references/output-format.md).

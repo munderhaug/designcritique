@@ -29,7 +29,12 @@ init + HCD     shipped apps     mobile checks            Anthropic design     �
 | Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan | Importing its findings for HTML mockups, mobile-aware severities |
 | Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
 | Merged report | | De-duplication, severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
-| Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved (exit 2) |
+| Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved inside a run (exit 2) |
+| Independent judging | | The reviewer runs on a model you choose (`critics.judge_model`), ideally not the one that made the mockups; extra judges on other tools (`critics.external`, e.g. Codex) use the same brief and format |
+| Scores and gate | | Each critic scores every key task 0–10 against fixed anchors; the gate fails on open findings at `fail_on` or a key task below `target_score` (lowest critic counts). `gate.mjs` exits 2 for CI or a Stop hook |
+| Your decisions | | `.designcritique/decisions.yaml`: dismissed or re-rated findings stay that way across runs, critics see them, and `decide.mjs --list` shows where the critics are miscalibrated |
+| Taste | | Optional `taste:` references you chose; critics score closeness separately from usability |
+| Iterate | | `/designcritique:iterate`: a builder fixes HTML mockups, fresh critics re-judge, until the gate passes or the round limit |
 | Build stack | `catalog/stack.yaml`: 26 entries, each with maker, trust level and sources | Picks per platform and stack, ranked by what the findings show |
 | Calibration | | Eval screens with planted problems and clean screens, and a scorer |
 
@@ -89,10 +94,12 @@ Anthropic's design plugin, then lists what it found. Connect a reference source 
 /designcritique:critique mockups.yaml      # full critique
 /designcritique:critique exports/prototype.zip
 /designcritique:critique https://claude.ai/artifact/…
+/designcritique:decide 4 dismiss "out of scope for v1"   # your verdict, kept across runs
+/designcritique:iterate mockups.yaml --rounds 3          # fix and re-critique until the gate passes
 ```
 
-Inputs: HTML, PNG/JPG/WebP, `.zip` exports, folders, Claude artifacts, Figma frames, and canvases
-with several phone frames (`phone_frame:`). See [templates/mockups.yaml](templates/mockups.yaml).
+Inputs: HTML, PNG/JPG/WebP, `.zip` exports, folders, Claude artifacts, Figma frames, canvases
+with several phone frames (`phone_frame:`), and screenshots from a simulator or device. See [templates/mockups.yaml](templates/mockups.yaml).
 Each run writes to `.designcritique/runs/<timestamp>/`: screenshots, `framing.md`,
 `checks/findings.json`, `critique/*.json`, `findings.json`, `report.md`, `report.html`.
 
@@ -101,6 +108,15 @@ Each run writes to `.designcritique/runs/<timestamp>/`: screenshots, `framing.md
 Run the critique again after changing the design. The report compares with the previous run
 of the same mockups and lists what was fixed, what is new and what is still open.
 `node scripts/report/compare-runs.mjs --run <run> [--base <run>]` does it by hand.
+
+## Gate in CI or a hook
+
+```bash
+node scripts/report/gate.mjs --run .designcritique/runs/<run>   # exit 2 with reasons when it fails
+```
+
+`gate:` in mockups.yaml sets the bar (`fail_on: P1`, `target_score: 8` by default);
+`--fail-on` and `--target` override it.
 
 ## Evals and tests
 
@@ -114,13 +130,15 @@ To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
 
 ## Status
 
-Version 0.1, for mockups and prototypes. Tested: capture, checks (all planted problems found,
+Version 0.2, for mockups and prototypes. Tested: capture, checks (all planted problems found,
 no false alarms on clean screens), design-system checks, input types, report, run comparison,
-validation hook and build-stack recommendations; the motion import against a sample scan.
-**Not yet run end to end:** the two critics, the reference step and a live transitions-agent scan. They depend on Impeccable,
-the Anthropic design plugin and Mobbin or Refero, which need a Claude Code session with them installed.
+validation hook, gate, decisions and build-stack recommendations; the motion import against a
+sample scan. Critic results on the eval set are in [evals/README.md](evals/README.md).
+**Not yet run end to end:** the reference step, a live transitions-agent scan, external judges and
+`iterate` over several rounds.
 
-Next: running apps through MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI.
+Running apps: simulator and device screenshots work as image inputs today. Next: driving
+MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI from capture.
 Not supported: single-file `.jsx` artifacts (export as HTML or images). Image inputs get critics
 only; deterministic checks need HTML. Large-text rendering is a proxy for Dynamic Type and font scale.
 
@@ -128,9 +146,10 @@ only; deterministic checks need HTML. Large-text rendering is a proxy for Dynami
 
 ```
 catalog/stack.yaml     cited build-stack catalog
-commands/              /designcritique:critique, /designcritique:frame
+commands/              /designcritique:critique, :frame, :iterate, :decide
 skills/frame/          problem framing on top of Impeccable init
 skills/critique/       orchestration, inputs, references, severity, output format, companions
+skills/iterate/        fix and re-critique in rounds until the gate passes
 skills/principles/     citation index (IDs and primary sources)
 agents/                design-reviewer (read-only, Anthropic design-plugin methods)
 hooks/                 validates critic JSON when it's saved

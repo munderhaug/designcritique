@@ -10,5 +10,7 @@
 - Keep skills and agents short; put detail in `references/` files that load on demand.
 - Judgement comes from Impeccable and Anthropic's design plugin. Don't add critique methods
   here; wire in proven ones and cite them.
+- The gate, decisions and scores are plumbing around the critics, not critique methods: keep
+  them in `scripts/lib/{gate,decisions,match}.mjs` with unit tests.
 - `catalog/stack.yaml` is the only source for build recommendations. Every entry needs `by`,
   `trust` and `sources`; update `verified` when you re-check entries.

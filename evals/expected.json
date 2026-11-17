@@ -1,5 +1,5 @@
 {
-  "$comment": "Expected findings per eval screen. checks.must: rule IDs the deterministic checks must report. checks.clean: no P0-P2 check findings allowed. critic.must: each item is a principle ID (prefix match) or {any:[...]} that some critic finding's rule or basis must contain. critic.max_major: most P0/P1 critic findings allowed (false-positive guard on clean screens).",
+  "$comment": "Expected findings per eval screen. checks.must: rule IDs the deterministic checks must report. checks.clean: no P0-P2 check findings allowed. critic.must: each item is a principle ID (exact, or an ID family such as IOS-NAV for IOS-NAV-STACK; WCAG-1.4.1 does not match WCAG-1.4.11) or {any:[...]} that some critic finding's rule or basis must contain. critic.max_major: most P0/P1 critic findings allowed (false-positive guard on clean screens).",
   "login": {
     "checks": {
       "must": ["CHK-TARGET", "AXE-button-name", "AXE-color-contrast", "CHK-TEXT-SCALE", "CHK-OVERFLOW", "CHK-TEXT-MIN", "CHK-SAFE-AREA", "CHK-DARK", "CHK-TOKEN-COLOR", "CHK-TOKEN-SPACE", "CHK-TOKEN-TYPE"],

@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs, readJson } from '../lib/config.mjs';
+import { findingCites } from '../lib/match.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = parseArgs(process.argv.slice(2));
@@ -28,8 +29,6 @@ if (fs.existsSync(critiqueDir)) {
 const haveCritics = fs.existsSync(critiqueDir) && criticFindings.length + fs.readdirSync(critiqueDir).length > 0;
 
 const MAJOR = new Set(['P0', 'P1']);
-const ids = (f) => [f.rule, ...(f.basis || [])].filter(Boolean);
-const matches = (f, want) => ids(f).some((id) => id === want || id.startsWith(`${want}-`) || id.startsWith(want));
 
 let failures = 0;
 const rows = [];
@@ -57,7 +56,7 @@ for (const [screen, exp] of Object.entries(expected)) {
   for (const want of cr.must || []) {
     const options = typeof want === 'string' ? [want] : want.any;
     tally.criticMust++;
-    if (theirs.some((f) => options.some((o) => matches(f, o)))) tally.criticHit++;
+    if (theirs.some((f) => options.some((o) => findingCites(f, o)))) tally.criticHit++;
     else missed.push(options.join('|'));
   }
   const major = theirs.filter((f) => f.screen === screen && MAJOR.has(f.severity));

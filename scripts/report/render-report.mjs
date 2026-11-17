@@ -8,6 +8,9 @@ import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
 import { recommendStack, stackMarkdown } from '../lib/stack.mjs';
 import { validateCritique } from '../lib/validate.mjs';
 import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
+import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.mjs';
+import { evaluateGate } from '../lib/gate.mjs';
+import { DEFAULT_GATE } from '../lib/config.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: render-report.mjs --run <runDir>'); process.exit(2); }
@@ -24,6 +27,7 @@ const notes = [
 const warnings = [...(manifest.warnings || [])];
 
 const SEV = ['P0', 'P1', 'P2', 'P3'];
+const DECISIONS_REL = '.designcritique/decisions.yaml';
 const CATEGORIES = new Set(['task-fit', 'ux', 'content', 'visual', 'layout', 'typography', 'color', 'a11y', 'platform', 'tokens']);
 const screenIds = new Set(manifest.screens.map((s) => s.id));
 const screenOrder = new Map(manifest.screens.map((s, i) => [s.id, i]));
@@ -53,6 +57,8 @@ let frameCheck = null;
 const tasks = [];
 const strengths = [];
 const comparisons = [];
+const tasteChecks = [];
+const overallScores = [];
 for (const { file, data } of critics) {
   const v = validateCritique(data, { screens: screenIds });
   criticValidity.set(file, v.badFindings);
@@ -72,7 +78,9 @@ for (const { file, data } of critics) {
     });
   }
   if (data.frame_check && !frameCheck) frameCheck = data.frame_check;
-  for (const t of data.tasks || []) tasks.push({ ...t, finding_ids: undefined, steps: (t.steps || []).map((s) => ({ ...s, finding_ids: (s.finding_ids || []).map((id) => `${source}-${id}`.replace(new RegExp(`^${source}-${source}-`), `${source}-`)) })) });
+  if (typeof data.frame_check?.score === 'number') overallScores.push({ source, score: data.frame_check.score });
+  if (data.taste_check) tasteChecks.push({ ...data.taste_check, source });
+  for (const t of data.tasks || []) tasks.push({ ...t, source, finding_ids: undefined, steps: (t.steps || []).map((s) => ({ ...s, finding_ids: (s.finding_ids || []).map((id) => `${source}-${id}`.replace(new RegExp(`^${source}-${source}-`), `${source}-`)) })) });
   for (const s of data.strengths || []) strengths.push({ ...s, source });
   for (const c of data.comparisons || []) comparisons.push({ ...c, source });
 }
@@ -87,7 +95,10 @@ for (const f of all) {
     byKey.set(key, f);
   } else prev.alsoReportedBy = [...new Set([...(prev.alsoReportedBy || []), f.source])];
 }
-const findings = [...byKey.values()].sort((a, b) =>
+// ---------- your decisions (.designcritique/decisions.yaml) ----------
+const decisions = loadDecisions(manifest.baseDir);
+const { open, decided } = applyDecisions([...byKey.values()], decisions);
+const findings = open.sort((a, b) =>
   SEV.indexOf(a.severity) - SEV.indexOf(b.severity)
   || (a.screen === '*' ? -1 : b.screen === '*' ? 1 : (screenOrder.get(a.screen) ?? 0) - (screenOrder.get(b.screen) ?? 0))
   || a.rule.localeCompare(b.rule));
@@ -141,13 +152,20 @@ if (baseDir && fs.existsSync(path.join(baseDir, 'findings.json'))) {
   writeJson(path.join(runDir, 'compare.json'), comparison);
 }
 
-const stack = recommendStack({ productText: framingText, fallbackPlatform: manifest.screens[0]?.platform, findings: [...byKey.values()], prototype: manifest.screens.some((s) => s.kind === 'html') });
+const stack = recommendStack({ productText: framingText, fallbackPlatform: manifest.screens[0]?.platform, findings, prototype: manifest.screens.some((s) => s.kind === 'html') });
+
+const gate = evaluateGate({ findings, tasks, critics: critics.map((c) => c.data.critic || c.file) }, manifest.gate || DEFAULT_GATE);
 
 const merged = {
   generatedAt: new Date().toISOString(),
   run: runDir,
   framing: { ...framing, present: !!framingText, frameCheck },
   tasks, findings, strengths, comparisons, counts, stack,
+  scores: { tasks: gate.scores, overall: overallScores },
+  taste: { references: manifest.taste || [], checks: tasteChecks },
+  gate: { pass: gate.pass, reasons: gate.reasons, ...gate.gate },
+  decided: decided.map(({ id, screen, rule, severity, title, source, decision }) => ({ id, screen, rule, severity, title, source, decision: decision.decision, newSeverity: decision.severity, reason: decision.reason })),
+  decisionsFile: decisions.length ? decisionsPath(manifest.baseDir) : null,
   compare: comparison && { base: comparison.base, fixed: comparison.fixed.length, new: comparison.introduced.length, stillOpen: comparison.persisting.length, notRechecked: comparison.notRechecked.length },
   coverage: {
     screens: manifest.screens.length,
@@ -162,6 +180,7 @@ writeJson(path.join(runDir, 'findings.json'), merged);
 const L = [];
 const screenTitle = (id) => (id === '*' ? 'All screens' : manifest.screens.find((s) => s.id === id)?.title || id);
 L.push(`# Design critique: ${framing.title}`, '', `${new Date().toISOString().slice(0, 10)} · ${merged.coverage.screens} screens · ${merged.coverage.renders} renders · critics: ${merged.coverage.critics.join(', ') || 'none yet (checks only)'}`, '');
+L.push(`**Gate: ${gate.pass ? 'passed' : 'not passed'}** (fail on ${gate.gate.fail_on}, target score ${gate.gate.target_score ?? 'none'})${gate.pass ? '' : `: ${gate.reasons.join('; ')}`}.`, '');
 L.push('## The problem', '');
 if (!framingText) L.push('_No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first._', '');
 else {
@@ -172,9 +191,10 @@ else {
 }
 if (frameCheck) L.push('## Fit to the problem', '', `**${frameCheck.fit}**: ${frameCheck.summary || ''}`, '');
 if (tasks.length) {
-  L.push('## Key tasks', '', '| Task | Verdict | Why |', '|---|---|---|');
-  for (const t of tasks) L.push(`| ${md(t.task)} | ${t.verdict} | ${md(t.summary || '')} |`);
+  L.push('## Key tasks', '', '| Task | Verdict | Score | Why | Critic |', '|---|---|---|---|---|');
+  for (const t of tasks) L.push(`| ${md(t.task)} | ${t.verdict} | ${typeof t.score === 'number' ? `${t.score}/10` : '–'} | ${md(t.summary || '')} | ${t.source} |`);
   L.push('');
+  if (overallScores.length) L.push(`Overall: ${overallScores.map((o) => `${o.score}/10 (${o.source})`).join(', ')}. The gate uses the lowest task score.`, '');
 }
 if (comparison) {
   L.push('## Since last run', '', `Compared with ${path.basename(comparison.base)}: **${comparison.fixed.length} fixed**, **${comparison.introduced.length} new**, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.`, '');
@@ -195,9 +215,23 @@ for (const sev of SEV) {
   }
 }
 if (strengths.length) L.push('## What works', '', ...strengths.map((s) => `- ${md(s.text)}${s.screen && s.screen !== '*' ? ` (${screenTitle(s.screen)})` : ''}${s.basis?.length ? ` · ${s.basis.join(', ')}` : ''}`), '');
+if (manifest.taste?.length) {
+  L.push('## Against the direction you chose', '', `${manifest.taste.length} reference image(s) in taste/. Judged apart from the findings: being close to a reference doesn't excuse a usability problem.`, '');
+  if (!tasteChecks.length) L.push('_No critic judged the screens against these references._', '');
+  for (const t of tasteChecks) {
+    L.push(`**${t.score}/10** (${t.source}): ${md(t.summary)}`, '');
+    for (const g of t.gaps || []) L.push(`- ${screenTitle(g.screen)}${g.reference ? ` vs ${g.reference}` : ''}: ${md(g.text)}`);
+    if (t.gaps?.length) L.push('');
+  }
+}
 if (comparisons.length) {
   L.push('## Variant comparison', '');
   for (const c of comparisons) L.push(`- **${c.group}**: recommend ${c.recommended}${c.ranking ? ` (ranking: ${c.ranking.join(' > ')})` : ''}. ${md(c.reasons || '')}`);
+  L.push('');
+}
+if (decided.length) {
+  L.push('## Decided by you', '', `From ${DECISIONS_REL}. Dismissed findings are left out of the counts and the gate.`, '');
+  for (const f of decided) L.push(`- ${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${f.severity} → ${f.decision.severity}`}: ${md(f.title)} (${screenTitle(f.screen)}, ${f.rule}, ${f.source})${f.decision.reason ? `. ${md(f.decision.reason)}` : ''}`);
   L.push('');
 }
 L.push(stackMarkdown(stack), '');
@@ -262,19 +296,23 @@ span.sev { color:#fff; border-radius:6px; padding:1px 6px; font-size:12px; font-
 details p { margin:6px 0; } summary { cursor:pointer; color:var(--muted); font-size:13px; }
 .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; } .thumbs figure { margin:0; width:110px; } .thumbs img { width:100%; border-radius:8px; border:1px solid var(--line); }
 ul.plain { padding-left:20px; }
+.gate { padding:10px 14px; border-radius:10px; border:1px solid var(--line); } .gate.fail { border-color:var(--p1); } .gate.pass { border-color:var(--line); }
 </style></head><body><main>
 <h1>Design critique: ${esc(framing.title)}</h1>
 <p class="sub">${esc(merged.generatedAt.slice(0, 10))} · ${merged.coverage.screens} screens · ${merged.coverage.renders} renders · critics: ${esc(merged.coverage.critics.join(', ') || 'none yet (checks only)')}</p>
+<p class="gate ${gate.pass ? 'pass' : 'fail'}"><strong>Gate: ${gate.pass ? 'passed' : 'not passed'}</strong> · fail on ${esc(gate.gate.fail_on)} · target score ${esc(gate.gate.target_score ?? 'none')}${gate.pass ? '' : `<br>${gate.reasons.map(esc).join('<br>')}`}</p>
 <h2>The problem</h2>
 <div class="frame-box">${framingText ? `${framing.problem ? `<p>${mdInline(framing.problem)}</p>` : ''}${framing.users ? `<p><strong>Users</strong><br>${mdInline(framing.users)}</p>` : ''}${framing.tasks ? `<p><strong>Key tasks</strong><br>${mdInline(framing.tasks)}</p>` : ''}${framing.assumptions.length ? `<p><strong>Open assumptions</strong></p><ul class="plain">${framing.assumptions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : '<p>No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first.</p>'}
 ${frameCheck ? `<p><strong>Fit to the problem: ${esc(frameCheck.fit)}.</strong> ${esc(frameCheck.summary || '')}</p>` : ''}</div>
-${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>Why</th></tr>${tasks.map((t) => `<tr><td>${esc(t.task)}</td><td class="verdict v-${esc(t.verdict)}">${esc(t.verdict)}</td><td>${esc(t.summary || '')}</td></tr>`).join('')}</table>` : ''}
+${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>Score</th><th>Why</th><th>Critic</th></tr>${tasks.map((t) => `<tr><td>${esc(t.task)}</td><td class="verdict v-${esc(t.verdict)}">${esc(t.verdict)}</td><td>${typeof t.score === 'number' ? `${esc(t.score)}/10` : '–'}</td><td>${esc(t.summary || '')}</td><td class="meta">${esc(t.source)}</td></tr>`).join('')}</table>` : ''}
 ${comparison ? `<h2>Since last run</h2><div class="frame-box"><p>Compared with ${esc(path.basename(comparison.base))}: <strong>${comparison.fixed.length} fixed</strong>, <strong>${comparison.introduced.length} new</strong>, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.</p>${comparison.fixed.length ? `<ul class="plain">${comparison.fixed.map((f) => `<li><s>${esc(f.title)}</s> <span class="meta">${esc(f.severity)} · ${esc(screenTitle(f.screen))}</span></li>`).join('')}</ul>` : ''}</div>` : ''}
 <h2>Findings</h2>
 <p class="counts">${SEV.map((s) => `<span><span class="sev sev-${s}">${s}</span> ${counts[s]}</span>`).join('')}</p>
 ${global.length ? `<div class="screen"><h3>Across all screens</h3><ol class="flist">${global.map((f) => `<li id="f${f.n}" value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong><div class="meta">${esc(f.basis.join(', '))} · ${esc(f.source)}</div><details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p></details></li>`).join('')}</ol></div>` : ''}
 ${manifest.screens.map(screenCard).join('\n')}
 ${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)}${s.basis?.length ? ` <span class="meta">${esc(s.basis.join(', '))}</span>` : ''}</li>`).join('')}</ul>` : ''}
+${manifest.taste?.length ? `<h2>Against the direction you chose</h2><div class="frame-box"><div class="thumbs">${manifest.taste.map((t) => `<figure><a href="${esc(t)}"><img src="${esc(t)}" alt="reference"></a></figure>`).join('')}</div>${tasteChecks.map((t) => `<p><strong>${esc(t.score)}/10</strong> <span class="meta">${esc(t.source)}</span> ${esc(t.summary)}</p>${t.gaps?.length ? `<ul class="plain">${t.gaps.map((g) => `<li>${esc(screenTitle(g.screen))}${g.reference ? ` vs ${esc(g.reference)}` : ''}: ${esc(g.text)}</li>`).join('')}</ul>` : ''}`).join('') || '<p class="sub">No critic judged the screens against these references.</p>'}</div>` : ''}
+${decided.length ? `<h2>Decided by you</h2><ul class="plain">${decided.map((f) => `<li>${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${esc(f.severity)} → ${esc(f.decision.severity)}`}: ${esc(f.title)} <span class="meta">${esc(screenTitle(f.screen))} · ${esc(f.rule)} · ${esc(f.source)}</span>${f.decision.reason ? `<br><span class="sub">${esc(f.decision.reason)}</span>` : ''}</li>`).join('')}</ul>` : ''}
 ${comparisons.length ? `<h2>Variant comparison</h2><ul class="plain">${comparisons.map((c) => `<li><strong>${esc(c.group)}</strong>: recommend ${esc(c.recommended)}. ${esc(c.reasons || '')}</li>`).join('')}</ul>` : ''}
 <h2>To build this</h2>
 <p class="sub">Platform: <strong>${esc(stack.platform)}</strong> · Stack: <strong>${esc(stack.decided ? stack.stacks.join(', ') : 'not decided')}</strong> · picks come only from catalog/stack.yaml (verified ${esc(stack.verified)}), each with its source.</p>
@@ -286,6 +324,7 @@ ${notes.length || warnings.length ? `<h2>Notes</h2><ul class="plain">${notes.map
 </main></body></html>`;
 fs.writeFileSync(path.join(runDir, 'report.html'), html);
 
+console.log(`Gate: ${gate.pass ? 'passed' : `not passed (${gate.reasons.join('; ')})`}`);
 console.log(`Report: ${findings.length} findings ${JSON.stringify(counts)} from ${['checks', ...merged.coverage.critics].join(', ')}`);
 console.log(`Wrote ${path.join(runDir, 'report.md')}`);
 console.log(`Wrote ${path.join(runDir, 'report.html')}`);

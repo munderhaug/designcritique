@@ -59,3 +59,73 @@ test('validation rejects unknown principle IDs, screens and severities', () => {
   assert.ok(errors.some((e) => /severity/.test(e)));
   assert.ok(badFindings.has('ad-1'));
 });
+
+// ---------- review fixes ----------
+import { spawnSync } from 'node:child_process';
+import { idMatches, findingCites } from '../scripts/lib/match.mjs';
+import { applyDecisions, decisionFromFinding, saveDecisions, loadDecisions } from '../scripts/lib/decisions.mjs';
+import { evaluateGate } from '../scripts/lib/gate.mjs';
+import { normalizeGate, expandImages } from '../scripts/lib/config.mjs';
+
+const runHook = (file) => spawnSync(process.execPath, ['scripts/hooks/validate-critique-hook.mjs'], { input: JSON.stringify({ tool_input: { file_path: file } }), encoding: 'utf8' });
+
+test('hook ignores critique/*.json outside a run, validates inside one', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-'));
+  fs.mkdirSync(path.join(dir, 'critique'));
+  const file = path.join(dir, 'critique', 'config.json');
+  fs.writeFileSync(file, '{"theme":"dark"}');
+  assert.equal(runHook(file).status, 0);
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ screens: [{ id: 'checkout' }] }));
+  const r = runHook(file);
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /critic/);
+});
+
+test('principle matching: exact or family, never a longer number', () => {
+  assert.ok(idMatches('IOS-NAV-STACK', 'IOS-NAV'));
+  assert.ok(idMatches('NN-H1', 'NN-H1'));
+  assert.ok(!idMatches('NN-H10', 'NN-H1'));
+  assert.ok(!idMatches('WCAG-1.4.11', 'WCAG-1.4.1'));
+  assert.ok(findingCites({ rule: 'VIS-HIERARCHY', basis: ['VIS-HIERARCHY', 'WCAG-1.4.3'] }, 'WCAG-1.4.3'));
+});
+
+test('decisions: dismiss removes, severity re-rates, both survive a re-worded critic finding', () => {
+  const before = { id: 'anthropic-design-ad-3', source: 'anthropic-design', screen: 'checkout', rule: 'NN-H10', title: 'No help link on the payment form', severity: 'P2' };
+  const rerated = { id: 'anthropic-design-ad-1', source: 'anthropic-design', screen: 'checkout', rule: 'NN-H5', title: 'Delete order styled like Pay now', severity: 'P1' };
+  const check = { id: 'chk-login-target-1', source: 'check', screen: 'login', rule: 'CHK-TARGET', title: 'Small target', severity: 'P1' };
+  const decisions = [
+    decisionFromFinding(before, { decision: 'dismiss', reason: 'Help is out of scope for v1' }),
+    decisionFromFinding(rerated, { decision: 'severity', severity: 'P2', reason: 'Undo exists' }),
+  ];
+  const next = [
+    { ...before, id: 'impeccable-x', title: 'Payment form has no help link' },
+    { ...rerated, id: 'anthropic-design-ad-7' },
+    check,
+    { ...before, screen: 'login', id: 'other' },
+  ];
+  const { open, decided } = applyDecisions(next, decisions);
+  assert.deepEqual(open.map((f) => f.id).sort(), ['anthropic-design-ad-7', 'chk-login-target-1', 'other']);
+  assert.equal(open.find((f) => f.id === 'anthropic-design-ad-7').severity, 'P2');
+  assert.equal(decided.length, 2);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-'));
+  saveDecisions(dir, decisions);
+  assert.equal(loadDecisions(dir).length, 2);
+});
+
+test('gate: fails on severe findings and on the lowest task score', () => {
+  const tasks = [{ task: 'Pay', score: 9, source: 'a' }, { task: 'Pay', score: 6, source: 'b' }, { task: 'Log in', score: 9, source: 'a' }];
+  const g = normalizeGate({ fail_on: 'P1', target_score: 8 });
+  const r = evaluateGate({ findings: [{ severity: 'P2' }], tasks, critics: ['a', 'b'] }, g);
+  assert.equal(r.pass, false);
+  assert.ok(r.reasons.some((x) => /"Pay" scored 6/.test(x)));
+  assert.equal(evaluateGate({ findings: [{ severity: 'P2' }], tasks: tasks.slice(0, 1).concat(tasks[2]), critics: ['a'] }, g).pass, true);
+  assert.equal(evaluateGate({ findings: [{ severity: 'P1' }], tasks: [], critics: [] }, normalizeGate({ target_score: null })).pass, false);
+  assert.equal(evaluateGate({ findings: [{ severity: 'P1' }], tasks: [], critics: [] }, normalizeGate({ fail_on: 'none', target_score: null })).pass, true);
+  assert.throws(() => normalizeGate({ fail_on: 'High' }));
+});
+
+test('taste: a folder expands to its images', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-'));
+  for (const f of ['b.png', 'a.webp', 'notes.txt']) fs.writeFileSync(path.join(dir, f), '');
+  assert.deepEqual(expandImages('.', dir).map((p) => path.basename(p)), ['a.webp', 'b.png']);
+});
