@@ -1,41 +1,46 @@
-# Companions: the proven tools designcritique builds on
+# What designcritique builds on
 
-designcritique adds the parts nobody else provides: problem framing, mobile evidence capture,
-independent critics, calibration and a merged report. For everything else it uses established
-tools. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to see which are installed.
+The judgement and the product record come from proven tools. This repo provides capture,
+mobile checks for mockups, orchestration, the merged report, evals and the build-stack
+catalog. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to see what's installed.
 
-## Used in every run
-
-| Tool | By | Role in designcritique |
-|---|---|---|
-| Playwright | Microsoft | Renders HTML mockups at phone sizes, light/dark, large text |
-| axe-core (`@axe-core/playwright`) | Deque | Accessibility rules engine (WCAG 2.x A/AA, best practice) |
-| DESIGN.md format | Google Labs | Token file the token checks read |
-| Impeccable | Paul Bakaus | Default critique stage: its `critique` (scored UX review) and `audit` (technical quality) on HTML mockups, with `## Platform` from PRODUCT.md switching it to the HIG or Material 3. Its detector runs via `npx impeccable detect --json`. Install: `npx impeccable install -y --providers=claude --scope=project` |
-
-If Impeccable isn't installed, the run continues without that stage and the report says so.
-Recommend installing it once.
-
-## Used when available
+## Core: needed for a full critique
 
 | Tool | By | Role | Install |
 |---|---|---|---|
-| Mobbin MCP | Mobbin (official, paid plans) | Reference screens and flows from shipped apps for each key task; critics compare against them. iOS and web only | `claude mcp add --transport http mobbin https://api.mobbin.com/mcp`, then sign in via `/mcp` |
-| Figma MCP | Figma (official) | Exports Figma frames as PNG inputs; reads variables into DESIGN.md | `claude plugin install figma@claude-plugins-official` |
-| Claude artifact tools | Anthropic | Pull Claude artifacts into the run | Built into Claude sessions that offer artifacts |
-| `material-3` skill | hamen/material-3-skill | Companion guidance for Android screens (Material 3, M3 Expressive, compliance audit) | `npx skills add hamen/material-3-skill --skill material-3 -a claude-code` |
-| `ui-design` plugin (platform-audit) | Owl-Listener/designer-skills | Companion guidance for iOS/Android convention audits | `/plugin marketplace add Owl-Listener/designer-skills`, then `/plugin install ui-design@designer-skills` |
-| Expo skills (`expo-design-system`, `expo-native-ui`) | Expo team (official) | Companion guidance for Expo / React Native projects | `claude plugin install expo@claude-plugins-official` |
-| `hcd-interviewer` skill | Anthropic | Plans real user interviews when the frame rests on untested assumptions | Available in Claude where listed |
+| Impeccable | Paul Bakaus | `init` writes PRODUCT.md (used by the frame skill); `critique` is one of the two critics | `npx impeccable install -y --providers=claude --scope=project` |
+| Anthropic design plugin | Anthropic (official) | `design-critique`, `accessibility-review`, `ux-copy` are the design-reviewer's methods; `user-research` for real research | `claude plugin marketplace add anthropics/knowledge-work-plugins` then `claude plugin install design@knowledge-work-plugins` |
+| Playwright | Microsoft | Renders HTML mockups at phone sizes, light, dark and large text | npm dependency |
+| axe-core | Deque | Accessibility rules engine | npm dependency |
+| DESIGN.md format | Google Labs | Token file the token checks read | template in `templates/` |
 
-"Companion guidance" means the ui critic reads that skill's SKILL.md (and any reference it
-points to) alongside the principles library. The critic still cites principle IDs; companion
-guidance sharpens what it looks for. If a companion and a primary source disagree, follow
-the primary source (Apple HIG, Material 3, WCAG) and say so.
+`bash scripts/setup.sh --install-companions` installs Impeccable into the project and the
+Anthropic design plugin for the user.
 
-## Next version (running apps, not mockups)
+## When connected or installed
 
-MobileBuildMCP (Sentry, formerly XcodeBuildMCP), Maestro MCP (mobile.dev), Expo MCP (local
-capabilities), Android CLI (Google), mobile-mcp (mobile-next), and Apple's exported Xcode 27
-skills for SwiftUI source. These capture real screens and accessibility trees from simulators
-and emulators, and plug into the same checks, critics and report.
+| Tool | By | Role |
+|---|---|---|
+| Mobbin MCP | Mobbin (official, paid) | Shipped iOS and web screens and flows for reference |
+| Refero MCP | Refero (official, freemium) | Alternative reference source: websites and iOS apps |
+| Figma MCP | Figma (official) | Figma frames as inputs; variables into DESIGN.md |
+| Claude artifact tools | Anthropic | Pull Claude artifacts into a run |
+| `material-3` skill | hamen | Companion guidance for Android screens |
+| designer-skills `ui-design` | Owl-Listener | Companion guidance: platform and responsive audits |
+| Expo skills | Expo (official) | Companion guidance for Expo / React Native projects |
+| `hcd-interviewer` | Anthropic | Plans real user interviews when the frame rests on assumptions |
+
+When companion guidance and a primary source disagree, the critic follows the primary source
+(Apple HIG, Material 3, WCAG) and says so.
+
+## Why the principles index exists
+
+Critics cite principle IDs (`NN-H5`, `WCAG-3.3.2`, `IOS-DESTRUCTIVE`) so findings from different
+tools can be merged, de-duplicated and scored against the eval set. The index
+(`skills/principles/`) summarises primary sources: Nielsen, Norman, Wharton et al., WCAG 2.2, the
+HIG and Material 3. It's a citation index, not a separate method.
+
+## Next version (running apps)
+
+MobileBuildMCP (Sentry), Maestro MCP (mobile.dev), Expo MCP, Android CLI (Google), mobile-mcp,
+and Apple's Xcode 27 skills, feeding real simulator screens into the same checks, critics and report.

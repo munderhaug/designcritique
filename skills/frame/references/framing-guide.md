@@ -14,6 +14,14 @@
 - **Inclusive design**: Microsoft Inclusive Design toolkit. Consider permanent, temporary and
   situational limits (the "persona spectrum").
 
+## How the sections map to Impeccable's PRODUCT.md
+
+Impeccable's `init` already records Platform, Stack, Users, Product Purpose, Operating Context
+(which is the ISO "context of use"), Capabilities and Constraints, Evidence on Hand and
+Accessibility & Inclusion. designcritique adds three sections: Problem, Key Tasks and Success
+Criteria. The questions below cover all of them, so the frame can be written by hand when
+Impeccable isn't installed.
+
 ## Sections and the questions behind them
 
 **Problem.** What goes wrong for people today, and what does it cost them? State it without
@@ -24,13 +32,13 @@ problem is unknown, say so; the critique will then flag every screen as unverifi
 who is explicitly not served? Name relevant abilities and constraints: experience with similar
 apps, language, vision, motor control, attention.
 
-**Context of use** (ISO 9241-11). Where, when and how the app is used: one-handed or two, moving
+**Operating Context** (ISO 9241-11's context of use). Where, when and how the app is used: one-handed or two, moving
 or seated, glanceable or focused, connectivity, interruptions, privacy of the surroundings.
 
-**Key tasks.** Two to five tasks, each as a job story, ranked by criticality: what fails if this
+**Key Tasks.** Two to five tasks, each as a job story, ranked by criticality: what fails if this
 task fails? Mark the task that must never fail.
 
-**Success criteria.** How you would tell the design works, in ISO 9241-11 terms:
+**Success Criteria.** How you would tell the design works, in ISO 9241-11 terms:
 - *effectiveness*: can they complete it at all, with what error rate?
 - *efficiency*: how many steps, how much time, how much thinking?
 - *satisfaction*: confidence, trust, perceived effort.

@@ -1,43 +1,37 @@
 ---
 name: frame
-description: Human-centred problem framing for an app or feature - what problem it solves, who it is for, their context of use, key tasks and how success is measured - written to PRODUCT.md. Use before designing or critiquing any app screens, when PRODUCT.md is missing or thin, or when the user asks what the app is for or who it serves. The critique skill runs it first.
+description: Human-centred problem framing for a mobile app before designing or critiquing it - who it is for, what problem it solves, context of use, ranked key tasks and success criteria - recorded in PRODUCT.md. Builds on Impeccable's init (product record) and adds the human-centred layer the critique needs. Use when PRODUCT.md is missing, thin, or has no key tasks; the critique skill runs it first.
 ---
 
 # Frame the problem
 
-Design starts with the problem, not the screens. This skill produces a short `PRODUCT.md`.
-The critique judges every screen against it, so a vague frame makes a vague critique.
-
-Follow the human-centred design process in ISO 9241-210: understand and specify the
-context of use, then the user requirements. Only after that come design and evaluation.
-Read [framing-guide.md](references/framing-guide.md) for the questions and formats.
+Design starts with the problem, not the screens. This skill doesn't invent its own product
+record. It uses **Impeccable's `init`** (Paul Bakaus), which interviews you and writes
+`PRODUCT.md`: Platform, Stack, Users, Product Purpose, Operating Context, Capabilities and
+Constraints, Accessibility. Then it adds the human-centred sections the critique judges against
+(ISO 9241-210 / 9241-11, jobs to be done). [framing-guide.md](references/framing-guide.md)
+explains each one.
 
 ## Steps
 
-1. **Gather what exists.** Read `PRODUCT.md`, `README`, `CLAUDE.md`, any brief or research notes,
-   and the mockups themselves (text, labels and flows say a lot about the intended user).
-2. **Draft the frame** using [the template](../../templates/PRODUCT.md). Fill every section.
-   Tag every statement with its evidence level:
-   - `[confirmed]`: the user said it, or it comes from research.
-   - `[inferred]`: deduced from the mockups or repo, with the clue named.
-   - `[assumption]`: a guess that needs checking.
-3. **Ask, if someone is there.** Ask at most three questions at a time, about whatever would
-   change the critique most. That's usually who the primary user is, the one task that must
-   not fail, and the context of use. Use multiple-choice questions where possible. If nobody
-   is there to answer (a scheduled or unattended run), keep the `[assumption]` tags and carry on.
-4. **Check the frame before saving.** It must name:
-   - a specific user, not "everyone";
-   - a problem stated without the solution;
-   - two to five key tasks ranked by criticality;
-   - success criteria the screens can be judged against.
-5. **Write `PRODUCT.md`** next to `mockups.yaml`, or at the project root. Keep the `## Platform`
-   section: Impeccable reads it too.
-6. **Say what changed** in two or three lines, listing the open assumptions.
-
-If the frame rests on untested assumptions about users, suggest real research. The
-`hcd-interviewer` skill (Anthropic), where available, plans and runs user interviews. If the
-Mobbin MCP is connected, looking at how shipped apps handle the key tasks helps make the tasks
-concrete; record what you learned as `[inferred]`.
-
-Never invent research findings, personas with fake names and photos, or statistics. A named
-example user is fine when it's clearly labelled as illustrative.
+1. **Run Impeccable's init.** If the Impeccable skill is installed, run `/impeccable init` and let
+   it write or update `PRODUCT.md`, including `## Platform` (`ios`, `android` or `adaptive`) and
+   `## Stack`. If it isn't installed, write the same sections yourself from
+   [the template](../../templates/PRODUCT.md), interviewing the user in the same way, and suggest
+   installing Impeccable (`npx impeccable install -y --providers=claude --scope=project`).
+2. **Add the human-centred layer** to the same file. Impeccable keeps extra headings.
+   - `## Problem`: what goes wrong for the primary user today, stated without the solution.
+   - `## Key Tasks`: two to five job stories, ranked by criticality, one marked "must not fail".
+   - `## Success Criteria`: effectiveness, efficiency and satisfaction, in terms a reviewer can
+     judge from screens.
+   Ask at most three questions at a time, only for what the repository and the user haven't
+   already answered. Use the question tool when available.
+3. **Tag evidence.** Mark each added statement `[confirmed]`, `[inferred]` (name the clue) or
+   `[assumption]` (say what changes if it's wrong). Never invent research, personas or numbers.
+4. **Point at research when it's thin.** If key tasks rest on assumptions, suggest Anthropic's
+   `user-research` skill (design plugin) or the `hcd-interviewer` skill to plan real interviews.
+   If Mobbin or Refero is connected, looking at how shipped apps handle the key tasks helps make
+   them concrete; record what you learn as `[inferred]`.
+5. **Check before finishing.** The file names a specific primary user, a problem without a
+   solution in it, ranked key tasks with one must-not-fail, and judgeable success criteria.
+   Then report in two or three lines what changed and which assumptions are open.

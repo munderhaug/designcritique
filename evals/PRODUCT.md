@@ -1,6 +1,6 @@
-# Eval Kit
+# Product
 
-A set of single screens from different apps, used to calibrate designcritique. Each screen's
+Eval Kit: a set of single screens from different apps, used to calibrate designcritique. Each screen's
 intended task is in its `notes:` in mockups.yaml. [confirmed]
 
 ## Problem
@@ -14,12 +14,12 @@ judge whether the screen lets that user complete that task easily, safely and ac
   large text, dark mode and screen readers. [confirmed]
 - **Not for:** expert or enterprise users.
 
-## Context of use
+## Operating Context
 
 Often one-handed and on the move, with interruptions. [assumption] If wrong: reach and target-size
 findings would matter less.
 
-## Key tasks
+## Key Tasks
 
 1. **Pay for an order** (must not fail): When I've chosen my items, I want to check the total and pay,
    so I can get my order without surprises. (checkout)
@@ -32,7 +32,7 @@ findings would matter less.
 6. **Understand what the product does**: When I first open the app, I want to know what it does
    for me and how to start. (welcome)
 
-## Success criteria
+## Success Criteria
 
 - Effectiveness: a first-time user completes each task without help.
 - Efficiency: the task's main action is visible without scrolling on a standard phone.
@@ -40,7 +40,11 @@ findings would matter less.
 
 ## Platform
 
-Per screen: ios or android.
+adaptive (per screen, see mockups.yaml)
+
+## Stack
+
+undecided (calibration mockups in HTML)
 
 ## Constraints
 

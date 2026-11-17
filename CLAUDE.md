@@ -8,3 +8,7 @@
 - Principle IDs are a contract: critics cite them and `evals/expected.json` matches on them.
   Don't rename an ID without updating both.
 - Keep skills and agents short; put detail in `references/` files that load on demand.
+- Judgement comes from Impeccable and Anthropic's design plugin. Don't add critique methods
+  here; wire in proven ones and cite them.
+- `catalog/stack.yaml` is the only source for build recommendations. Every entry needs `by`,
+  `trust` and `sources`; update `verified` when you re-check entries.

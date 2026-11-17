@@ -6,7 +6,8 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
 
 ```json
 {
-  "critic": "ux",
+  "critic": "anthropic-design",
+  "method": "design-critique + accessibility-review + ux-copy + cognitive walkthrough",
   "frame_check": {
     "fit": "strong | partial | weak | unknown",
     "summary": "One or two sentences: do these screens serve the problem and users in PRODUCT.md?",
@@ -19,13 +20,13 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
       "verdict": "supported | at-risk | blocked | not-covered",
       "summary": "Why, in one or two sentences.",
       "steps": [
-        { "screen": "checkout", "action": "Tap Pay now", "q1": true, "q2": true, "q3": true, "q4": false, "finding_ids": ["ux-4"] }
+        { "screen": "checkout", "action": "Tap Pay now", "q1": true, "q2": true, "q3": true, "q4": false, "finding_ids": ["ad-4"] }
       ]
     }
   ],
   "findings": [
     {
-      "id": "ux-4",
+      "id": "ad-4",
       "screen": "checkout",
       "rule": "NN-H1",
       "basis": ["NN-H1", "TASK-WALK-Q4"],
@@ -50,8 +51,9 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
 ```
 
 Field rules:
-- `critic`: `ux`, `ui`, or `impeccable` for converted Impeccable output.
-- `frame_check` and `tasks`: ux critic only. `comparisons`: ui critic only, and only when screens share a `group`.
+- `critic`: `anthropic-design` (design-reviewer agent) or `impeccable` (converted Impeccable critique).
+- `method`: optional; what the critic actually used, e.g. `fallback: principles index` when the Anthropic design plugin isn't installed.
+- `frame_check` and `tasks`: design-reviewer; Impeccable puts its scores in `frame_check.summary`. `comparisons`: only when screens share a `group`.
 - `screen`: a screen id from the manifest, or `"*"` for the whole set.
 - `rule`: the single most specific principle ID; `basis` lists all that apply, most specific first. IDs come from the principles library.
 - `category`: one of `task-fit, ux, content, visual, layout, typography, color, a11y, platform, tokens`.
@@ -59,4 +61,4 @@ Field rules:
 - `evidence`: what is visible and where, naming the screenshot file and variant. No evidence, no finding.
 - `impact`: which user, in which task, and how. Use the words of PRODUCT.md.
 - `confidence`: `low` when a static mockup can't show it (motion, real data, behaviour).
-- Up to 12 findings per critic per 8 screens, most severe first. Zero findings is a valid result for a good screen.
+- Up to 15 findings per critic per 8 screens, most severe first. Zero findings is a valid result for a good screen.

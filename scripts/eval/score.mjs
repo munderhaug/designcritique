@@ -21,7 +21,6 @@ if (fs.existsSync(critiqueDir)) {
   for (const f of fs.readdirSync(critiqueDir).filter((x) => x.endsWith('.json'))) {
     try {
       const d = JSON.parse(fs.readFileSync(path.join(critiqueDir, f), 'utf8'));
-      if (d.critic === 'impeccable') continue;
       for (const x of d.findings || []) criticFindings.push(x);
     } catch { console.error(`warning: critique/${f} is not valid JSON`); }
   }

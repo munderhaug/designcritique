@@ -1,47 +1,60 @@
 # designcritique
 
-Human-centred design critique for mobile app mockups and prototypes, as a Claude Code plugin.
+Human-centred design critique for mobile app mockups and prototypes, as a Claude Code plugin,
+built on proven tools: **Impeccable** and **Anthropic's design plugin** for the judgement,
+**Playwright** and **axe-core** for the evidence, **Mobbin** or **Refero** for references
+from shipped apps.
 
-It starts with the problem the app solves and who it is for, compares the screens with shipped
-apps, collects objective evidence at real phone sizes, and then has independent critics judge
-the screens against established design research. You get a report with findings marked on the
-screenshots, each tied to a principle and to the user and task it affects.
+It starts with the problem the app solves and who it's for, then critiques the screens against
+that, and ends by recommending what to build with, from a cited catalog.
 
 ```
-frame the problem → references → capture + checks → independent critics → report
-   PRODUCT.md        Mobbin       Playwright, axe     UX · UI · Impeccable   report.html
+1 Frame        2 References     3 Capture + checks      4 Two critiques            5 Report + build stack
+Impeccable     Mobbin / Refero  Playwright, axe-core,    Impeccable critique  ┐     report.html,
+init + HCD     shipped apps     mobile checks            Anthropic design     ┘     "To build this"
+                                                         plugin methods             from catalog/stack.yaml
 ```
 
-## Why it works this way
+## What comes from where
 
-- **Problem first.** Screens are judged against `PRODUCT.md`: the problem, the primary user,
-  their context of use, and ranked key tasks (ISO 9241-210 / 9241-11, jobs to be done).
-  Anything inferred rather than confirmed is labelled as an assumption.
-- **Evidence before opinion.** Every HTML screen is rendered at small and standard phone sizes
-  in light, dark and large text. Accessibility (axe-core), tap targets, text scaling, overflow,
-  safe areas and design-token drift are checked by code, not by a model.
-- **Independent judgement.** The critics are read-only agents with fresh context. They never
-  see how the screens were made, so the maker doesn't grade its own work.
-- **Established principles, not taste.** Findings cite Nielsen's heuristics, Norman, the
-  cognitive walkthrough, Gestalt, Fitts and Hick, WCAG 2.2, Apple's HIG and Material 3.
-  Severity follows Nielsen's frequency, impact and persistence, weighted by task criticality.
-- **Calibrated.** An eval set with planted problems and clean screens measures what the
-  critique catches and what it invents.
+| Part | Provided by | This repo adds |
+|---|---|---|
+| Problem framing (PRODUCT.md) | Impeccable `init` (Paul Bakaus) | Problem, ranked Key Tasks and Success Criteria (ISO 9241-210/-11, jobs to be done), evidence tags |
+| References | Mobbin MCP or Refero MCP (official) | How to pick and cite comparable screens per key task |
+| Rendering | Playwright (Microsoft) | Phone sizes per platform; light, dark and large-text variants; zip, folder, artifact and phone-frame inputs |
+| Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, token drift against DESIGN.md |
+| Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
+| Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
+| Platform guidance | Material 3 skill (hamen), designer-skills `ui-design`, Expo skills, when installed | Routing the right guidance to the reviewer |
+| Merged report | | De-duplication, severity (Nielsen's factors, weighted by task criticality), annotated HTML |
+| Build stack | `catalog/stack.yaml`: 26 entries, each with maker, trust level and sources | Picks per platform and stack, ranked by what the findings show |
+| Calibration | | Eval screens with planted problems and clean screens, and a scorer |
 
-## What it builds on
+## Where "To build this, start with X" comes from
 
-| Part | Provided by |
-|---|---|
-| Rendering at phone sizes | [Playwright](https://playwright.dev) (Microsoft) |
-| Accessibility rules | [axe-core](https://github.com/dequelabs/axe-core) (Deque) |
-| Design-token file | [DESIGN.md](https://github.com/google-labs-code/design.md) format (Google Labs) |
-| Design critique and audit stage | [Impeccable](https://github.com/pbakaus/impeccable) (Paul Bakaus), when installed |
-| Reference screens from shipped apps | [Mobbin MCP](https://mobbin.com) (official, paid plans), when connected |
-| Figma frames as input | [Figma MCP](https://help.figma.com/hc/en-us/articles/32132100833559) (official), when connected |
-| Platform companion guidance | [`material-3`](https://github.com/hamen/material-3-skill), [designer-skills `ui-design`](https://github.com/Owl-Listener/designer-skills), [Expo skills](https://docs.expo.dev/skills/), when installed |
-| **This repo** | Problem framing, mobile checks (targets, safe areas, text scaling, tokens), critic agents, principles library, merged report, evals |
+Every critique report ends with **To build this**:
+1. design system and components
+2. tokens
+3. platform skills
+4. design-quality skills
+5. design inputs and references
+6. device checks
 
-Details and install commands: [skills/critique/references/companions.md](skills/critique/references/companions.md).
+The recommender (`scripts/lib/stack.mjs`) picks **only** from
+[`catalog/stack.yaml`](catalog/stack.yaml). It never invents tools:
+- Each entry records who makes it, whether it's official, practitioner or community, its install
+  command and the sources it was checked against, plus a `verified` date.
+- Picks are filtered by `## Platform` and `## Stack` in PRODUCT.md, and ranked by the categories
+  of findings in the run (accessibility, tokens, platform and so on).
+- If the stack is undecided, each step lists the options per stack.
+
+The catalog was compiled from the platform owners' docs (Apple, Google, Expo, Flutter, Figma,
+Anthropic) and established practitioners (Antoine van der Lee, Paul Hudson, Callstack, Paul
+Bakaus). Re-verify it when the date is more than about three months old.
+
+```bash
+node scripts/report/recommend-stack.mjs --product PRODUCT.md   # recommendations without a critique
+```
 
 ## Install
 
@@ -50,74 +63,64 @@ Details and install commands: [skills/critique/references/companions.md](skills/
 /plugin install designcritique@designcritique
 ```
 
-Then, once, from your app project:
+Then, once, in your app project:
 
 ```bash
-bash ~/.claude/plugins/<path-to>/designcritique/scripts/setup.sh --with-impeccable
+bash <plugin-dir>/scripts/setup.sh --install-companions
 ```
 
-Node 20+ is required. The setup script installs dependencies, installs a browser if needed,
-optionally installs Impeccable into the project, and lists which companions it found.
-Connect Mobbin with `claude mcp add --transport http mobbin https://api.mobbin.com/mcp`.
+This installs script dependencies and a browser if needed, Impeccable into the project, and
+Anthropic's design plugin, then lists what it found. Connect a reference source with
+`claude mcp add --transport http mobbin https://api.mobbin.com/mcp` (paid) or Refero
+(`https://api.refero.design/mcp`, freemium). Node 20+ is required.
 
 ## Use
 
 ```text
-/designcritique:frame                      # write PRODUCT.md: problem, users, tasks
+/designcritique:frame                      # PRODUCT.md via Impeccable init + problem, key tasks, success criteria
 /designcritique:critique mockups.yaml      # full critique
-/designcritique:critique mockups/onboarding.zip
+/designcritique:critique exports/prototype.zip
 /designcritique:critique https://claude.ai/artifact/…
 ```
 
-Inputs: HTML files, PNG/JPG/WebP images, `.zip` exports, folders, Claude artifacts (pulled with
-the artifact tools), Figma frames (via the Figma MCP), and canvases with several phone frames
-(`phone_frame:`). See [templates/mockups.yaml](templates/mockups.yaml) and
-[inputs.md](skills/critique/references/inputs.md).
-
+Inputs: HTML, PNG/JPG/WebP, `.zip` exports, folders, Claude artifacts, Figma frames, and canvases
+with several phone frames (`phone_frame:`). See [templates/mockups.yaml](templates/mockups.yaml).
 Each run writes to `.designcritique/runs/<timestamp>/`: screenshots, `framing.md`,
-`checks/findings.json`, `critique/*.json`, and the merged `findings.json`, `report.md` and `report.html`.
-
-The scripts also run on their own:
-
-```bash
-node scripts/capture/capture.mjs --config mockups.yaml
-node scripts/checks/run-checks.mjs --run <run>
-node scripts/report/render-report.mjs --run <run>
-```
+`checks/findings.json`, `critique/*.json`, `findings.json`, `report.md`, `report.html`.
 
 ## Evals
 
 ```bash
-npm run eval          # captures the eval set, runs the checks, scores them
+npm run eval     # capture, checks and scoring on the eval set (no model)
 ```
 
 To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
 `npm run eval:score -- --run <run>`. See [evals/README.md](evals/README.md).
 
-## Status and limits
+## Status
 
-Version 0.1: mockups and prototypes. Not yet:
-- Running apps in simulators and emulators. Planned with MobileBuildMCP, Maestro MCP, Expo MCP
-  and Android CLI, feeding the same checks, critics and report.
-- Single-file React (`.jsx`) artifacts. Export them as HTML or images.
-- Comparing runs over time.
+Version 0.1, for mockups and prototypes. Tested: capture, checks (all planted problems found,
+no false alarms on clean screens), input types, report and build-stack recommendations.
+**Not yet run end to end:** the two critics and the reference step. They depend on Impeccable,
+the Anthropic design plugin and Mobbin or Refero, which need a Claude Code session with them installed.
 
-Image inputs get critic judgement only; deterministic checks need HTML. Text scaling in
-mockups is a proxy (root font size at 135%) for Dynamic Type and Android font scale.
+Next: running apps through MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI.
+Not supported: single-file `.jsx` artifacts (export as HTML or images). Image inputs get critics
+only; deterministic checks need HTML. Large-text rendering is a proxy for Dynamic Type and font scale.
 
 ## Layout
 
 ```
-.claude-plugin/        plugin and marketplace manifests
+catalog/stack.yaml     cited build-stack catalog
 commands/              /designcritique:critique, /designcritique:frame
-skills/frame/          problem framing (PRODUCT.md)
-skills/critique/       orchestration, inputs, severity, output format, companions, Mobbin
-skills/principles/     principles library with stable IDs
-agents/                ux-critic, ui-critic (read-only)
-scripts/               capture, checks, report, evals, setup, companion detection
-schemas/               critic output JSON Schema
-templates/             PRODUCT.md, DESIGN.md, mockups.yaml
+skills/frame/          problem framing on top of Impeccable init
+skills/critique/       orchestration, inputs, references, severity, output format, companions
+skills/principles/     citation index (IDs and primary sources)
+agents/                design-reviewer (read-only, Anthropic design-plugin methods)
+scripts/               capture, checks, report, stack recommender, evals, setup, companion detection
+templates/             PRODUCT.md (Impeccable schema + HCD), DESIGN.md, mockups.yaml
 evals/                 calibration screens, expectations, fixtures
 ```
 
-MIT licensed.
+MIT licensed. Impeccable (Apache 2.0) and Anthropic's design plugin are installed as
+dependencies, not copied into this repo.

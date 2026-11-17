@@ -1,7 +1,7 @@
 {
   "name": "designcritique",
   "version": "0.1.0",
-  "description": "Human-centred design critique for mobile app mockups and prototypes: frame the problem, capture screens at phone sizes, run accessibility and token checks, then independent UX and UI critics grounded in established design principles.",
+  "description": "Human-centred design critique for mobile app mockups and prototypes, built on Impeccable and Anthropic's design plugin: frame the problem, compare with shipped apps, capture screens at phone sizes with accessibility and token checks, run two independent critiques, and recommend a cited build stack.",
   "author": { "name": "munderhaug" },
   "homepage": "https://github.com/munderhaug/designcritique",
   "repository": "https://github.com/munderhaug/designcritique",

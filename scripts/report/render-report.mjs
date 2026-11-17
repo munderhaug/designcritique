@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
+import { recommendStack, stackMarkdown } from '../lib/stack.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: render-report.mjs --run <runDir>'); process.exit(2); }
@@ -102,20 +103,23 @@ function assumptionsOf(md) {
   return out;
 }
 const productTitle = (framingText.match(/^#\s+(.+)$/m) || [])[1] || 'Untitled product';
+const firstSection = (...names) => names.map((n) => section(framingText, n)).find(Boolean) || '';
 const framing = {
-  title: productTitle,
-  problem: section(framingText, 'Problem'),
-  users: section(framingText, 'Users'),
-  context: section(framingText, 'Context of use'),
-  tasks: section(framingText, 'Key tasks'),
+  title: productTitle === 'Product' ? (manifest.screens[0]?.mockupId ? path.basename(manifest.baseDir) : 'Untitled product') : productTitle,
+  problem: firstSection('Problem', 'Product Purpose'),
+  users: firstSection('Users'),
+  context: firstSection('Context of use', 'Operating Context'),
+  tasks: firstSection('Key tasks'),
   assumptions: assumptionsOf(framingText),
 };
+
+const stack = recommendStack({ productText: framingText, fallbackPlatform: manifest.screens[0]?.platform, findings: [...byKey.values()] });
 
 const merged = {
   generatedAt: new Date().toISOString(),
   run: runDir,
   framing: { ...framing, present: !!framingText, frameCheck },
-  tasks, findings, strengths, comparisons, counts,
+  tasks, findings, strengths, comparisons, counts, stack,
   coverage: {
     screens: manifest.screens.length,
     renders: manifest.screens.reduce((n, s) => n + s.captures.length, 0),
@@ -161,6 +165,7 @@ if (comparisons.length) {
   for (const c of comparisons) L.push(`- **${c.group}**: recommend ${c.recommended}${c.ranking ? ` (ranking: ${c.ranking.join(' > ')})` : ''}. ${md(c.reasons || '')}`);
   L.push('');
 }
+L.push(stackMarkdown(stack), '');
 if (notes.length || warnings.length) L.push('## Notes', '', ...notes.map((n) => `- ${n.screen}: ${n.note}`), ...warnings.map((w) => `- Warning: ${w}`), '');
 L.push('---', 'Principle IDs refer to the designcritique principles library (skills/principles). Severity follows Nielsen\'s frequency, impact and persistence, weighted by task criticality.');
 fs.writeFileSync(path.join(runDir, 'report.md'), L.join('\n') + '\n');
@@ -234,6 +239,10 @@ ${global.length ? `<div class="screen"><h3>Across all screens</h3><ol class="fli
 ${manifest.screens.map(screenCard).join('\n')}
 ${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)}${s.basis?.length ? ` <span class="meta">${esc(s.basis.join(', '))}</span>` : ''}</li>`).join('')}</ul>` : ''}
 ${comparisons.length ? `<h2>Variant comparison</h2><ul class="plain">${comparisons.map((c) => `<li><strong>${esc(c.group)}</strong>: recommend ${esc(c.recommended)}. ${esc(c.reasons || '')}</li>`).join('')}</ul>` : ''}
+<h2>To build this</h2>
+<p class="sub">Platform: <strong>${esc(stack.platform)}</strong> · Stack: <strong>${esc(stack.decided ? stack.stacks.join(', ') : 'not decided')}</strong> · picks come only from catalog/stack.yaml (verified ${esc(stack.verified)}), each with its source.</p>
+${stack.notes.map((n) => `<p class="sub"><em>${esc(n)}</em></p>`).join('')}
+${stack.steps.map((st, i) => `<div class="screen"><h3>${i + 1}. ${esc(st.title)}</h3><ul class="plain">${st.picks.map((p) => `<li><strong>${esc(p.name)}</strong> <span class="meta">${esc(p.by)} · ${esc(p.trust)}${stack.decided ? '' : ` · for ${esc(p.stacks.join(', '))}`}${p.group && st.picks.filter((x) => x.group === p.group).length > 1 ? ' · alternative' : ''}</span><br>${esc(p.why)}${p.because ? ` <em>${esc(p.because)}.</em>` : ''}<br><code>${esc(p.install)}</code> · ${p.sources.map((u) => `<a href="${esc(u)}">source</a>`).join(' ')}</li>`).join('')}</ul></div>`).join('')}
 ${notes.length || warnings.length ? `<h2>Notes</h2><ul class="plain">${notes.map((n) => `<li>${esc(n.screen)}: ${esc(n.note)}</li>`).join('')}${warnings.map((w) => `<li>Warning: ${esc(w)}</li>`).join('')}</ul>` : ''}
 <p class="sub">Principle IDs refer to the designcritique principles library. Severity follows Nielsen's frequency, impact and persistence, weighted by task criticality.</p>
 </main></body></html>`;

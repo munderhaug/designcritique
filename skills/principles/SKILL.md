@@ -1,12 +1,15 @@
 ---
 name: principles
-description: Established design theory and research for judging mobile app screens - Nielsen's heuristics, Norman's principles, the cognitive walkthrough, Gestalt and visual hierarchy, Fitts's and Hick's laws, cognitive load, WCAG 2.2, Apple HIG and Material 3, plus common AI-generated UI tells. Use when critiquing or designing a mobile screen or flow and a finding or decision should rest on a named principle.
+description: Citation index of established design principles with stable IDs - Nielsen's heuristics, Norman, the cognitive walkthrough, Gestalt, Fitts and Hick, WCAG 2.2, Apple HIG, Material 3 and common AI-generated UI tells - each summarised from its primary source. Use to cite the principle behind a design finding or decision on a mobile screen.
 ---
 
-# Design principles library
+# Design principles: citation index
 
-Every critique finding cites at least one principle ID from these files, so a reader can
-check the reasoning and look up the source. Read only the files the task needs.
+This is a citation index, not a critique method. The methods come from Impeccable's critique
+and Anthropic's design plugin (see the critique skill). Every finding, whichever tool produced
+it, cites a principle ID from these files. That lets findings be merged and de-duplicated, lets
+readers look up the primary source, and lets the eval set score the critics. Each file
+summarises its primary sources and names them. Read only the files the task needs.
 
 | File | Covers | IDs |
 |---|---|---|

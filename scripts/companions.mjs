@@ -22,9 +22,27 @@ const roots = [
 ];
 
 export const COMPANIONS = {
+  'design-critique': {
+    skill: 'design-critique',
+    use: 'Core: the design-reviewer agent follows this framework (Anthropic design plugin).',
+    install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins',
+    by: 'Anthropic, official',
+  },
+  'accessibility-review': {
+    skill: 'accessibility-review',
+    use: 'Core: WCAG review method for the design-reviewer agent (Anthropic design plugin).',
+    install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins',
+    by: 'Anthropic, official',
+  },
+  'ux-copy': {
+    skill: 'ux-copy',
+    use: 'Core: copy review patterns for the design-reviewer agent (Anthropic design plugin).',
+    install: 'claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins',
+    by: 'Anthropic, official',
+  },
   impeccable: {
     skill: 'impeccable',
-    use: 'Default stage: run its critique and audit on HTML mockups in a fresh agent; its detector via `npx impeccable detect --json`.',
+    use: 'Core: init writes PRODUCT.md (frame skill); critique is one of the two critics.',
     install: 'npx impeccable install -y --providers=claude --scope=project',
     by: 'Paul Bakaus (pbakaus/impeccable), Apache-2.0',
   },

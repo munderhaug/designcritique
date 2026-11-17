@@ -3,37 +3,92 @@
   "$id": "https://github.com/munderhaug/designcritique/schemas/critic-output.schema.json",
   "title": "designcritique critic output",
   "type": "object",
-  "required": ["critic", "findings"],
+  "required": [
+    "critic",
+    "findings"
+  ],
   "properties": {
-    "critic": { "enum": ["ux", "ui", "impeccable"] },
+    "critic": {
+      "type": "string",
+      "description": "anthropic-design or impeccable"
+    },
     "frame_check": {
       "type": "object",
       "properties": {
-        "fit": { "enum": ["strong", "partial", "weak", "unknown"] },
-        "summary": { "type": "string" },
-        "assumptions_relied_on": { "type": "array", "items": { "type": "string" } }
+        "fit": {
+          "enum": [
+            "strong",
+            "partial",
+            "weak",
+            "unknown"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "assumptions_relied_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "tasks": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["task", "verdict"],
+        "required": [
+          "task",
+          "verdict"
+        ],
         "properties": {
-          "task": { "type": "string" },
-          "user": { "type": "string" },
-          "verdict": { "enum": ["supported", "at-risk", "blocked", "not-covered"] },
-          "summary": { "type": "string" },
+          "task": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "supported",
+              "at-risk",
+              "blocked",
+              "not-covered"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
           "steps": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "screen": { "type": "string" },
-                "action": { "type": "string" },
-                "q1": { "type": "boolean" }, "q2": { "type": "boolean" },
-                "q3": { "type": "boolean" }, "q4": { "type": "boolean" },
-                "finding_ids": { "type": "array", "items": { "type": "string" } }
+                "screen": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "q1": {
+                  "type": "boolean"
+                },
+                "q2": {
+                  "type": "boolean"
+                },
+                "q3": {
+                  "type": "boolean"
+                },
+                "q4": {
+                  "type": "boolean"
+                },
+                "finding_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -44,25 +99,96 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "screen", "rule", "severity", "title", "evidence", "recommendation"],
+        "required": [
+          "id",
+          "screen",
+          "rule",
+          "severity",
+          "title",
+          "evidence",
+          "recommendation"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "screen": { "type": "string" },
-          "rule": { "type": "string" },
-          "basis": { "type": "array", "items": { "type": "string" } },
-          "category": { "enum": ["task-fit", "ux", "content", "visual", "layout", "typography", "color", "a11y", "platform", "tokens"] },
-          "severity": { "enum": ["P0", "P1", "P2", "P3"] },
-          "title": { "type": "string" },
-          "evidence": { "type": "string" },
-          "impact": { "type": "string" },
-          "recommendation": { "type": "string" },
-          "confidence": { "enum": ["high", "medium", "low"] },
-          "task": { "type": ["string", "null"] },
+          "id": {
+            "type": "string"
+          },
+          "screen": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "category": {
+            "enum": [
+              "task-fit",
+              "ux",
+              "content",
+              "visual",
+              "layout",
+              "typography",
+              "color",
+              "a11y",
+              "platform",
+              "tokens"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2",
+              "P3"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "task": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "element": {
-            "type": ["object", "null"],
+            "type": [
+              "object",
+              "null"
+            ],
             "properties": {
-              "selector": { "type": ["string", "null"] },
-              "region": { "type": ["string", "null"] }
+              "selector": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "region": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             }
           }
         }
@@ -72,11 +198,22 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["text"],
+        "required": [
+          "text"
+        ],
         "properties": {
-          "screen": { "type": "string" },
-          "text": { "type": "string" },
-          "basis": { "type": "array", "items": { "type": "string" } }
+          "screen": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -84,14 +221,31 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["group", "recommended"],
+        "required": [
+          "group",
+          "recommended"
+        ],
         "properties": {
-          "group": { "type": "string" },
-          "recommended": { "type": "string" },
-          "ranking": { "type": "array", "items": { "type": "string" } },
-          "reasons": { "type": "string" }
+          "group": {
+            "type": "string"
+          },
+          "recommended": {
+            "type": "string"
+          },
+          "ranking": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reasons": {
+            "type": "string"
+          }
         }
       }
+    },
+    "method": {
+      "type": "string"
     }
   }
 }

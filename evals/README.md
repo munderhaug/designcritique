@@ -13,7 +13,7 @@ To score the critics, run `/designcritique:critique evals/mockups.yaml` in Claud
 npm run eval:score -- --run evals/.runs/<run-folder>
 ```
 
-The critics must find the seeded problems on `welcome` and `checkout` and raise no P0/P1 on
+The critics (Impeccable and the design-reviewer) together must find the seeded problems on `welcome` and `checkout` and raise no P0/P1 on
 `settings` and `trips`. Expectations are in `expected.json`. Screen names are neutral and the
 mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 
@@ -27,5 +27,5 @@ mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 ## Fixtures
 
 - `fixtures/inputs.yaml`: smoke test for zip, phone-frame canvas and image inputs (not scored).
-- `fixtures/sample-critique/ux.json`: a hand-written example of the critic output format, used to
+- `fixtures/sample-critique/anthropic-design.json`: a hand-written example of the critic output format, used to
   test the report. It is not a real critique.

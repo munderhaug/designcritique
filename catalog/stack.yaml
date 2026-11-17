@@ -1,0 +1,370 @@
+# Build-stack catalog: where "To build this, start with X, add Y" in a critique report comes from.
+#
+# Every entry names who makes it, how trusted it is, and the sources it was checked against.
+# The recommender (scripts/lib/stack.mjs) only picks from this file: it never invents tools.
+# Re-verify entries when `verified` is older than ~3 months; this ecosystem changes monthly.
+#
+# trust: official   = made by the platform or tool owner (Apple, Google, Expo, Figma, Anthropic…)
+#        practitioner = a named, established practitioner or firm (e.g. Antoine van der Lee, Callstack)
+#        community  = maintained open source without an established author track record
+# role (order in the report): foundation, tokens, platform-skill, design-skill, design-input, verify
+# group: entries sharing a group are alternatives; the report says "pick one".
+
+verified: 2026-11-17
+
+entries:
+  # ---------- 1. Foundation: design system and components ----------
+  - id: hig-swiftui
+    role: foundation
+    name: "Apple HIG with native SwiftUI components"
+    by: "Apple"
+    trust: official
+    platforms: [ios]
+    stacks: [swiftui]
+    why: "Native controls bring Dynamic Type, dark mode, VoiceOver and platform behaviour for free; the HIG is the yardstick the critique uses."
+    install: "Xcode, SwiftUI"
+    helps_with: [platform, a11y, typography, color]
+    sources:
+      - https://developer.apple.com/design/human-interface-guidelines
+
+  - id: material3-compose
+    role: foundation
+    name: "Material 3 with Jetpack Compose (androidx.compose.material3)"
+    by: "Google"
+    trust: official
+    platforms: [android]
+    stacks: [compose]
+    why: "Material 3 components, colour roles, type scale and dynamic colour; the conventions the critique checks Android screens against."
+    install: "Android Studio, Compose BOM with material3"
+    helps_with: [platform, a11y, typography, color, tokens]
+    sources:
+      - https://m3.material.io
+      - https://developer.android.com/develop/ui/compose
+
+  - id: expo-ui
+    role: foundation
+    group: rn-components
+    name: "@expo/ui (real SwiftUI on iOS, Jetpack Compose on Android)"
+    by: "Expo"
+    trust: official
+    platforms: [ios, android]
+    stacks: [expo]
+    why: "Genuinely native controls from React Native, so screens follow the HIG and Material 3 instead of imitating them."
+    install: "npx expo install @expo/ui"
+    helps_with: [platform, a11y]
+    sources:
+      - https://docs.expo.dev/skills/
+
+  - id: rn-reusables
+    role: foundation
+    group: rn-components
+    name: "React Native Reusables (shadcn/ui for React Native, on Nativewind/Uniwind)"
+    by: "founded-labs"
+    trust: community
+    platforms: [ios, android]
+    stacks: [expo, react-native]
+    why: "Copy-in component source the agent can read and edit, with tokens through Tailwind classes. Cross-platform look rather than native controls."
+    install: "see reactnativereusables.com/docs"
+    helps_with: [tokens, visual]
+    sources:
+      - https://github.com/founded-labs/react-native-reusables
+
+  - id: gluestack-ui
+    role: foundation
+    group: rn-components
+    name: "gluestack-ui v5 with its official agent skill"
+    by: "gluestack"
+    trust: official
+    platforms: [ios, android]
+    stacks: [expo, react-native]
+    why: "Themed, accessible component library; the vendor's agent skill enforces semantic tokens over raw values."
+    install: "npx skills add https://github.com/gluestack/agent-skills --skill gluestack-ui-v5"
+    helps_with: [tokens, a11y]
+    sources:
+      - https://skills.sh/gluestack/agent-skills/gluestack-ui-v5
+
+  - id: flutter-widgets
+    role: foundation
+    name: "Flutter Material 3 and Cupertino widgets"
+    by: "Google (Flutter team)"
+    trust: official
+    platforms: [ios, android]
+    stacks: [flutter]
+    why: "Material 3 by default, Cupertino widgets where iOS conventions matter."
+    install: "flutter create"
+    helps_with: [platform, a11y]
+    sources:
+      - https://docs.flutter.dev/ui/widgets
+
+  # ---------- 2. Tokens ----------
+  - id: design-md
+    role: tokens
+    name: "DESIGN.md token file"
+    by: "Google Labs"
+    trust: official
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "One file of colour, type, spacing and radius tokens with the reasons behind them, read by coding agents and by designcritique's token checks."
+    install: "start from templates/DESIGN.md in this repo, or /impeccable document"
+    helps_with: [tokens, color, typography, layout]
+    sources:
+      - https://github.com/google-labs-code/design.md
+
+  # ---------- 3. Platform skills ----------
+  - id: xcode-skills
+    role: platform-skill
+    name: "Apple's Xcode 27 agent skills (swiftui-specialist and others)"
+    by: "Apple"
+    trust: official
+    platforms: [ios]
+    stacks: [swiftui]
+    why: "Apple's own SwiftUI guidance, exported for Claude Code. Lacks accessibility and layout guidance, so pair it with one practitioner skill."
+    install: "xcrun agent skills export ~/.claude/skills"
+    helps_with: [platform]
+    sources:
+      - https://www.avanderlee.com/ai-development/using-xcode-27s-agent-skills-in-claude-codex-and-cursor/
+
+  - id: swiftui-expert
+    role: platform-skill
+    group: swiftui-practitioner
+    name: "SwiftUI Expert skill"
+    by: "Antoine van der Lee (SwiftLee)"
+    trust: practitioner
+    platforms: [ios]
+    stacks: [swiftui]
+    why: "State, composition, performance, accessibility and Liquid Glass; version 5 merges Apple's Xcode 27 guidance."
+    install: "npx skills@latest add https://github.com/avdlee/swiftui-agent-skill --skill swiftui-expert-skill"
+    helps_with: [a11y, platform, layout]
+    sources:
+      - https://www.avanderlee.com/ai-development/swiftui-best-practices-xcode-27-agent-skill/
+
+  - id: swiftui-pro
+    role: platform-skill
+    group: swiftui-practitioner
+    name: "SwiftUI Pro skill"
+    by: "Paul Hudson (Hacking with Swift)"
+    trust: practitioner
+    platforms: [ios]
+    stacks: [swiftui]
+    why: "Targets mistakes AI tools repeat: deprecated modifiers, labelled controls, touch targets, scalable fonts, performance."
+    install: "npx skills add https://github.com/twostraws/swiftui-agent-skill --skill swiftui-pro"
+    helps_with: [a11y, platform]
+    sources:
+      - https://www.hackingwithswift.com/articles/282/swiftui-agent-skill-claude-codex-ai
+
+  - id: android-skills
+    role: platform-skill
+    name: "Android skills and Android CLI"
+    by: "Google"
+    trust: official
+    platforms: [android]
+    stacks: [compose]
+    why: "Official skills for the areas where models underperform (edge-to-edge, XML-to-Compose, Styles API), installed through Android CLI."
+    install: "android init && android skills add --agent=claude-code --all"
+    helps_with: [platform, layout]
+    sources:
+      - https://github.com/android/skills
+      - https://developer.android.com/tools/agents/android-cli
+
+  - id: material-3-skill
+    role: platform-skill
+    name: "Material 3 skill"
+    by: "hamen"
+    trust: community
+    platforms: [android]
+    stacks: [compose, flutter]
+    why: "Material 3 and M3 Expressive tokens, components and a compliance audit, Compose first."
+    install: "npx skills add hamen/material-3-skill --skill material-3 -a claude-code"
+    helps_with: [platform, tokens, color, typography]
+    sources:
+      - https://github.com/hamen/material-3-skill
+
+  - id: expo-skills
+    role: platform-skill
+    name: "Expo plugin skills (expo-design-system, expo-native-ui, expo-ui, expo-router)"
+    by: "Expo"
+    trust: official
+    platforms: [ios, android]
+    stacks: [expo]
+    why: "Tokens and design-system drift, native styling (HIG, semantic colours, SF Symbols), native navigation; written for apps that look AI-generated."
+    install: "claude plugin install expo@claude-plugins-official"
+    helps_with: [tokens, platform, visual]
+    sources:
+      - https://docs.expo.dev/skills/
+
+  - id: callstack-rn
+    role: platform-skill
+    name: "React Native best practices skills"
+    by: "Callstack"
+    trust: practitioner
+    platforms: [ios, android]
+    stacks: [expo, react-native]
+    why: "Performance guidance (frame rate, startup) from a major React Native contributor; not visual design."
+    install: "/plugin marketplace add callstackincubator/agent-skills, then /plugin install react-native-best-practices@callstack-agent-skills"
+    helps_with: []
+    sources:
+      - https://www.callstack.com/blog/announcing-react-native-best-practices-for-ai-agents
+
+  - id: flutter-plugin
+    role: platform-skill
+    name: "Flutter and Dart agent plugin (dart-flutter)"
+    by: "Google (Flutter and Dart teams)"
+    trust: official
+    platforms: [ios, android]
+    stacks: [flutter]
+    why: "Theming, responsive layout, layout fixes, widget previews and an accessibility audit skill, plus the Dart MCP config."
+    install: "claude plugin marketplace add flutter/agent-plugins && claude plugin install dart-flutter@dart-flutter"
+    helps_with: [a11y, layout, tokens]
+    sources:
+      - https://github.com/flutter/agent-plugins
+      - https://docs.flutter.dev/ai/agent-skills
+
+  # ---------- 4. Design quality (all stacks) ----------
+  - id: impeccable
+    role: design-skill
+    name: "Impeccable"
+    by: "Paul Bakaus"
+    trust: practitioner
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Design vocabulary and anti-pattern rules while building (shape, init, polish, harden, clarify, adapt), with native iOS and Android references."
+    install: "npx impeccable install -y --providers=claude --scope=project"
+    helps_with: [visual, ux, content, layout, typography]
+    sources:
+      - https://github.com/pbakaus/impeccable
+
+  - id: anthropic-design
+    role: design-skill
+    name: "Anthropic design plugin (design-critique, accessibility-review, ux-copy, design-system)"
+    by: "Anthropic"
+    trust: official
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Structured critique, WCAG audits, interface copy and design-system management while building."
+    install: "claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins"
+    helps_with: [a11y, content, ux, tokens]
+    sources:
+      - https://github.com/anthropics/knowledge-work-plugins
+
+  # ---------- 5. Design inputs and references ----------
+  - id: figma-mcp
+    role: design-input
+    name: "Figma MCP server (remote) via Figma's Claude Code plugin"
+    by: "Figma"
+    trust: official
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Layout, variables and Code Connect mappings from your Figma files instead of guessing from images."
+    install: "claude plugin install figma@claude-plugins-official"
+    helps_with: [tokens, visual]
+    sources:
+      - https://help.figma.com/hc/en-us/articles/39888612464151-Claude-Code-and-Figma-Set-up-the-MCP-server
+
+  - id: mobbin-mcp
+    role: design-input
+    group: references
+    name: "Mobbin MCP"
+    by: "Mobbin"
+    trust: official
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Largest library of shipped iOS and web screens and flows to design and judge key tasks against. No Android library, so Android apps get task patterns only. Paid plans."
+    install: "claude mcp add --transport http mobbin https://api.mobbin.com/mcp"
+    helps_with: [ux, task-fit, platform]
+    sources:
+      - https://mobbin.com
+
+  - id: refero-mcp
+    role: design-input
+    group: references
+    name: "Refero MCP"
+    by: "Refero"
+    trust: official
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Real product screens and user flows from websites and iOS apps, plus curated styles. Smaller than Mobbin; freemium."
+    install: "claude mcp add --transport http refero https://api.refero.design/mcp --header \"Authorization: Bearer <token>\""
+    helps_with: [ux, task-fit, visual]
+    sources:
+      - https://doc.refero.design/mcp/getting-started
+
+  # ---------- 6. Check it on a device ----------
+  - id: mobilebuildmcp
+    role: verify
+    name: "MobileBuildMCP (formerly XcodeBuildMCP)"
+    by: "Sentry (created by Cameron Cooke)"
+    trust: official
+    platforms: [ios]
+    stacks: [swiftui, expo, react-native, flutter]
+    why: "Build, run, tap and screenshot on the iOS Simulator so the agent can check its own UI."
+    install: "claude mcp add MobileBuildMCP -- npx -y mobilebuildmcp@latest mcp"
+    helps_with: [visual, a11y]
+    sources:
+      - https://github.com/getsentry/MobileBuildMCP
+
+  - id: android-cli-verify
+    role: verify
+    name: "Android CLI previews and emulators"
+    by: "Google"
+    trust: official
+    platforms: [android]
+    stacks: [compose]
+    why: "Renders Compose @Preview functions to PNG without an emulator, and drives emulators and devices."
+    install: "see Android CLI docs"
+    helps_with: [visual]
+    sources:
+      - https://developer.android.com/tools/agents/android-cli
+
+  - id: expo-mcp
+    role: verify
+    name: "Expo MCP server (local capabilities)"
+    by: "Expo"
+    trust: official
+    platforms: [ios, android]
+    stacks: [expo]
+    why: "Simulator screenshots, taps and view inspection for Expo apps; docs and EAS on the hosted server."
+    install: "npx expo install expo-mcp --dev"
+    helps_with: [visual]
+    sources:
+      - https://expo.dev/changelog/the-expo-mcp-server-is-now-available-on-the-free-plan
+
+  - id: dart-mcp
+    role: verify
+    name: "Dart and Flutter MCP server"
+    by: "Google (Dart team)"
+    trust: official
+    platforms: [ios, android]
+    stacks: [flutter]
+    why: "Analyzer, tests and runtime inspection of a running Flutter app. Experimental."
+    install: "dart mcp-server (Dart 3.9+)"
+    helps_with: [layout]
+    sources:
+      - https://docs.flutter.dev/ai/tools
+
+  - id: maestro-mcp
+    role: verify
+    group: cross-platform-ui
+    name: "Maestro MCP"
+    by: "mobile.dev"
+    trust: official
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Inspect screens, run and save UI flows on simulators and emulators, cross-platform."
+    install: "install the Maestro CLI, then claude mcp add maestro -- maestro mcp"
+    helps_with: [ux, task-fit]
+    sources:
+      - https://maestro.dev/mcp
+
+  - id: mobile-mcp
+    role: verify
+    group: cross-platform-ui
+    name: "mobile-mcp"
+    by: "mobile-next"
+    trust: community
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "One API for iOS simulators, Android emulators and real devices through accessibility snapshots."
+    install: "claude mcp add mobile-mcp -- npx -y @mobilenext/mobile-mcp@latest"
+    helps_with: [a11y]
+    sources:
+      - https://github.com/mobile-next/mobile-mcp
