@@ -1,10 +1,20 @@
 {
   "name": "designcritique",
-  "version": "0.3.0",
-  "description": "Human-centred design critique for mobile app mockups and prototypes, built on Impeccable and Anthropic's design plugin: frame the problem, compare with shipped apps, capture screens at phone sizes with accessibility and token checks, run two independent critiques, and recommend a cited build stack.",
-  "author": { "name": "munderhaug" },
+  "version": "0.4.0",
+  "description": "Human-centred design critique for mobile app mockups and prototypes, built on Impeccable and Anthropic's design plugin: frame the problem, capture screens with accessibility and token checks, run independent critiques, and recommend a cited build stack. A separate whole-product review crawls the prototype, replays journeys, maps the information architecture and adds journey, structure, scope and system reviewers.",
+  "author": {
+    "name": "munderhaug"
+  },
   "homepage": "https://github.com/munderhaug/designcritique",
   "repository": "https://github.com/munderhaug/designcritique",
   "license": "MIT",
-  "keywords": ["design", "critique", "ux", "ui", "mobile", "accessibility", "heuristics"]
+  "keywords": [
+    "design",
+    "critique",
+    "ux",
+    "ui",
+    "mobile",
+    "accessibility",
+    "heuristics"
+  ]
 }

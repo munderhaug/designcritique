@@ -6,6 +6,9 @@
 //   node scripts/report/decide.mjs --run <RUN_DIR> --finding <n|id> --severity P3 --reason "..."
 //   node scripts/report/decide.mjs --run <RUN_DIR> --finding <n|id> --accept
 //     add --eval-candidate to mark it as a case worth adding to evals/
+//   node scripts/report/decide.mjs --run <RUN_DIR> --proposal M2 --accept|--reject|--defer [--reason "..."]
+//     your decision on a structural or scope proposal (moves M1…, scope S1… in the report); never
+//     applied automatically, but reviewers and iterate respect it
 //   node scripts/report/decide.mjs --project <dir> --list
 //     decisions grouped by principle and critic: where the critics are miscalibrated
 import path from 'node:path';
@@ -33,6 +36,21 @@ if (args.list) {
   }
   console.log('\nA principle that keeps being dismissed or re-rated is a calibration problem: add an eval case');
   console.log('(evals/README.md) or sharpen the principle text, rather than dismissing it run after run.');
+  process.exit(0);
+}
+
+if (args.run && args.proposal) {
+  const runDir = path.resolve(args.run);
+  const merged = readJson(path.join(runDir, 'findings.json'));
+  const manifest = readJson(path.join(runDir, 'manifest.json'));
+  const p = (merged.review?.proposals || []).find((x) => x.id === String(args.proposal).toUpperCase());
+  if (!p) fail(`No proposal ${args.proposal} in ${runDir}/findings.json (proposals: ${(merged.review?.proposals || []).map((x) => x.id).join(', ') || 'none'})`);
+  const decision = args.accept ? 'accept' : args.reject ? 'reject' : args.defer ? 'defer' : null;
+  if (!decision) fail('Say --accept, --reject or --defer');
+  const decisions = loadDecisions(manifest.baseDir).filter((d) => !(d.kind === 'proposal' && d.item === p.item && d.verdict === p.verdict));
+  decisions.push({ kind: 'proposal', item: p.item, verdict: p.verdict, ...(p.to ? { to: p.to } : {}), ...(p.from ? { from: p.from } : {}), decision, reason: args.reason === true ? '' : (args.reason || ''), date: new Date().toISOString().slice(0, 10), ...(args.by ? { by: args.by } : {}) });
+  saveDecisions(manifest.baseDir, decisions);
+  console.log(`Recorded: ${decision} for ${p.id} (${p.verdict} ${p.item}${p.to ? ` → ${p.to}` : ''}) in ${decisionsPath(manifest.baseDir)}`);
   process.exit(0);
 }
 

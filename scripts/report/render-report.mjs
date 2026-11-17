@@ -12,7 +12,9 @@ import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.m
 import { evaluateGate } from '../lib/gate.mjs';
 import { section, assumptionsOf, titleOf } from '../lib/framing.mjs';
 import { mergeAcrossSources, groupChecksByCause } from '../lib/merge.mjs';
-import { DEFAULT_GATE } from '../lib/config.mjs';
+import { productModel } from '../lib/product.mjs';
+import { iaMapSvg, iaMapMermaid, rankProposals } from '../lib/review-report.mjs';
+import { DEFAULT_GATE, normalizeGate } from '../lib/config.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: render-report.mjs --run <runDir>'); process.exit(2); }
@@ -62,6 +64,9 @@ const tasks = [];
 const strengths = [];
 const comparisons = [];
 const tasteChecks = [];
+const journeysJudged = [];
+const moves = [];
+const scopeVerdicts = [];
 const overallScores = [];
 for (const { file, data } of critics) {
   const v = validateCritique(data, { screens: screenIds });
@@ -87,6 +92,9 @@ for (const { file, data } of critics) {
   for (const t of data.tasks || []) tasks.push({ ...t, source, finding_ids: undefined, steps: (t.steps || []).map((s) => ({ ...s, finding_ids: (s.finding_ids || []).map((id) => `${source}-${id}`.replace(new RegExp(`^${source}-${source}-`), `${source}-`)) })) });
   for (const s of data.strengths || []) strengths.push({ ...s, source });
   for (const c of data.comparisons || []) comparisons.push({ ...c, source });
+  for (const j of data.journeys || []) journeysJudged.push({ ...j, source });
+  for (const m of data.moves || []) moves.push({ ...m, source });
+  for (const v of data.scope || []) scopeVerdicts.push({ ...v, source });
 }
 
 // ---------- de-duplicate: same screen + same rule + same element, keep the more severe ----------
@@ -144,7 +152,25 @@ if (baseDir && fs.existsSync(path.join(baseDir, 'findings.json'))) {
 
 const stack = recommendStack({ productText: framingText, fallbackPlatform: manifest.screens[0]?.platform, findings, prototype: manifest.screens.some((s) => s.kind === 'html') });
 
-const gate = evaluateGate({ findings, tasks, critics: critics.map((c) => c.data.critic || c.file) }, manifest.gate || DEFAULT_GATE);
+// ---------- whole-product review (crawl, journeys, structure, consistency, lenses) ----------
+const coverageData = readJson(path.join(runDir, 'coverage.json'), null);
+const graph = readJson(path.join(runDir, 'graph.json'), null);
+const consistencyInv = readJson(path.join(runDir, 'consistency.json'), null);
+const journeysRun = manifest.journeys || [];
+const productM = productModel(framingText);
+const captureOf = (id) => { const sc = manifest.screens.find((x) => x.id === id); return sc && (sc.captures.find((c) => c.variant === 'light' && c.device === 'standard') || sc.captures[0]); };
+const pageTitle = (id) => { const c = captureOf(id); try { return c?.data ? readJson(path.join(runDir, c.data)).fingerprint?.title || id : id; } catch { return id; } };
+const criticalIds = new Set([...journeysRun.filter((j) => j.critical).map((j) => j.id), ...productM.journeys.filter((j) => j.critical).map((j) => j.id)]);
+const criticalJourneys = journeysRun.filter((j) => criticalIds.has(j.id)).map((j) => ({ id: j.id, title: j.title, screens: j.screens.map(pageTitle) }));
+const review = !!(coverageData || graph || journeysRun.length || moves.length || scopeVerdicts.length);
+const proposals = review ? rankProposals({ moves, scope: scopeVerdicts, findings, decisions }) : [];
+const flagged = new Map();
+for (const f of findings) {
+  const why = f.rule === 'CHK-NO-WAY-BACK' ? 'no way back' : f.rule === 'CHK-DEAD-END' ? 'dead end' : null;
+  if (why) for (const t of f.affected_screens || []) flagged.set(t, flagged.has(t) ? `${flagged.get(t)}, ${why}` : why);
+}
+
+const gate = evaluateGate({ findings, tasks, critics: critics.map((c) => c.data.critic || c.file), journeys: journeysJudged, coverage: coverageData, criticalJourneys }, normalizeGate(manifest.gate || DEFAULT_GATE));
 
 const merged = {
   generatedAt: new Date().toISOString(),
@@ -156,6 +182,7 @@ const merged = {
   gate: { pass: gate.pass, reasons: gate.reasons, ...gate.gate },
   decided: decided.map(({ id, screen, rule, severity, title, source, decision }) => ({ id, screen, rule, severity, title, source, decision: decision.decision, newSeverity: decision.severity, reason: decision.reason })),
   decisionsFile: decisions.length ? decisionsPath(manifest.baseDir) : null,
+  review: review ? { coverage: coverageData, journeys: journeysRun, journeysJudged, criticalJourneys, proposals, consistency: consistencyInv, graph: !!graph, journeyScores: gate.journeyScores } : null,
   compare: comparison && { base: comparison.base, fixed: comparison.fixed.length, new: comparison.introduced.length, stillOpen: comparison.persisting.length, notRechecked: comparison.notRechecked.length },
   coverage: {
     screens: manifest.screens.length,
@@ -221,6 +248,63 @@ if (comparisons.length) {
   for (const c of comparisons) L.push(`- **${c.group}**: recommend ${c.recommended}${c.ranking ? ` (ranking: ${c.ranking.join(' > ')})` : ''}. ${md(c.reasons || '')}`);
   L.push('');
 }
+if (review) {
+  if (coverageData) {
+    L.push('## Coverage', '');
+    if (coverageData.features.length) {
+      const unseen = coverageData.features.filter((f) => !f.seen);
+      L.push(`Features captured: **${coverageData.features.length - unseen.length} of ${coverageData.features.length}**${unseen.length ? `. Not seen in the capture (not covered, not necessarily missing): ${unseen.map((f) => f.feature).join(', ')}` : ''}.`, '');
+    }
+    if (coverageData.journeys.length) L.push(`Journeys: ${coverageData.journeys.map((j) => `${j.id} ${!j.scripted ? '(not scripted in mockups.yaml)' : j.completed ? '(completed)' : `(broke at step ${j.brokenAt})`}`).join(', ')}.`, '');
+    if (coverageData.neverSeenStates.length) L.push(`States never captured on any screen: ${coverageData.neverSeenStates.join(', ')}.`, '');
+    const kinds = ['ideal', 'empty', 'error', 'loading', 'partial', 'offline', 'first-run'];
+    L.push('| Screen | ' + kinds.join(' | ') + ' |', '|---|' + kinds.map(() => '---').join('|') + '|');
+    for (const st of coverageData.states.slice(0, 40)) L.push(`| ${md(st.title)} | ${kinds.map((k) => (st.seen.includes(k) ? '✓' : '·')).join(' | ')} |`);
+    L.push('');
+  }
+  if (graph) L.push('## Information architecture', '', `${graph.nodes.length} screens and ${graph.edges.length} links found by tapping every control from the start screen, by depth.${flagged.size ? ` Flagged: ${[...flagged].map(([t, w]) => `${t} (${w})`).join(', ')}.` : ''}`, '', iaMapMermaid(graph), '');
+  if (journeysRun.length) {
+    L.push('## Journeys', '');
+    for (const j of journeysRun) {
+      const judged = journeysJudged.filter((x) => x.journey === j.id);
+      L.push(`### ${md(j.title)}${criticalIds.has(j.id) ? ' (must not fail)' : ''}`, '', judged.length ? judged.map((x) => `${x.source}: **${x.verdict}**${typeof x.score === 'number' ? ` ${x.score}/10` : ''}${x.summary ? `. ${md(x.summary)}` : ''}`).join('  \n') : '_Not judged by a critic yet._', '');
+      L.push('| Step | Tap | Screen | Reached | ' + (judged.map((x) => x.source).join(' | ') || 'Verdict') + ' |', '|---|---|---|---|' + (judged.map(() => '---').join('|') || '---') + '|');
+      for (let k = 0; k <= j.steps.length; k++) {
+        const sid = j.screens[k];
+        const reached = sid ? 'yes' : j.brokenAt === k ? `**broken**: ${md(j.error || '')}` : '—';
+        const cells = judged.map((x) => { const st = (x.steps || []).find((y) => y.step === k || y.screen === sid); return st ? `${st.verdict}${st.note ? `: ${md(st.note)}` : ''}` : ''; });
+        L.push(`| ${k} | ${k ? md(j.steps[k - 1]) : 'start'} | ${sid ? md(pageTitle(sid)) : ''} | ${reached} | ${cells.join(' | ') || ''} |`);
+      }
+      L.push('');
+    }
+  }
+  if (productM.features.length) {
+    L.push('## Features and the problem', '', '| Feature | Problem part | Key task | Phase | Captured | Taps | Scope |', '|---|---|---|---|---|---|---|');
+    for (const f of productM.features) {
+      const c = coverageData?.features.find((x) => x.feature === f.feature);
+      const v = scopeVerdicts.filter((x) => (x.feature || '').toLowerCase() === f.feature.toLowerCase()).map((x) => `${x.verdict} (${x.source})`).join(', ');
+      L.push(`| ${md(f.feature)} | ${md(f.problem)} | ${md(f.task)} | ${f.phase || ''} | ${c ? (c.seen ? 'yes' : 'no') : ''} | ${c?.depth ?? ''} | ${v} |`);
+    }
+    const extra = scopeVerdicts.filter((x) => !productM.features.some((f) => f.feature.toLowerCase() === (x.feature || '').toLowerCase()));
+    if (extra.length) L.push('', 'Not in the feature map: ' + extra.map((x) => `${md(x.feature)} (${x.verdict}, ${x.source})`).join(', ') + '.');
+    L.push('');
+  }
+  if (proposals.length) {
+    L.push('## Cut, add or move', '', 'Proposals, ranked by impact. None is applied automatically: record your decision with `/designcritique:decide <id> accept|reject|defer`.', '');
+    for (const p of proposals) L.push(`- **${p.id}** ${p.type === 'move' ? `Move **${md(p.item)}**${p.from ? ` from ${md(p.from)}` : ''} to **${md(p.to)}**` : `${p.verdict[0].toUpperCase()}${p.verdict.slice(1)} **${md(p.item)}**`}: ${md(p.reason)} _(${p.impact} impact; ${p.sources.join(' + ')})_${p.decision ? ` · **${PAST[p.decision.decision] || p.decision.decision} by you**${p.decision.reason ? `: ${md(p.decision.reason)}` : ''}` : ''}`);
+    L.push('');
+  }
+  if (consistencyInv) {
+    L.push('## Consistency inventory', '');
+    if (consistencyInv.components.length) L.push('Emphasised buttons: ' + consistencyInv.components.map((c) => `${c.signature} ×${c.count}`).join('; ') + '.');
+    const multi = consistencyInv.icons.filter((i) => i.meanings.length > 1);
+    L.push(`Icons: ${consistencyInv.icons.length} in use${multi.length ? `, ${multi.length} with more than one meaning (${multi.map((i) => i.meanings.join(' / ')).join('; ')})` : ''}.`);
+    if (consistencyInv.terms.length) L.push('Terms to replace: ' + consistencyInv.terms.map((t) => `"${t.avoid}" → "${t.use}"`).join(', ') + '.');
+    if (consistencyInv.formats.length) L.push('Amount formats: ' + consistencyInv.formats.map((f) => `${f.format} (${f.examples.join(', ')})`).join('; ') + '.');
+    if (consistencyInv.figures.length) L.push('Figures that disagree: ' + consistencyInv.figures.map((f) => `${f.label}: ${f.values.map((v) => v.value).join(' vs ')}`).join('; ') + '.');
+    L.push('');
+  }
+}
 if (decided.length) {
   L.push('## Decided by you', '', `From ${DECISIONS_REL}. Dismissed findings are left out of the counts and the gate.`, '');
   for (const f of decided) L.push(`- ${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${f.severity} → ${f.decision.severity}`}: ${md(f.title)} (${screenTitle(f.screen)}, ${f.rule}, ${f.source})${f.decision.reason ? `. ${md(f.decision.reason)}` : ''}`);
@@ -231,6 +315,7 @@ if (notes.length || warnings.length) L.push('## Notes', '', ...notes.map((n) => 
 L.push('---', 'Principle IDs refer to the designcritique principles library (skills/principles). Severity follows Nielsen\'s frequency, impact and persistence, weighted by task criticality.');
 fs.writeFileSync(path.join(runDir, 'report.md'), L.join('\n') + '\n');
 
+const PAST = { accept: 'accepted', reject: 'rejected', defer: 'deferred' };
 function whereOf(f) {
   if (f.screens) return `${f.screens.length} screens: ${f.screens.map(screenTitle).join(', ')}`;
   return `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''}`;
@@ -245,6 +330,37 @@ function md(s) { return String(s ?? '').replace(/\|/g, '\\|'); }
 // ---------- report.html ----------
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const mdInline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+
+function reviewHtml() {
+  const out = [];
+  if (coverageData) {
+    const kinds = ['ideal', 'empty', 'error', 'loading', 'partial', 'offline', 'first-run'];
+    const unseen = coverageData.features.filter((f) => !f.seen);
+    out.push(`<h2>Coverage</h2><div class="frame-box">${coverageData.features.length ? `<p>Features captured: <strong>${coverageData.features.length - unseen.length} of ${coverageData.features.length}</strong>${unseen.length ? `. Not seen in the capture (not covered, not necessarily missing): ${unseen.map((f) => esc(f.feature)).join(', ')}` : ''}.</p>` : ''}${coverageData.journeys.length ? `<p>Journeys: ${coverageData.journeys.map((j) => `${esc(j.id)} ${!j.scripted ? '(not scripted)' : j.completed ? '(completed)' : `<span class="broken">(broke at step ${j.brokenAt})</span>`}`).join(', ')}.</p>` : ''}${coverageData.neverSeenStates.length ? `<p>States never captured: ${coverageData.neverSeenStates.map(esc).join(', ')}.</p>` : ''}
+<table class="matrix"><tr><th>Screen</th>${kinds.map((k) => `<th>${k}</th>`).join('')}</tr>${coverageData.states.slice(0, 40).map((st) => `<tr><td>${esc(st.title)}</td>${kinds.map((k) => `<td>${st.seen.includes(k) ? '✓' : '·'}</td>`).join('')}</tr>`).join('')}</table></div>`);
+  }
+  if (graph) out.push(`<h2>Information architecture</h2><p class="sub">${graph.nodes.length} screens and ${graph.edges.length} links found by tapping every control from the start screen; columns are taps from the start. Outlined: ${flagged.size ? [...flagged].map(([t, w]) => `${esc(t)} (${esc(w)})`).join(', ') : 'none'}. Dashed arrows lead back.</p><div class="iamap-wrap">${iaMapSvg(graph, flagged)}</div>`);
+  for (const j of journeysRun) {
+    const judged = journeysJudged.filter((x) => x.journey === j.id);
+    const steps = [];
+    for (let k = 0; k <= j.steps.length; k++) {
+      const sid = j.screens[k];
+      const cap = sid && captureOf(sid);
+      const verdicts = judged.map((x) => { const st = (x.steps || []).find((y) => y.step === k || y.screen === sid); return st ? `<div class="v v-${esc(st.verdict)}">${esc(x.source)}: ${esc(st.verdict)}${st.note ? ` – ${esc(st.note)}` : ''}</div>` : ''; }).join('');
+      steps.push(`<div class="jstep"><div class="tap">${k ? `${k}. tap “${esc(j.steps[k - 1])}”` : 'start'}</div>${cap ? `<img src="${esc(cap.screenshot)}" alt="${esc(pageTitle(sid))}">` : j.brokenAt === k ? `<div class="broken">Broken: ${esc(j.error || '')}</div>` : ''}${verdicts}</div>`);
+      if (!sid) break;
+    }
+    out.push(`<h3>${esc(j.title)}${criticalIds.has(j.id) ? ' <small>must not fail</small>' : ''}</h3><p class="sub">${judged.map((x) => `${esc(x.source)}: <strong>${esc(x.verdict)}</strong>${typeof x.score === 'number' ? ` ${x.score}/10` : ''}${x.summary ? ` – ${esc(x.summary)}` : ''}`).join('<br>') || 'Not judged by a critic yet.'}</p><div class="jstrip">${steps.join('')}</div>`);
+  }
+  if (journeysRun.length) out.splice(out.length - journeysRun.length, 0, '<h2>Journeys</h2>');
+  if (productM.features.length) out.push(`<h2>Features and the problem</h2><table><tr><th>Feature</th><th>Problem part</th><th>Key task</th><th>Phase</th><th>Captured</th><th>Taps</th><th>Scope</th></tr>${productM.features.map((f) => { const c = coverageData?.features.find((x) => x.feature === f.feature); return `<tr><td>${esc(f.feature)}</td><td>${esc(f.problem)}</td><td>${esc(f.task)}</td><td>${esc(f.phase || '')}</td><td>${c ? (c.seen ? 'yes' : 'no') : ''}</td><td>${c?.depth ?? ''}</td><td>${scopeVerdicts.filter((x) => (x.feature || '').toLowerCase() === f.feature.toLowerCase()).map((x) => `${esc(x.verdict)} <span class="meta">${esc(x.source)}</span>`).join(', ')}</td></tr>`; }).join('')}</table>`);
+  if (proposals.length) out.push(`<h2>Cut, add or move</h2><p class="sub">Proposals, ranked by impact. None is applied automatically: decide with <code>/designcritique:decide &lt;id&gt; accept|reject|defer</code>.</p><ol class="plain">${proposals.map((p) => `<li><strong>${esc(p.id)}</strong> ${p.type === 'move' ? `Move <strong>${esc(p.item)}</strong>${p.from ? ` from ${esc(p.from)}` : ''} to <strong>${esc(p.to)}</strong>` : `${esc(p.verdict[0].toUpperCase() + p.verdict.slice(1))} <strong>${esc(p.item)}</strong>`}: ${esc(p.reason)} <span class="meta">${esc(p.impact)} impact · ${esc(p.sources.join(' + '))}</span>${p.decision ? ` <span class="agree">${esc(PAST[p.decision.decision] || p.decision.decision)} by you</span>` : ''}</li>`).join('')}</ol>`);
+  if (consistencyInv) {
+    const multi = consistencyInv.icons.filter((i) => i.meanings.length > 1);
+    out.push(`<h2>Consistency inventory</h2><div class="frame-box">${consistencyInv.components.length ? `<p><strong>Emphasised buttons</strong><br>${consistencyInv.components.map((c) => `${esc(c.signature)} ×${c.count} <span class="meta">${esc(c.examples.join(', '))}</span>`).join('<br>')}</p>` : ''}<p><strong>Icons</strong>: ${consistencyInv.icons.length} in use${multi.length ? `; more than one meaning: ${multi.map((i) => esc(i.meanings.join(' / '))).join('; ')}` : ''}.</p>${consistencyInv.terms.length ? `<p><strong>Terms</strong>: ${consistencyInv.terms.map((t) => `“${esc(t.avoid)}” → “${esc(t.use)}”`).join(', ')}</p>` : ''}${consistencyInv.formats.length ? `<p><strong>Amount formats</strong>: ${consistencyInv.formats.map((f) => `${esc(f.format)} (${esc(f.examples.join(', '))})`).join('; ')}</p>` : ''}${consistencyInv.figures.length ? `<p><strong>Figures that disagree</strong>: ${consistencyInv.figures.map((f) => `${esc(f.label)}: ${esc(f.values.map((v) => v.value).join(' vs '))}`).join('; ')}</p>` : ''}</div>`);
+  }
+  return out.join('\n');
+}
 
 function findingItem(f, anchor) {
   const badge = f.agreement === 'both-critics' ? ' <span class="agree">both critics</span>' : f.agreement === 'check-and-critic' ? ' <span class="agree">check + critic</span>' : '';
@@ -306,6 +422,13 @@ span.sev { color:#fff; border-radius:6px; padding:1px 6px; font-size:12px; font-
 details p { margin:6px 0; } summary { cursor:pointer; color:var(--muted); font-size:13px; }
 .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; } .thumbs figure { margin:0; width:110px; } .thumbs img { width:100%; border-radius:8px; border:1px solid var(--line); }
 ul.plain { padding-left:20px; }
+.iamap-wrap { overflow-x:auto; background:var(--card); border-radius:12px; padding:8px; }
+svg.iamap .node rect { fill:var(--bg); stroke:var(--line); stroke-width:1.5; } svg.iamap .node.start rect { stroke:var(--fg); stroke-width:2.5; } svg.iamap .node.flagged rect { stroke:var(--p1); stroke-width:2.5; }
+svg.iamap text { fill:var(--fg); font:600 13px system-ui,sans-serif; } svg.iamap text.sub { fill:var(--muted); font-weight:400; font-size:11px; }
+svg.iamap .edge { fill:none; stroke:var(--muted); stroke-width:1.2; } svg.iamap .edge.back { stroke-dasharray:4 3; } svg.iamap marker path { fill:var(--muted); }
+.jstrip { display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; } .jstep { flex:0 0 150px; } .jstep img { width:100%; border-radius:10px; border:1px solid var(--line); display:block; }
+.jstep .tap { font-size:12px; color:var(--muted); margin:4px 0 2px; } .jstep .v { font-size:12px; } .v-ok { color:var(--fg); } .v-friction { color:var(--p2); } .v-blocked, .broken { color:var(--p0); font-weight:700; }
+table.matrix td, table.matrix th { text-align:center; } table.matrix td:first-child, table.matrix th:first-child { text-align:left; }
 .gate { padding:10px 14px; border-radius:10px; border:1px solid var(--line); } .gate.fail { border-color:var(--p1); } .gate.pass { border-color:var(--line); }
 </style></head><body><main>
 <h1>Design critique: ${esc(framing.title)}</h1>
@@ -322,6 +445,7 @@ ${global.length ? `<div class="screen"><h3>Across screens</h3><ol class="flist">
 ${manifest.screens.map(screenCard).join('\n')}
 ${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)}${s.basis?.length ? ` <span class="meta">${esc(s.basis.join(', '))}</span>` : ''}</li>`).join('')}</ul>` : ''}
 ${manifest.taste?.length ? `<h2>Against the direction you chose</h2><div class="frame-box"><div class="thumbs">${manifest.taste.map((t) => `<figure><a href="${esc(t)}"><img src="${esc(t)}" alt="reference"></a></figure>`).join('')}</div>${tasteChecks.map((t) => `<p><strong>${esc(t.score)}/10</strong> <span class="meta">${esc(t.source)}</span> ${esc(t.summary)}</p>${t.gaps?.length ? `<ul class="plain">${t.gaps.map((g) => `<li>${esc(screenTitle(g.screen))}${g.reference ? ` vs ${esc(g.reference)}` : ''}: ${esc(g.text)}</li>`).join('')}</ul>` : ''}`).join('') || '<p class="sub">No critic judged the screens against these references.</p>'}</div>` : ''}
+${review ? reviewHtml() : ''}
 ${decided.length ? `<h2>Decided by you</h2><ul class="plain">${decided.map((f) => `<li>${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${esc(f.severity)} → ${esc(f.decision.severity)}`}: ${esc(f.title)} <span class="meta">${esc(screenTitle(f.screen))} · ${esc(f.rule)} · ${esc(f.source)}</span>${f.decision.reason ? `<br><span class="sub">${esc(f.decision.reason)}</span>` : ''}</li>`).join('')}</ul>` : ''}
 ${comparisons.length ? `<h2>Variant comparison</h2><ul class="plain">${comparisons.map((c) => `<li><strong>${esc(c.group)}</strong>: recommend ${esc(c.recommended)}. ${esc(c.reasons || '')}</li>`).join('')}</ul>` : ''}
 <h2>To build this</h2>

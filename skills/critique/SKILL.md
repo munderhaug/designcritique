@@ -13,6 +13,9 @@ build stack**. Judgement comes from proven tools, not from this skill:
   by this plugin's read-only `design-reviewer` agent together with the cognitive walkthrough of
   each key task.
 
+For the whole product (where things belong, journeys across screens, scope, system
+consistency), use the **review** skill (`/designcritique:review`); it costs more.
+
 This skill adds what they don't provide: mobile capture and checks for mockups, independence
 between critics, a merged report, and build recommendations from a cited catalog.
 

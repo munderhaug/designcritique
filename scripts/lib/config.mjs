@@ -104,7 +104,7 @@ export function loadConfig(configPath) {
 }
 
 export const SEVERITIES = ['P0', 'P1', 'P2', 'P3'];
-export const DEFAULT_GATE = { fail_on: 'P1', target_score: 8 };
+export const DEFAULT_GATE = { fail_on: 'P1', target_score: 8, journey_target_score: null, min_feature_coverage: 0.8, no_dead_end_on_critical: true };
 
 /** taste: a folder or a list of images (the 9-12 references you chose), resolved to image files. */
 export function expandImages(spec, baseDir) {
@@ -134,6 +134,9 @@ export function normalizeGate(raw = {}) {
   if (!SEVERITIES.includes(gate.fail_on) && gate.fail_on !== 'none') throw new Error(`gate.fail_on must be P0-P3 or none (got ${gate.fail_on})`);
   gate.target_score = gate.target_score == null ? null : Number(gate.target_score);
   if (gate.target_score != null && !(gate.target_score >= 0 && gate.target_score <= 10)) throw new Error('gate.target_score must be 0-10');
+  gate.journey_target_score = gate.journey_target_score == null ? gate.target_score : Number(gate.journey_target_score);
+  gate.min_feature_coverage = gate.min_feature_coverage == null ? null : Number(gate.min_feature_coverage);
+  if (gate.min_feature_coverage != null && !(gate.min_feature_coverage >= 0 && gate.min_feature_coverage <= 1)) throw new Error('gate.min_feature_coverage must be 0-1 (a share, e.g. 0.8)');
   return gate;
 }
 

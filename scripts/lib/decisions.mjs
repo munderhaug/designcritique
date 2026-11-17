@@ -16,14 +16,17 @@ export function loadDecisions(baseDir) {
   const p = decisionsPath(baseDir);
   if (!fs.existsSync(p)) return [];
   const raw = YAML.parse(fs.readFileSync(p, 'utf8')) || {};
-  return (raw.decisions || []).filter((d) => d && d.rule && ['dismiss', 'severity', 'accept'].includes(d.decision));
+  return (raw.decisions || []).filter((d) => d && (
+    (d.kind === 'proposal' && d.item && ['accept', 'reject', 'defer'].includes(d.decision))
+    || (d.rule && ['dismiss', 'severity', 'accept'].includes(d.decision))));
 }
 
 export function saveDecisions(baseDir, decisions) {
   const p = decisionsPath(baseDir);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   const head = '# designcritique decisions: your verdicts on findings, applied to every run.\n' +
-    '# decision: dismiss (false alarm or out of scope) | severity (re-rated) | accept (agreed, kept open)\n';
+    '# decision: dismiss (false alarm or out of scope) | severity (re-rated) | accept (agreed, kept open)\n' +
+    '# kind: proposal entries record your decision on a structural or scope proposal: accept | reject | defer\n';
   fs.writeFileSync(p, head + YAML.stringify({ decisions }));
 }
 
@@ -32,6 +35,7 @@ const where = (f) => f.element?.selector || f.element?.region || '';
 
 /** Does decision d refer to finding f? */
 export function decisionMatches(d, f) {
+  if (d.kind === 'proposal') return false; // decisions on moves and scope match proposals, not findings
   if (d.screen && d.screen !== '*' && d.screen !== f.screen) return false;
   if (deterministic(f) && d.id) return d.id === f.id;
   const cites = [f.rule, ...(f.basis || [])].some((id) => idMatches(id, d.rule));

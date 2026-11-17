@@ -14,8 +14,31 @@ export function taskScores(tasks) {
   return [...by.values()];
 }
 
-export function evaluateGate({ findings, tasks = [], critics = [] }, gate = DEFAULT_GATE) {
+/** Lowest score per journey across critics (review mode). */
+export function journeyScores(journeys) {
+  return taskScores(journeys.map((j) => ({ task: j.journey, score: j.score, source: j.source })));
+}
+
+const DEAD = new Set(['CHK-DEAD-END', 'CHK-NO-WAY-BACK', 'CHK-JOURNEY-BROKEN']);
+
+export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [] }, gate = DEFAULT_GATE) {
   const reasons = [];
+  // Review mode: the must-not-fail journeys have no dead end, no missing way back and no broken step.
+  if (gate.no_dead_end_on_critical !== false && criticalJourneys.length) {
+    for (const cj of criticalJourneys) {
+      const titles = new Set(cj.screens || []);
+      const hit = findings.filter((f) => DEAD.has(f.rule) && (f.journey === cj.id || (f.affected_screens || []).some((s) => titles.has(s))));
+      if (hit.length) reasons.push(`must-not-fail journey "${cj.title || cj.id}" has ${hit.map((f) => f.rule.replace('CHK-', '').toLowerCase()).join(', ')}`);
+      const blocked = journeys.filter((j) => j.journey === cj.id && j.verdict === 'blocked');
+      if (blocked.length) reasons.push(`must-not-fail journey "${cj.title || cj.id}" judged blocked by ${blocked.map((j) => j.source).join(', ')}`);
+    }
+  }
+  if (gate.journey_target_score != null) {
+    for (const s of journeyScores(journeys)) if (s.score < gate.journey_target_score) reasons.push(`journey "${s.task}" scored ${s.score} (target ${gate.journey_target_score}, by ${s.source})`);
+  }
+  if (gate.min_feature_coverage != null && coverage?.share != null && coverage.share < gate.min_feature_coverage) {
+    reasons.push(`only ${Math.round(coverage.share * 100)}% of the feature map was captured (minimum ${Math.round(gate.min_feature_coverage * 100)}%)`);
+  }
   if (gate.fail_on && gate.fail_on !== 'none') {
     const limit = SEVERITIES.indexOf(gate.fail_on);
     const blocking = findings.filter((f) => SEVERITIES.indexOf(f.severity) <= limit);
@@ -27,7 +50,7 @@ export function evaluateGate({ findings, tasks = [], critics = [] }, gate = DEFA
     else if (!scores.length) reasons.push('no critic scored the key tasks');
     for (const s of scores) if (s.score < gate.target_score) reasons.push(`"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
   }
-  return { pass: reasons.length === 0, reasons, scores, gate };
+  return { pass: reasons.length === 0, reasons, scores, journeyScores: journeyScores(journeys), gate };
 }
 
 /**

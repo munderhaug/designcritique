@@ -1,6 +1,6 @@
 ---
 description: Record your verdict on a critique finding (dismiss, re-rate or accept) so later runs and critics respect it
-argument-hint: "<finding number> dismiss|P0-P3|accept [reason]"
+argument-hint: "<finding number | proposal id> dismiss|P0-P3|accept|reject|defer [reason]"
 ---
 
 Record a decision on a finding from the latest designcritique run: $ARGUMENTS
@@ -11,6 +11,9 @@ Record a decision on a finding from the latest designcritique run: $ARGUMENTS
    `--dismiss --reason "…"`, `--severity P0-P3 --reason "…"` or `--accept`. A dismissal needs a
    reason; ask for one if none was given. Add `--eval-candidate` if the person says the critics
    keep getting this wrong.
+   For a proposal from a whole-product review (an id like `M2` or `S1` in "Cut, add or move"),
+   run `decide.mjs --run <RUN_DIR> --proposal <id>` with `--accept`, `--reject` or `--defer`.
+   Proposals are never applied automatically; accepting one records it as agreed work.
 3. Re-render the report (`scripts/report/render-report.mjs --run <RUN_DIR>`) and say what changed
    in the counts and the gate.
 

@@ -425,3 +425,39 @@ test('consistency: component variants, icon meanings, glossary, formats, figures
   assert.equal(d.length, 1, 'small counters like "Step 2" may differ');
   assert.deepEqual(d[0].values.map((x) => x.value), ['1,240.00', '1,204.00']);
 });
+
+test('gate (review): dead ends on must-not-fail journeys, journey scores, feature coverage', () => {
+  const g = normalizeGate({ fail_on: 'none', target_score: 8 });
+  assert.equal(g.journey_target_score, 8);
+  assert.equal(g.min_feature_coverage, 0.8);
+  const crit = [{ id: 'card-lost', title: 'Card lost', screens: ['Help', 'Card lost', 'Card frozen'] }];
+  const dead = { rule: 'CHK-DEAD-END', severity: 'P1', affected_screens: ['Card frozen'] };
+  const r = evaluateGate({ findings: [dead], journeys: [{ journey: 'card-lost', score: 9, verdict: 'supported', source: 'a' }, { journey: 'card-lost', score: 6, verdict: 'at-risk', source: 'b' }], coverage: { share: 0.6 }, criticalJourneys: crit, critics: ['a'], tasks: [{ task: 't', score: 9, source: 'a' }] }, g);
+  assert.equal(r.pass, false);
+  assert.ok(r.reasons.some((x) => /must-not-fail journey "Card lost" has dead-end/.test(x)));
+  assert.ok(r.reasons.some((x) => /journey "card-lost" scored 6/.test(x)));
+  assert.ok(r.reasons.some((x) => /60% of the feature map/.test(x)));
+  const ok = evaluateGate({ findings: [{ ...dead, affected_screens: ['Settings'] }], journeys: [{ journey: 'card-lost', score: 9, verdict: 'supported', source: 'a' }], coverage: { share: 0.9 }, criticalJourneys: crit, critics: ['a'], tasks: [{ task: 't', score: 9, source: 'a' }] }, g);
+  assert.equal(ok.pass, true, ok.reasons.join('; '));
+});
+
+import { iaMapSvg, iaMapMermaid, rankProposals } from '../scripts/lib/review-report.mjs';
+
+test('review report: IA map and ranked proposals', () => {
+  const graph = { start: 'n1', nodes: [{ id: 'n1', title: 'Home', depth: 0, states: ['s1'], kind: 'screen' }, { id: 'n2', title: 'Help', depth: 1, states: ['s2'], kind: 'screen' }], edges: [{ from: 'n1', to: 'n2', labels: ['Help'] }] };
+  const svg = iaMapSvg(graph, new Map([['Help', 'no way back']]));
+  assert.match(svg, /<svg/);
+  assert.match(svg, /class="node flagged"/);
+  assert.match(iaMapMermaid(graph), /n1 -->\|"Help"\| n2/);
+  const ranked = rankProposals({
+    moves: [
+      { item: 'Export statements', from: 'Advanced', to: 'Menu', reason: 'rarely needed but 4 taps deep', impact: 'low', source: 'ia' },
+      { item: 'Card lost', from: 'Help', to: 'Home', reason: 'urgent', impact: 'high', source: 'ia' },
+      { item: 'Card lost', from: 'Help', to: 'Home', reason: 'urgent', impact: 'high', source: 'system' },
+    ],
+    scope: [{ feature: 'Crypto trading', verdict: 'cut', reason: 'no job', source: 'scope' }, { feature: 'Accounts', verdict: 'keep', source: 'scope' }],
+    decisions: [{ kind: 'proposal', item: 'Export statements', verdict: 'move', to: 'Menu', decision: 'reject', reason: 'rare' }],
+  });
+  assert.deepEqual(ranked.map((p) => [p.id, p.item, p.sources.length]), [['M2', 'Card lost', 2], ['S1', 'Crypto trading', 1], ['M1', 'Export statements', 1]]);
+  assert.equal(ranked.find((p) => p.id === 'M1').decision.decision, 'reject');
+});

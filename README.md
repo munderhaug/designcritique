@@ -99,6 +99,30 @@ rm -rf /tmp/dc-setup
 `claude mcp add --transport http mobbin https://api.mobbin.com/mcp` (paid) or Refero
 (`https://api.refero.design/mcp`, freemium). Node 20+ is required.
 
+## Two modes
+
+- **`/designcritique:critique`**: fast. Screens and their states, two critics, deterministic
+  checks, report and gate.
+- **`/designcritique:review`**: the whole product, several times the cost. It crawls the
+  prototype, replays journeys, and adds reviewers for journeys, structure (IA), concept and
+  scope, and system consistency.
+
+### What the review adds
+
+| Part | Grounded in | This repo adds |
+|---|---|---|
+| Crawl | Crawljax's state-flow crawling (Mesbah et al., 2012); DroidBot-style state IDs (Li et al., 2017) | `scripts/crawl/`: taps every control, records each screen, sheet and state from Playwright's accessibility snapshot, with guardrails; `inventory.json` with each state's path |
+| Journeys | Shostack's service blueprints (1984), Patton's story maps (2014), the cognitive walkthrough | `journeys:` in mockups.yaml, replayed tap by tap and captured; broken steps, dead ends, ways back and unclosed loops computed from the graph |
+| Problem frame | Jobs to be done, OOUX (Prater 2015), release slices | Journeys, Concept model, Scope, Feature map and Navigation in PRODUCT.md, derived from the project's documents |
+| Structure (IA) | Rosenfeld, Morville & Arango (2015), Covert (2014), OOUX | `ia-reviewer`; depth, orphans and navigation consistency computed; an IA map; "move X from A to B" proposals |
+| Concept and scope | Christensen (2016), Ulwick (2005), Torres (2021) | `scope-reviewer` using Anthropic's product-management skills; feature × problem matrix; cut/add proposals |
+| System | NN-H4, Covert, Podmajersky (2019), Frost (2016), Hurff's UI stack (2016) | `system-reviewer` with Anthropic's design-system and Impeccable's harden; a deterministic audit of button styles, icons with two meanings, glossary terms, number formats and figures that disagree; a state matrix |
+| Coverage | | What wasn't captured is reported as not covered, not missing; the gate needs a minimum share of the feature map |
+| Language | | Words the crawler and checks need (destructive controls, back labels, state words) come from `catalog/vocabulary.yaml` (en, de, fr, es, nb, sv, da) by the pages' language, extendable per project |
+
+Structure and scope changes are always proposals for you to decide (`/designcritique:decide M2
+accept`), never edits.
+
 ## Use
 
 ```text
@@ -108,6 +132,7 @@ rm -rf /tmp/dc-setup
 /designcritique:critique https://claude.ai/artifact/…
 /designcritique:decide 4 dismiss "out of scope for v1"   # your verdict, kept across runs
 /designcritique:iterate mockups.yaml --rounds 3          # fix and re-critique until the gate passes
+/designcritique:review mockups.yaml                      # the whole product: crawl, journeys, IA, scope, system
 ```
 
 Inputs: HTML, PNG/JPG/WebP, `.zip` exports, folders, Claude artifacts, Figma frames, canvases
@@ -134,7 +159,8 @@ node scripts/report/gate.mjs --run .designcritique/runs/<run>   # exit 2 with re
 
 ```bash
 npm run eval     # capture, checks and scoring on the eval set (no model)
-npm test         # unit tests: design-system checks, comparison, validation
+npm run eval:review   # whole-product review: crawl, journeys, structure and consistency on a seeded and a clean prototype
+npm test         # unit tests
 ```
 
 To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
@@ -142,7 +168,7 @@ To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
 
 ## Status
 
-Version 0.3, for mockups and prototypes. Tested: capture, checks (all planted problems found,
+Version 0.4, for mockups and prototypes. Tested: capture, checks (all planted problems found,
 no false alarms on clean screens), design-system checks, input types, report, run comparison,
 validation hook, gate, decisions and build-stack recommendations; the motion import against a
 sample scan. Critic results on the eval set are in [evals/README.md](evals/README.md).
@@ -158,12 +184,13 @@ only; deterministic checks need HTML. Large-text rendering is a proxy for Dynami
 
 ```
 catalog/stack.yaml     cited build-stack catalog
-commands/              /designcritique:critique, :frame, :iterate, :decide
+commands/              /designcritique:critique, :review, :frame, :iterate, :decide
 skills/frame/          problem framing on top of Impeccable init
 skills/critique/       orchestration, inputs, references, severity, output format, companions
 skills/iterate/        fix and re-critique in rounds until the gate passes
+skills/review/         whole-product review and its lens briefs (references/lenses/)
 skills/principles/     citation index (IDs and primary sources)
-agents/                design-reviewer (read-only, Anthropic design-plugin methods)
+agents/                design-reviewer; ia-, scope- and system-reviewer (all read-only)
 hooks/                 validates critic JSON when it's saved
 scripts/               capture, checks, report, stack recommender, evals, setup, companion detection
 templates/             PRODUCT.md (Impeccable schema + HCD), DESIGN.md, mockups.yaml, CLAUDE design-system rule

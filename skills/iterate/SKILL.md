@@ -47,6 +47,12 @@ fewest P2) and prints `BEST_ROUND=N`. If that isn't the last round, restore it w
 `rounds.mjs restore --config mockups.yaml --round N` and say so: the loop keeps its best result,
 not its last.
 
+**Structure and scope are proposals, never edits.** Findings at `level: journey` or `system`,
+with `move_to`, or in the categories `ia`, `scope` or `journey` change what the product is or
+where things live. Don't give them to the builder. List them as proposals for the person
+(with the review's ids, such as M2 or S1) and let them decide with `/designcritique:decide`. Only
+proposals the person has accepted may be built, and only when they ask for it.
+
 Never dismiss or re-rate a finding yourself to get past the gate. When you think a finding is
 wrong, ask the person; if they agree, they record it with `/designcritique:decide`.
 

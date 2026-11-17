@@ -2,7 +2,10 @@
 
 - Scripts are Node ESM (`scripts/`), no build step. Run `npm install` once.
 - After changing capture or checks, run `npm run eval` and `npm test`. It must stay at full recall with
-  0 false positives on the clean screens.
+  0 false positives on the clean screens. After changing the crawler, journeys, structure or
+  consistency checks, also run `npm run eval:review` (seeded flaws all found, none on clean).
+- The plugin is generic: never build in one product's words, domain or language. Language words
+  go in `catalog/vocabulary.yaml`; examples in principles and docs stay neutral.
 - Eval screens must not hint at their flaws: neutral ids, titles and file names, no comments
   in the HTML. Document what is seeded in `evals/README.md`.
 - Principle IDs are a contract: critics cite them and `evals/expected.json` matches on them.

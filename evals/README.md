@@ -25,6 +25,24 @@ mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 - **welcome**: Seeded flaws (critic): generic purple-blue gradient hero, emoji used as feature icons, everything centred in identical cards, three competing primary buttons, made-up stats, a hamburger menu as primary navigation on iOS, and a web-style footer link row.
 - **settings**, **trips**: clean. Token-compliant, accessible, dark mode, scalable type.
 
+## Whole-product review (`npm run eval:review`)
+
+`evals/review/` holds one small single-page banking prototype in two versions, with the same
+PRODUCT.md (journeys, concept model, scope, feature map, navigation) and content guide.
+`seeded/` has twelve structural and system flaws; `clean/` has none. The script crawls, captures,
+runs the checks, structure and consistency audits and scores against `review/expected.json`:
+every seeded rule must fire, and none of the watched rules may fire on the clean version.
+
+Seeded: the must-not-fail "card lost" journey ends on a screen with no controls (dead end) and
+no screen in it leads back home; it doesn't lead into ordering a new card; "Export statements"
+is four taps deep; the monthly summary exists only as a separate page (orphan); "Overview" leads
+to different places; the tab order differs from `## Navigation`; an out-of-scope feature is
+present; the balance differs between two screens; a term the glossary says to avoid; one icon
+with two meanings; three styles of primary button.
+
+The lens reviewers (ia, scope, system) aren't scored yet: run `/designcritique:review
+evals/review/seeded.yaml` and compare with the seeded list above.
+
 ## Critic results
 
 First end-to-end run of both critics on this set (2026-11-17). Each ran in a fresh agent that
