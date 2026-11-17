@@ -14,7 +14,8 @@ still comes from the critique skill's critics; this skill only orchestrates roun
 ## Before the first round
 
 - Only HTML mockups can be fixed. Image inputs are critiqued but left alone; say so.
-- Make sure the mockups can be restored: a git commit, or a copy under `.designcritique/before/`.
+- Each round's mockups are saved under `.designcritique/iterate/round-N/` (below), so round 1 is
+  the starting point and any round can be restored. A git commit first doesn't hurt.
 - Read `gate:` and `iterate.max_rounds` (default 3) from `mockups.yaml`. Tell the person the
   bar and the round limit before starting; each round is a full critique.
 
@@ -23,7 +24,9 @@ still comes from the critique skill's critics; this skill only orchestrates roun
 1. **Critique.** Run the critique skill in full, steps 3–6 (frame and references once, in the
    first round). Fresh critic agents every round, briefed only as critic-brief.md says: never
    tell them what was changed or what the last round found.
-2. **Gate.** `node PLUGIN_ROOT/scripts/report/gate.mjs --run <RUN_DIR>`. Exit 0: stop, it passed.
+2. **Save and gate.** `node PLUGIN_ROOT/scripts/report/rounds.mjs save --config mockups.yaml
+   --round N --run <RUN_DIR>` snapshots the files this run judged. Then
+   `node PLUGIN_ROOT/scripts/report/gate.mjs --run <RUN_DIR>`. Exit 0: stop, it passed.
 3. **Stop early** if this was the last round, or if, compared with the previous round, nothing was
    fixed, or more P0/P1 findings appeared than were fixed. Report the regression; don't keep going.
 4. **Pick what to fix**, from `findings.json` (decisions already applied): P0 and P1 first, then
@@ -36,11 +39,20 @@ still comes from the critique skill's critics; this skill only orchestrates roun
    asks), and returns which finding ids it addressed and how.
 6. Next round.
 
+## When the loop stops
+
+Unless the last round passed, run `node PLUGIN_ROOT/scripts/report/rounds.mjs best --config
+mockups.yaml`. It ranks the rounds (gate, then fewest P0, fewest P1, highest lowest task score,
+fewest P2) and prints `BEST_ROUND=N`. If that isn't the last round, restore it with
+`rounds.mjs restore --config mockups.yaml --round N` and say so: the loop keeps its best result,
+not its last.
+
 Never dismiss or re-rate a finding yourself to get past the gate. When you think a finding is
 wrong, ask the person; if they agree, they record it with `/designcritique:decide`.
 
 ## Reply
 
 A table of rounds (P0 / P1 / P2 counts, lowest key-task score, taste score if any, gate), what
-the builder changed, what is still open and why the loop stopped. Point to the last
-`report.html`, and say how to restore the starting mockups.
+the builder changed, what is still open and why the loop stopped. Point to the
+`report.html` of the round you kept, and say how to restore any other round
+(`rounds.mjs restore --round N`; round 1 is the starting point).

@@ -29,3 +29,36 @@ export function evaluateGate({ findings, tasks = [], critics = [] }, gate = DEFA
   }
   return { pass: reasons.length === 0, reasons, scores, gate };
 }
+
+/**
+ * How good a rendered run is, for choosing between iterate rounds: passing the gate first, then
+ * fewer P0, fewer P1, a higher lowest task score, fewer P2. Idea from AutoDesign (Yaxin Luo, MIT):
+ * keep the best candidate, not the last one. A round no critic judged never beats one they did.
+ */
+export function roundStanding(merged) {
+  const count = (sev) => (merged.findings || []).filter((f) => f.severity === sev).length;
+  const scores = taskScores(merged.tasks || []);
+  return {
+    pass: !!merged.gate?.pass,
+    judged: (merged.coverage?.critics || []).length > 0,
+    p0: count('P0'), p1: count('P1'), p2: count('P2'),
+    lowest: scores.length ? Math.min(...scores.map((s) => s.score)) : null,
+  };
+}
+
+/** Negative when a ranks above b. */
+export function compareStanding(a, b) {
+  return (Number(b.pass) - Number(a.pass))
+    || (Number(b.judged) - Number(a.judged))
+    || (a.p0 - b.p0)
+    || (a.p1 - b.p1)
+    || ((b.lowest ?? -1) - (a.lowest ?? -1))
+    || (a.p2 - b.p2);
+}
+
+/** rounds: [{ round, merged }] → the best one (earliest wins a tie, since it changed least). */
+export function bestRound(rounds) {
+  return [...rounds]
+    .map((r) => ({ ...r, standing: roundStanding(r.merged) }))
+    .sort((a, b) => compareStanding(a.standing, b.standing) || a.round - b.round)[0] || null;
+}

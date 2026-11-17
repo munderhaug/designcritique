@@ -83,7 +83,7 @@ file (`.designcritique/decisions.yaml`), the taste references and the gate.
 - **design-reviewer** (this plugin's read-only agent), on the model in `critics.judge_model`, or
   a model other than the one that made the mockups. Fill in [critic-brief.md](references/critic-brief.md)
   with the Anthropic design-plugin SKILL.md paths from step 0, plus companion guidance for the
-  platform (Material 3, Expo or platform-audit skills, when installed). With more than 8 screens,
+  platform (Material 3 or Expo skills, when installed). With more than 8 screens,
   run one reviewer per batch of 8, and give one of them the whole flow for the walkthrough.
 - **Impeccable critique**, in a fresh general-purpose agent, using the Impeccable brief in
   critic-brief.md. On `ios`, `android` and `adaptive` platforms Impeccable runs its design review

@@ -129,3 +129,25 @@ test('taste: a folder expands to its images', () => {
   for (const f of ['b.png', 'a.webp', 'notes.txt']) fs.writeFileSync(path.join(dir, f), '');
   assert.deepEqual(expandImages('.', dir).map((p) => path.basename(p)), ['a.webp', 'b.png']);
 });
+
+import { bestRound } from '../scripts/lib/gate.mjs';
+
+test('iterate keeps the best round, not the last', () => {
+  const run = (pass, sevs, scores) => ({
+    gate: { pass },
+    coverage: { critics: ['a'] },
+    findings: sevs.map((severity) => ({ severity })),
+    tasks: scores.map((score, i) => ({ task: `t${i}`, score, source: 'a' })),
+  });
+  const rounds = [
+    { round: 1, merged: run(false, ['P1', 'P1', 'P2'], [5, 7]) },
+    { round: 2, merged: run(false, ['P1', 'P2'], [6, 8]) },
+    { round: 3, merged: run(false, ['P0', 'P2'], [8, 9]) },
+  ];
+  assert.equal(bestRound(rounds).round, 2);
+  rounds.push({ round: 4, merged: run(true, ['P2', 'P2', 'P2'], [8, 8]) });
+  assert.equal(bestRound(rounds).round, 4);
+  assert.equal(bestRound([{ round: 2, merged: run(false, ['P1'], [6]) }, { round: 1, merged: run(false, ['P1'], [6]) }]).round, 1);
+  const checksOnly = { ...run(false, [], []), coverage: { critics: [] } };
+  assert.equal(bestRound([{ round: 1, merged: run(false, ['P1', 'P1'], [5]) }, { round: 2, merged: checksOnly }]).round, 1);
+});

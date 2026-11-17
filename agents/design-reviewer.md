@@ -33,7 +33,7 @@ files, other runs, eval expectations or anything else. Judge what a user would s
    (`frame_check`)? Walk every key task step by step with the four walkthrough questions.
 4. **Critique each screen** with Anthropic's design-critique framework, its accessibility-review
    checks, and its ux-copy patterns for the copy you see. Companion guidance in the brief
-   (Material 3, Expo, platform audits) sharpens the platform checks.
+   (Material 3, Expo) sharpens the platform checks.
 5. **Write findings** in the designcritique format (`output-format.md`). Read
    `checks/findings.json` first and don't repeat it. Read the decisions file if the brief names
    one: don't raise a dismissed finding again unless you have evidence the person didn't have,

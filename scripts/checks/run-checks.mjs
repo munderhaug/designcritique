@@ -42,6 +42,7 @@ const BASIS = {
   'CHK-TEXT-MIN': (p) => [p === 'ios' ? 'IOS-TYPE' : 'AND-TYPE', 'VIS-TYPE'],
   'CHK-TEXT-SCALE': (p) => ['WCAG-1.4.4', p === 'ios' ? 'IOS-TYPE' : 'AND-TYPE'],
   'CHK-TEXT-CLIP': () => ['WCAG-1.4.4', 'NN-H6'],
+  'CHK-TEXT-OVERLAP': () => ['WCAG-1.4.4', 'GESTALT-FIGURE'],
   'CHK-OVERFLOW': () => ['WCAG-1.4.10'],
   'CHK-SAFE-AREA': (p) => [p === 'ios' ? 'IOS-LAYOUT' : 'AND-LAYOUT'],
   'CHK-DARK': (p) => [p === 'ios' ? 'IOS-COLOR' : 'AND-COLOR'],
@@ -187,6 +188,40 @@ for (const screen of manifest.screens) {
       });
     }
 
+    // --- text overlapping text ---
+    // Two text elements whose rendered lines intersect, usually once text is enlarged: badges,
+    // labels over images, absolutely positioned captions. Thresholds adapted from AutoDesign's
+    // poster DOM audit (Yaxin Luo, MIT): ignore slivers under 24 px² or under 8% of the smaller line.
+    const overlaps = new Map();
+    for (const c of caps.filter((c) => c.variant !== 'dark')) {
+      const texts = load(c.data).texts.filter((t) => t.lines?.length);
+      for (let i = 0; i < texts.length; i++) {
+        for (let j = i + 1; j < texts.length; j++) {
+          // Content scrolling under fixed or sticky chrome (tab bar, header) is expected.
+          if (!!texts[i].fixed !== !!texts[j].fixed) continue;
+          const hit = worstOverlap(texts[i].lines, texts[j].lines);
+          if (!hit) continue;
+          const key = [texts[i].selector, texts[j].selector].sort().join(' | ');
+          const e = overlaps.get(key) || { a: texts[i], b: texts[j], ratio: 0, seenIn: new Set() };
+          e.ratio = Math.max(e.ratio, hit.ratio);
+          e.seenIn.add(tagOf(c));
+          overlaps.set(key, e);
+        }
+      }
+    }
+    if (overlaps.size) {
+      const list = [...overlaps.values()].sort((x, y) => y.ratio - x.ratio);
+      const atDefault = list.some((e) => e.seenIn.has(tagOf(main)));
+      add({
+        ...base, rule: 'CHK-TEXT-OVERLAP', category: 'layout', severity: list[0].ratio >= 0.15 ? 'P1' : 'P2',
+        title: atDefault ? `${list.length} pair(s) of text overlap at default size` : `${list.length} pair(s) of text overlap at large text or small screens`,
+        element: { selector: list[0].a.selector, text: list[0].a.text },
+        evidence: list.slice(0, 4).map((e) => `"${e.a.text}" over "${e.b.text}" (${Math.round(e.ratio * 100)}% of the smaller line) in ${[...e.seenIn].join(', ')}`).join('\n'),
+        recommendation: 'Keep text in the flow instead of positioning it over other text; let rows grow with the text size, and check the layout at the largest text size.',
+        seenIn: [...new Set(list.flatMap((e) => [...e.seenIn]))], key: 'overlap',
+      });
+    }
+
     // --- horizontal overflow ---
     const over = caps.filter((c) => c.variant !== 'dark').map((c) => ({ c, d: load(c.data) })).filter(({ d }) => d.scrollWidth > d.viewport.width + 1);
     if (over.length) {
@@ -304,3 +339,19 @@ writeJson(path.join(runDir, 'checks', 'notes.json'), notes);
 const counts = findings.reduce((m, f) => ((m[f.severity] = (m[f.severity] || 0) + 1), m), {});
 console.log(`Checks: ${findings.length} findings ${JSON.stringify(counts)}; ${notes.length} notes`);
 console.log(`Wrote ${path.join(runDir, 'checks', 'findings.json')}`);
+
+function worstOverlap(linesA, linesB) {
+  let best = null;
+  for (const a of linesA) {
+    for (const b of linesB) {
+      const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      if (w <= 0 || h <= 0) continue;
+      const area = w * h;
+      const ratio = area / Math.max(1, Math.min(a.w * a.h, b.w * b.h));
+      if (area <= 24 || ratio < 0.08) continue;
+      if (!best || ratio > best.ratio) best = { area, ratio };
+    }
+  }
+  return best;
+}

@@ -37,12 +37,22 @@ first, and its native ports aren't published yet.
 | Figma MCP | Figma (official) | Figma frames as inputs; variables into DESIGN.md |
 | Claude artifact tools | Anthropic | Pull Claude artifacts into a run |
 | `material-3` skill | hamen | Companion guidance for Android screens |
-| designer-skills `ui-design` | Owl-Listener | Companion guidance: platform and responsive audits |
 | Expo skills | Expo (official) | Companion guidance for Expo / React Native projects |
 | `hcd-interviewer` | Anthropic | Plans real user interviews when the frame rests on assumptions |
 
 When companion guidance and a primary source disagree, the critic follows the primary source
 (Apple HIG, Material 3, WCAG) and says so.
+
+## Considered and not used (checked 2026-11-17)
+
+Reviewed against the primary sources in the principles index. Re-check before adding any of them.
+
+| Tool | Why not |
+|---|---|
+| designer-skills `ui-design` (Owl-Listener) | Was a companion until 0.2. Its platform-conventions skill contradicts the HIG and Material 3 (iOS tab bars "no labels required"; an Android left-edge drawer swipe "without conflicting" with system back) and gives WCAG large text as 18px/14px bold instead of 18pt/14pt; its responsive audit uses web breakpoints |
+| ui-ux-pro-max (nextlevelbuilder) | A generator over large CSV data, most rows without sources; runs Python and writes into the project. Its accurate rules are already in the index |
+| ux-ui-agent-skills (plugin87) | Hooks on every Write/Edit and a blocking Stop hook; brand design systems scraped from websites, some with failing contrast pairs |
+| sumi (Phazur Labs), interface-design (Dammyjay93), mobile-app-ui-design (ceorkm) | Web-first, duplicate Impeccable's critique, or unlicensed and unsourced |
 
 ## Why the principles index exists
 

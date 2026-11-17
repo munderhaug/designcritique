@@ -1,6 +1,8 @@
 # iOS: Apple Human Interface Guidelines (iPhone)
 
 Source: Apple, Human Interface Guidelines (developer.apple.com/design/human-interface-guidelines).
+Liquid Glass (`IOS-MATERIALS`): HIG Materials; Apple, "Adopting Liquid Glass"; WWDC25 sessions 219
+(Meet Liquid Glass), 284 (UIKit) and 323 (SwiftUI). Citations collected by 2dubu/liquid-glass (Apache-2.0).
 Check the live guidelines for the current OS release; these are the stable conventions.
 
 | ID | Convention | Look for |
@@ -16,5 +18,5 @@ Check the live guidelines for the current OS release; these are the stable conve
 | `IOS-TARGET` | Hit targets at least 44×44 pt | Small icon buttons, tight inline links |
 | `IOS-ICONS` | SF Symbols-style icons that match the weight and size of adjacent text | Mixed icon styles; emoji as icons |
 | `IOS-COLOR` | Semantic system colours, one tint colour for interactive elements, full dark appearance | Hard-coded colours that break in dark mode; tint used for decoration |
-| `IOS-MATERIALS` | Since iOS 26, system bars and controls use Liquid Glass. Content stays legible and the material belongs to system chrome | Decorative glass or blur on content; text on translucent layers with poor contrast |
+| `IOS-MATERIALS` | Since iOS 26, system bars and controls use Liquid Glass, which separates controls and navigation from content; content stays in the content layer. Regular glass for controls and text-heavy surfaces; clear glass only over rich media, with legible controls (the HIG suggests considering 35% dark dimming over bright content). Tint for meaning or the primary action, not branding. The material adapts to Reduce Transparency, Increase Contrast and Reduce Motion; custom elements must still be checked under them | Glass on content cards; regular and clear variants mixed in one group; every control tinted; text on clear glass over busy imagery; custom glass or colours that break with Reduce Transparency or Increase Contrast |
 | `IOS-MOTION` | Motion is purposeful and brief, follows system springs, and honours Reduce Motion (cross-fades instead of slides) | Decorative motion on every element; long or bouncy dismissals; no reduced-motion path |

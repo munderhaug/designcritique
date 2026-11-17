@@ -116,6 +116,35 @@ export function analyzePage({ frameAttr }) {
     if (e.examples.length < 3 && sel && !e.examples.includes(sel)) e.examples.push(sel);
   };
 
+  // The rendered lines of an element's own text, cut to any ancestor that clips its overflow,
+  // so truncated or visually hidden text isn't counted. Used by the text-overlap check.
+  const clipRect = (el) => {
+    let r = { l: -Infinity, t: -Infinity, r: Infinity, b: Infinity };
+    for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || (cs.clip && cs.clip !== 'auto')) {
+        const b = a.getBoundingClientRect();
+        r = { l: Math.max(r.l, b.left), t: Math.max(r.t, b.top), r: Math.min(r.r, b.right), b: Math.min(r.b, b.bottom) };
+      }
+    }
+    return r;
+  };
+  const textLines = (el) => {
+    const c = clipRect(el);
+    const out = [];
+    for (const n of el.childNodes) {
+      if (n.nodeType !== 3 || !n.textContent.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const q of range.getClientRects()) {
+        const l = Math.max(q.left, c.l); const t = Math.max(q.top, c.t);
+        const r = Math.min(q.right, c.r); const b = Math.min(q.bottom, c.b);
+        if (r - l > 2 && b - t > 2 && out.length < 8) out.push({ x: Math.round(l - origin.x), y: Math.round(t - origin.y), w: Math.round(r - l), h: Math.round(b - t) });
+      }
+    }
+    return out;
+  };
+
   for (const el of all) {
     if (!visible(el)) continue;
     const s = getComputedStyle(el);
@@ -138,6 +167,8 @@ export function analyzePage({ frameAttr }) {
         background: effectiveBg(el),
         box: box(el),
         clipped: clippedX || clippedY,
+        lines: textLines(el),
+        fixed: fixedAncestor(el),
       });
       note(colors, colorKey(s.color), lazySel());
       note(fontSizes, `${Math.round(fs * 10) / 10}`, lazySel());

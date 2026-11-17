@@ -22,10 +22,10 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Problem framing (PRODUCT.md) | Impeccable `init` (Paul Bakaus) | Problem, ranked Key Tasks and Success Criteria (ISO 9241-210/-11, jobs to be done), evidence tags |
 | References | Mobbin MCP or Refero MCP (official) | How to pick and cite comparable screens per key task |
 | Rendering | Playwright (Microsoft) | Phone sizes per platform; light, dark and large-text variants; zip, folder, artifact and phone-frame inputs |
-| Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, token drift against DESIGN.md |
+| Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, text overlapping text at large sizes (thresholds after AutoDesign's DOM audit), token drift against DESIGN.md |
 | Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
 | Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
-| Platform guidance | Material 3 skill (hamen), designer-skills `ui-design`, Expo skills, when installed | Routing the right guidance to the reviewer |
+| Platform guidance | Material 3 skill (hamen), Expo skills, when installed | Routing the right guidance to the reviewer |
 | Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan | Importing its findings for HTML mockups, mobile-aware severities |
 | Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
 | Merged report | | De-duplication, severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
@@ -34,7 +34,7 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Scores and gate | | Each critic scores every key task 0â€“10 against fixed anchors; the gate fails on open findings at `fail_on` or a key task below `target_score` (lowest critic counts). `gate.mjs` exits 2 for CI or a Stop hook |
 | Your decisions | | `.designcritique/decisions.yaml`: dismissed or re-rated findings stay that way across runs, critics see them, and `decide.mjs --list` shows where the critics are miscalibrated |
 | Taste | | Optional `taste:` references you chose; critics score closeness separately from usability |
-| Iterate | | `/designcritique:iterate`: a builder fixes HTML mockups, fresh critics re-judge, until the gate passes or the round limit |
+| Iterate | AutoDesign (Yaxin Luo): keep the best candidate, not the last | `/designcritique:iterate`: a builder fixes HTML mockups, fresh critics re-judge, until the gate passes or the round limit; every round is snapshotted and the loop ends on its best round (`rounds.mjs`) |
 | Build stack | `catalog/stack.yaml`: 26 entries, each with maker, trust level and sources | Picks per platform and stack, ranked by what the findings show |
 | Calibration | | Eval screens with planted problems and clean screens, and a scorer |
 

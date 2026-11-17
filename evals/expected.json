@@ -9,7 +9,7 @@
   },
   "feed": {
     "checks": {
-      "must": ["CHK-TARGET", "CHK-SAFE-AREA", "AXE-image-alt", "AXE-color-contrast", "CHK-TEXT-CLIP", "CHK-TOKEN-COLOR"],
+      "must": ["CHK-TARGET", "CHK-SAFE-AREA", "AXE-image-alt", "AXE-color-contrast", "CHK-TEXT-CLIP", "CHK-TEXT-OVERLAP", "CHK-TOKEN-COLOR"],
       "must_not": ["CHK-TEXT-SCALE", "CHK-OVERFLOW", "CHK-TEXT-MIN", "CHK-DARK", "CHK-TOKEN-SPACE", "CHK-TOKEN-TYPE"]
     },
     "critic": { "must": [] }

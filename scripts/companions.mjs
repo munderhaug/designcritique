@@ -52,13 +52,6 @@ export const COMPANIONS = {
     install: 'npx skills add hamen/material-3-skill --skill material-3 -a claude-code',
     by: 'hamen/material-3-skill, MIT',
   },
-  'platform-audit': {
-    skill: 'ui-design',
-    match: (p) => /designer-skills/i.test(p),
-    use: 'iOS and Android screens: give the ui critic its platform-audit and responsive-audit commands as companion guidance.',
-    install: '/plugin marketplace add Owl-Listener/designer-skills  then  /plugin install ui-design@designer-skills',
-    by: 'Owl-Listener/designer-skills, MIT',
-  },
   'expo-design-system': {
     skill: 'expo-design-system',
     use: 'Expo / React Native projects: design-system drift and "looks AI-generated" audit guidance for the ui critic.',
