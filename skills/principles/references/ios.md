@@ -17,3 +17,4 @@ Check the live guidelines for the current OS release; these are the stable conve
 | `IOS-ICONS` | SF Symbols-style icons that match the weight and size of adjacent text | Mixed icon styles; emoji as icons |
 | `IOS-COLOR` | Semantic system colours, one tint colour for interactive elements, full dark appearance | Hard-coded colours that break in dark mode; tint used for decoration |
 | `IOS-MATERIALS` | Since iOS 26, system bars and controls use Liquid Glass. Content stays legible and the material belongs to system chrome | Decorative glass or blur on content; text on translucent layers with poor contrast |
+| `IOS-MOTION` | Motion is purposeful and brief, follows system springs, and honours Reduce Motion (cross-fades instead of slides) | Decorative motion on every element; long or bouncy dismissals; no reduced-motion path |

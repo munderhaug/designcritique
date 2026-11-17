@@ -13,11 +13,13 @@
     "checks": "node scripts/checks/run-checks.mjs",
     "report": "node scripts/report/render-report.mjs",
     "eval": "node scripts/eval/run-evals.mjs",
-    "eval:score": "node scripts/eval/score.mjs"
+    "eval:score": "node scripts/eval/score.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.0",
     "adm-zip": "^0.5.18",
+    "ajv": "^8.20.0",
     "playwright": "^1.50.0",
     "yaml": "^2.6.0"
   }

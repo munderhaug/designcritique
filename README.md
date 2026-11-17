@@ -26,7 +26,10 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
 | Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
 | Platform guidance | Material 3 skill (hamen), designer-skills `ui-design`, Expo skills, when installed | Routing the right guidance to the reviewer |
-| Merged report | | De-duplication, severity (Nielsen's factors, weighted by task criticality), annotated HTML |
+| Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan | Importing its findings for HTML mockups, mobile-aware severities |
+| Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
+| Merged report | | De-duplication, severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
+| Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved (exit 2) |
 | Build stack | `catalog/stack.yaml`: 26 entries, each with maker, trust level and sources | Picks per platform and stack, ranked by what the findings show |
 | Calibration | | Eval screens with planted problems and clean screens, and a scorer |
 
@@ -55,6 +58,11 @@ Bakaus). Re-verify it when the date is more than about three months old.
 ```bash
 node scripts/report/recommend-stack.mjs --product PRODUCT.md   # recommendations without a critique
 ```
+
+When the critique ran on HTML mockups, the report adds **While you prototype in HTML**
+(transitions.dev skills and scanner). Items the catalog watches but doesn't recommend yet,
+like libraries.dev, are listed separately. For the build itself, `templates/CLAUDE-design-system.md`
+is a CLAUDE.md rule that keeps agents on your design system.
 
 ## Install
 
@@ -88,10 +96,17 @@ with several phone frames (`phone_frame:`). See [templates/mockups.yaml](templat
 Each run writes to `.designcritique/runs/<timestamp>/`: screenshots, `framing.md`,
 `checks/findings.json`, `critique/*.json`, `findings.json`, `report.md`, `report.html`.
 
-## Evals
+## Compare runs
+
+Run the critique again after changing the design. The report compares with the previous run
+of the same mockups and lists what was fixed, what is new and what is still open.
+`node scripts/report/compare-runs.mjs --run <run> [--base <run>]` does it by hand.
+
+## Evals and tests
 
 ```bash
 npm run eval     # capture, checks and scoring on the eval set (no model)
+npm test         # unit tests: design-system checks, comparison, validation
 ```
 
 To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
@@ -100,8 +115,9 @@ To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
 ## Status
 
 Version 0.1, for mockups and prototypes. Tested: capture, checks (all planted problems found,
-no false alarms on clean screens), input types, report and build-stack recommendations.
-**Not yet run end to end:** the two critics and the reference step. They depend on Impeccable,
+no false alarms on clean screens), design-system checks, input types, report, run comparison,
+validation hook and build-stack recommendations; the motion import against a sample scan.
+**Not yet run end to end:** the two critics, the reference step and a live transitions-agent scan. They depend on Impeccable,
 the Anthropic design plugin and Mobbin or Refero, which need a Claude Code session with them installed.
 
 Next: running apps through MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI.
@@ -117,8 +133,10 @@ skills/frame/          problem framing on top of Impeccable init
 skills/critique/       orchestration, inputs, references, severity, output format, companions
 skills/principles/     citation index (IDs and primary sources)
 agents/                design-reviewer (read-only, Anthropic design-plugin methods)
+hooks/                 validates critic JSON when it's saved
 scripts/               capture, checks, report, stack recommender, evals, setup, companion detection
-templates/             PRODUCT.md (Impeccable schema + HCD), DESIGN.md, mockups.yaml
+templates/             PRODUCT.md (Impeccable schema + HCD), DESIGN.md, mockups.yaml, CLAUDE design-system rule
+tests/                 unit tests
 evals/                 calibration screens, expectations, fixtures
 ```
 

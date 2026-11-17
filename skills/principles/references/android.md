@@ -16,3 +16,4 @@ developer guidance (developer.android.com). Check the live docs for current comp
 | `AND-TARGET` | Touch targets at least 48×48 dp | Small icon buttons; dense chips |
 | `AND-ICONS` | Material Symbols, consistent style and weight | Mixed icon sets; emoji as icons |
 | `AND-NOT-IOS` | Android-native idioms | iOS switches, action sheets, chevron-plus-label back buttons on Android |
+| `AND-MOTION` | Material 3 motion: easing and duration tokens, container transforms, and the Remove animations setting respected | Arbitrary durations; overlays that pop in with no transition; animations ignoring the system setting |

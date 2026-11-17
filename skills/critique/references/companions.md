@@ -17,6 +17,17 @@ catalog. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to se
 `bash scripts/setup.sh --install-companions` installs Impeccable into the project and the
 Anthropic design plugin for the user.
 
+## Motion and design systems
+
+| Tool or source | By | Role |
+|---|---|---|
+| transitions-agent | Jakub Antalik (transitions.dev), MIT | Deterministic motion scan of HTML mockups; imported as findings by `scripts/checks/motion.mjs` |
+| transitions-dev, transitions-polish skills | Jakub Antalik | Motion recipes and token rules when fixing motion in HTML prototypes (web only; native apps follow platform motion) |
+| Smpl design-system guide | Andreas Melvær, Smpl | The "eight essentials" behind the design-system checks, and the CLAUDE.md rule in `templates/CLAUDE-design-system.md` |
+
+libraries.dev (Jakub Antalik) is on the catalog's watch list, not used: it's React for the web
+first, and its native ports aren't published yet.
+
 ## When connected or installed
 
 | Tool | By | Role |

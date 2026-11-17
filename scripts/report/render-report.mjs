@@ -6,13 +6,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
 import { recommendStack, stackMarkdown } from '../lib/stack.mjs';
+import { validateCritique } from '../lib/validate.mjs';
+import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: render-report.mjs --run <runDir>'); process.exit(2); }
 const runDir = path.resolve(args.run);
 const manifest = readJson(path.join(runDir, 'manifest.json'));
-const checkFindings = readJson(path.join(runDir, 'checks', 'findings.json'), []);
-const notes = readJson(path.join(runDir, 'checks', 'notes.json'), []);
+const checkFindings = [
+  ...readJson(path.join(runDir, 'checks', 'findings.json'), []),
+  ...readJson(path.join(runDir, 'checks', 'motion.json'), []),
+];
+const notes = [
+  ...readJson(path.join(runDir, 'checks', 'notes.json'), []),
+  ...readJson(path.join(runDir, 'motion', 'notes.json'), []).map((note) => ({ screen: 'motion', note })),
+];
 const warnings = [...(manifest.warnings || [])];
 
 const SEV = ['P0', 'P1', 'P2', 'P3'];
@@ -33,13 +41,11 @@ if (fs.existsSync(critiqueDir)) {
   }
 }
 
+const criticValidity = new Map();
 function validCriticFinding(f, file) {
-  const problems = [];
-  for (const k of ['id', 'screen', 'rule', 'severity', 'title', 'evidence', 'recommendation']) if (!f[k]) problems.push(`missing ${k}`);
-  if (f.severity && !SEV.includes(f.severity)) problems.push(`bad severity ${f.severity}`);
-  if (f.screen && f.screen !== '*' && !screenIds.has(f.screen)) problems.push(`unknown screen ${f.screen}`);
-  if (problems.length) warnings.push(`critique/${file}: finding ${f.id || '?'} dropped (${problems.join(', ')})`);
-  return !problems.length;
+  const bad = criticValidity.get(file);
+  if (bad && bad.has(f.id ?? '')) { warnings.push(`critique/${file}: finding ${f.id || '?'} dropped (fails validation)`); return false; }
+  return true;
 }
 
 const all = checkFindings.map((f) => ({ ...f }));
@@ -48,6 +54,10 @@ const tasks = [];
 const strengths = [];
 const comparisons = [];
 for (const { file, data } of critics) {
+  const v = validateCritique(data, { screens: screenIds });
+  criticValidity.set(file, v.badFindings);
+  for (const e of v.errors) warnings.push(`critique/${file}: ${e}`);
+  for (const w of v.warnings) warnings.push(`critique/${file}: ${w}`);
   const source = data.critic || path.basename(file, '.json');
   for (const f of data.findings) {
     if (!validCriticFinding(f, file)) continue;
@@ -113,13 +123,32 @@ const framing = {
   assumptions: assumptionsOf(framingText),
 };
 
-const stack = recommendStack({ productText: framingText, fallbackPlatform: manifest.screens[0]?.platform, findings: [...byKey.values()] });
+// ---------- compare with the previous run ----------
+let comparison = null;
+const baseDir = args['no-compare'] ? null : (args.base ? path.resolve(args.base) : findPreviousRun(runDir));
+if (baseDir && fs.existsSync(path.join(baseDir, 'findings.json'))) {
+  const base = readJson(path.join(baseDir, 'findings.json'));
+  const c = compareFindings(base.findings || [], findings, screenIds);
+  const nowIds = new Set(c.introduced.map((f) => f.id));
+  for (const f of findings) f.status = nowIds.has(f.id) ? 'new' : 'still open';
+  comparison = {
+    base: baseDir, baseDate: base.generatedAt,
+    fixed: c.fixed.map(({ id, screen, rule, severity, title, source }) => ({ id, screen, rule, severity, title, source })),
+    introduced: c.introduced.map((f) => f.id),
+    persisting: c.persisting.map((p) => ({ id: p.now.id, before: p.before.id, severityChange: p.severityChange })),
+    notRechecked: c.notRechecked.map(({ id, screen, title }) => ({ id, screen, title })),
+  };
+  writeJson(path.join(runDir, 'compare.json'), comparison);
+}
+
+const stack = recommendStack({ productText: framingText, fallbackPlatform: manifest.screens[0]?.platform, findings: [...byKey.values()], prototype: manifest.screens.some((s) => s.kind === 'html') });
 
 const merged = {
   generatedAt: new Date().toISOString(),
   run: runDir,
   framing: { ...framing, present: !!framingText, frameCheck },
   tasks, findings, strengths, comparisons, counts, stack,
+  compare: comparison && { base: comparison.base, fixed: comparison.fixed.length, new: comparison.introduced.length, stillOpen: comparison.persisting.length, notRechecked: comparison.notRechecked.length },
   coverage: {
     screens: manifest.screens.length,
     renders: manifest.screens.reduce((n, s) => n + s.captures.length, 0),
@@ -147,13 +176,19 @@ if (tasks.length) {
   for (const t of tasks) L.push(`| ${md(t.task)} | ${t.verdict} | ${md(t.summary || '')} |`);
   L.push('');
 }
+if (comparison) {
+  L.push('## Since last run', '', `Compared with ${path.basename(comparison.base)}: **${comparison.fixed.length} fixed**, **${comparison.introduced.length} new**, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.`, '');
+  if (comparison.fixed.length) L.push('Fixed:', '', ...comparison.fixed.map((f) => `- ~~${md(f.title)}~~ (${f.severity}, ${screenTitle(f.screen)})`), '');
+  const worse = comparison.persisting.filter((p) => p.severityChange < 0);
+  if (worse.length) L.push(`Got worse: ${worse.length} finding(s) rose in severity.`, '');
+}
 L.push('## Findings', '', SEV.map((s) => `${s}: ${counts[s]}`).join(' · '), '');
 for (const sev of SEV) {
   const list = findings.filter((f) => f.severity === sev);
   if (!list.length) continue;
   L.push(`### ${sev}`, '');
   for (const f of list) {
-    L.push(`**${f.n}. ${md(f.title)}**  `, `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''} · ${f.basis.join(', ')} · ${f.source}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
+    L.push(`**${f.n}. ${md(f.title)}**${f.status === 'new' ? ' _(new)_' : ''}  `, `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''} · ${f.basis.join(', ')} · ${f.source}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
     L.push(`- Evidence: ${md(f.evidence).replace(/\n/g, '; ')}`);
     if (f.impact) L.push(`- Impact: ${md(f.impact)}`);
     L.push(`- Fix: ${md(f.recommendation)}`, '');
@@ -192,7 +227,7 @@ function screenCard(screen) {
   <div class="screen-body">
     <figure class="shot"><div class="frame"><img src="${esc(main.screenshot)}" alt="${esc(screen.title)}, ${esc(main.variant)}">${markers}</div><figcaption>${esc(main.deviceName)} · ${esc(main.variant)}</figcaption></figure>
     <div class="side">
-      <ol class="flist">${own.map((f) => `<li id="f${f.n}" value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong><div class="meta">${esc(f.basis.join(', '))} · ${esc(f.source)}${f.platform ? ` · ${esc(f.platform)}` : ''}</div><details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p></details></li>`).join('') || '<li class="none">No findings for this screen.</li>'}</ol>
+      <ol class="flist">${own.map((f) => `<li id="f${f.n}" value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}<div class="meta">${esc(f.basis.join(', '))} · ${esc(f.source)}${f.platform ? ` · ${esc(f.platform)}` : ''}</div><details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p></details></li>`).join('') || '<li class="none">No findings for this screen.</li>'}</ol>
       ${others.length ? `<div class="thumbs">${others.map((c) => `<figure><a href="${esc(c.screenshot)}"><img src="${esc(c.screenshot)}" alt="${esc(c.variant)}"></a><figcaption>${esc(c.platform)} ${esc(c.device)} · ${esc(c.variant)}</figcaption></figure>`).join('')}</div>` : ''}
     </div>
   </div>
@@ -221,6 +256,7 @@ table { border-collapse:collapse; width:100%; } td, th { text-align:left; paddin
 .sev-P1 { border-color:var(--p1); } .sev-P1 span, span.sev-P1 { background:var(--p1); }
 .sev-P2 { border-color:var(--p2); } .sev-P2 span, span.sev-P2 { background:var(--p2); }
 .sev-P3 { border-color:var(--p3); } .sev-P3 span, span.sev-P3 { background:var(--p3); }
+span.new { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--p1); border:1px solid var(--p1); border-radius:6px; padding:0 5px; margin-left:4px; }
 span.sev { color:#fff; border-radius:6px; padding:1px 6px; font-size:12px; font-weight:700; }
 .flist { padding-left:20px; margin:0; } .flist li { margin-bottom:10px; } .flist .none { list-style:none; color:var(--muted); }
 details p { margin:6px 0; } summary { cursor:pointer; color:var(--muted); font-size:13px; }
@@ -233,6 +269,7 @@ ul.plain { padding-left:20px; }
 <div class="frame-box">${framingText ? `${framing.problem ? `<p>${mdInline(framing.problem)}</p>` : ''}${framing.users ? `<p><strong>Users</strong><br>${mdInline(framing.users)}</p>` : ''}${framing.tasks ? `<p><strong>Key tasks</strong><br>${mdInline(framing.tasks)}</p>` : ''}${framing.assumptions.length ? `<p><strong>Open assumptions</strong></p><ul class="plain">${framing.assumptions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : '<p>No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first.</p>'}
 ${frameCheck ? `<p><strong>Fit to the problem: ${esc(frameCheck.fit)}.</strong> ${esc(frameCheck.summary || '')}</p>` : ''}</div>
 ${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>Why</th></tr>${tasks.map((t) => `<tr><td>${esc(t.task)}</td><td class="verdict v-${esc(t.verdict)}">${esc(t.verdict)}</td><td>${esc(t.summary || '')}</td></tr>`).join('')}</table>` : ''}
+${comparison ? `<h2>Since last run</h2><div class="frame-box"><p>Compared with ${esc(path.basename(comparison.base))}: <strong>${comparison.fixed.length} fixed</strong>, <strong>${comparison.introduced.length} new</strong>, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.</p>${comparison.fixed.length ? `<ul class="plain">${comparison.fixed.map((f) => `<li><s>${esc(f.title)}</s> <span class="meta">${esc(f.severity)} · ${esc(screenTitle(f.screen))}</span></li>`).join('')}</ul>` : ''}</div>` : ''}
 <h2>Findings</h2>
 <p class="counts">${SEV.map((s) => `<span><span class="sev sev-${s}">${s}</span> ${counts[s]}</span>`).join('')}</p>
 ${global.length ? `<div class="screen"><h3>Across all screens</h3><ol class="flist">${global.map((f) => `<li id="f${f.n}" value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong><div class="meta">${esc(f.basis.join(', '))} · ${esc(f.source)}</div><details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p></details></li>`).join('')}</ol></div>` : ''}
@@ -242,7 +279,8 @@ ${comparisons.length ? `<h2>Variant comparison</h2><ul class="plain">${compariso
 <h2>To build this</h2>
 <p class="sub">Platform: <strong>${esc(stack.platform)}</strong> · Stack: <strong>${esc(stack.decided ? stack.stacks.join(', ') : 'not decided')}</strong> · picks come only from catalog/stack.yaml (verified ${esc(stack.verified)}), each with its source.</p>
 ${stack.notes.map((n) => `<p class="sub"><em>${esc(n)}</em></p>`).join('')}
-${stack.steps.map((st, i) => `<div class="screen"><h3>${i + 1}. ${esc(st.title)}</h3><ul class="plain">${st.picks.map((p) => `<li><strong>${esc(p.name)}</strong> <span class="meta">${esc(p.by)} · ${esc(p.trust)}${stack.decided ? '' : ` · for ${esc(p.stacks.join(', '))}`}${p.group && st.picks.filter((x) => x.group === p.group).length > 1 ? ' · alternative' : ''}</span><br>${esc(p.why)}${p.because ? ` <em>${esc(p.because)}.</em>` : ''}<br><code>${esc(p.install)}</code> · ${p.sources.map((u) => `<a href="${esc(u)}">source</a>`).join(' ')}</li>`).join('')}</ul></div>`).join('')}
+${stack.steps.map((st, i) => `<div class="screen"><h3>${i + 1}. ${esc(st.title)}</h3><ul class="plain">${st.picks.map((p) => `<li><strong>${esc(p.name)}</strong> <span class="meta">${esc(p.by)} · ${esc(p.trust)}${stack.decided || st.role === 'prototype' ? '' : ` · for ${esc(p.stacks.join(', '))}`}${p.group && st.picks.filter((x) => x.group === p.group).length > 1 ? ' · alternative' : ''}</span><br>${esc(p.why)}${p.because ? ` <em>${esc(p.because)}.</em>` : ''}<br><code>${esc(p.install)}</code> · ${p.sources.map((u) => `<a href="${esc(u)}">source</a>`).join(' ')}</li>`).join('')}</ul></div>`).join('')}
+${stack.watch.length ? `<p class="sub">Watched, not recommended yet: ${stack.watch.map((w) => `${esc(w.name)}: ${esc(w.why_not_yet)}`).join(' ')}</p>` : ''}
 ${notes.length || warnings.length ? `<h2>Notes</h2><ul class="plain">${notes.map((n) => `<li>${esc(n.screen)}: ${esc(n.note)}</li>`).join('')}${warnings.map((w) => `<li>Warning: ${esc(w)}</li>`).join('')}</ul>` : ''}
 <p class="sub">Principle IDs refer to the designcritique principles library. Severity follows Nielsen's frequency, impact and persistence, weighted by task criticality.</p>
 </main></body></html>`;

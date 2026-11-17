@@ -71,6 +71,18 @@ export const COMPANIONS = {
     install: 'claude plugin install expo@claude-plugins-official',
     by: 'Expo team, official',
   },
+  'transitions-dev': {
+    skill: 'transitions-dev',
+    use: 'HTML prototypes: motion recipes and tokens when fixing motion findings (web only).',
+    install: 'npx skills add Jakubantalik/transitions.dev',
+    by: 'Jakub Antalik (transitions.dev)',
+  },
+  'transitions-polish': {
+    skill: 'transitions-polish',
+    use: 'HTML prototypes: motion-token polish rules when fixing motion findings (web only).',
+    install: 'npx skills add Jakubantalik/transitions.dev',
+    by: 'Jakub Antalik (transitions.dev)',
+  },
   'swiftui-specialist': {
     skill: 'swiftui-specialist',
     use: 'SwiftUI source code (next version, running apps): Apple\'s own guidance. Not used for HTML or image mockups.',

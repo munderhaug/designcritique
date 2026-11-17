@@ -110,6 +110,20 @@ entries:
     sources:
       - https://github.com/google-labs-code/design.md
 
+  - id: ds-agent-rules
+    role: tokens
+    name: "Design-system rule in CLAUDE.md"
+    by: "Smpl (Andreas Melvær) and Figma"
+    trust: practitioner
+    platforms: [ios, android]
+    stacks: [swiftui, compose, expo, react-native, flutter]
+    why: "Tell agents the rules: read DESIGN.md before building any UI, use only its tokens and components, stop and ask when something is missing. Snippet in templates/CLAUDE-design-system.md; Figma's create-design-system-rules skill generates the same kind of rules from your Figma file."
+    install: "append templates/CLAUDE-design-system.md to your CLAUDE.md"
+    helps_with: [tokens, visual]
+    sources:
+      - https://smpl.as
+      - https://developers.figma.com/docs/figma-mcp-server/skill-create-design-system-rules
+
   # ---------- 3. Platform skills ----------
   - id: xcode-skills
     role: platform-skill
@@ -368,3 +382,42 @@ entries:
     helps_with: [a11y]
     sources:
       - https://github.com/mobile-next/mobile-mcp
+
+  # ---------- While prototyping in HTML (shown only when the critique ran on HTML mockups) ----------
+  - id: transitions-dev
+    role: prototype
+    name: "transitions.dev skills (transitions-dev, transitions-polish)"
+    by: "Jakub Antalik"
+    trust: practitioner
+    platforms: [ios, android]
+    stacks: [html]
+    why: "36 CSS transitions with motion tokens and reduced-motion guards, plus polish rules (closes faster than opens, no bouncing closes, no delayed dismissals). For HTML prototypes only: in the native app, follow the platform's motion."
+    install: "npx skills add Jakubantalik/transitions.dev"
+    helps_with: [visual, a11y]
+    sources:
+      - https://transitions.dev
+      - https://github.com/Jakubantalik/transitions.dev
+
+  - id: transitions-agent
+    role: prototype
+    name: "transitions-agent motion scanner"
+    by: "Jakub Antalik"
+    trust: practitioner
+    platforms: [ios, android]
+    stacks: [html]
+    why: "Deterministic, local motion score (0-100) with findings for overlays without transitions, missing reduced-motion handling and off-scale timing. designcritique imports its results; the scan needs no account."
+    install: "npx transitions-agent --json --dir <mockups folder>"
+    helps_with: [visual, a11y]
+    sources:
+      - https://github.com/Jakubantalik/transitions.dev/tree/main/agent
+
+# Watched, not recommended yet. The recommender never picks these.
+watch:
+  - id: libraries-dev
+    name: "libraries.dev UI effect libraries (border beam, thinking orbs, voice glow, bot avatars, liquid metal)"
+    by: "Jakub Antalik"
+    why_not_yet: "React for the web first. Only two libraries are listed for SwiftUI and React Native, and the repo says the native ports aren't published yet. Its model files need a paid plan in commercial apps."
+    revisit_when: "Native SwiftUI / React Native packages are published; relevant for AI-interface apps (thinking states, voice)."
+    sources:
+      - https://libraries.dev
+      - https://github.com/Jakubantalik/Libraries.dev

@@ -23,4 +23,8 @@ a new principle of perceptual grouping" (*Cognitive Psychology*, 1992).
 | `VIS-SPACING` | Space creates rhythm and grouping | Spacing off the scale; inconsistent margins; crowded touch areas |
 | `VIS-ISOLATION` | Von Restorff (isolation) effect: the item that differs is remembered and noticed | Use it for the one primary action. Several "different" items cancel each other out |
 
-Source for the isolation effect: Hedwig von Restorff (1933).
+| `VIS-MOTION` | Motion explains change: where something came from and went | Overlays that appear with no transition; closes slower or bouncier than opens; delayed dismissals; a different duration for every element |
+
+Source for the isolation effect: Hedwig von Restorff (1933). Motion: Material 3 motion guidance,
+Apple HIG Motion, and the motion-token rules of transitions.dev (Jakub Antalik), which the
+transitions-agent scanner applies to HTML mockups.

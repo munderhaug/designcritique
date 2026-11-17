@@ -20,6 +20,7 @@ summarises its primary sources and names them. Read only the files the task need
 | [accessibility.md](references/accessibility.md) | WCAG 2.2 success criteria that apply to phone screens | `WCAG-x.y.z` |
 | [ios.md](references/ios.md) | Apple Human Interface Guidelines on iPhone | `IOS-*` |
 | [android.md](references/android.md) | Material 3 and Android conventions | `AND-*` |
+| [design-systems.md](references/design-systems.md) | Colour roles, token contrast, scales, the eight essentials, agent rules | `DS-*` |
 | [ai-tells.md](references/ai-tells.md) | Patterns that make generated UI look generic | `TELL-*` |
 
 ## How to use the principles

@@ -45,10 +45,14 @@ function frontMatter(text) {
 export function loadTokens(file) {
   if (!file || !fs.existsSync(file)) return null;
   const text = fs.readFileSync(file, 'utf8');
-  const data = path.extname(file).toLowerCase() === '.json' ? JSON.parse(text) : frontMatter(text);
+  const isJson = path.extname(file).toLowerCase() === '.json';
+  const data = isJson ? JSON.parse(text) : frontMatter(text);
   if (!data) return null;
+  const body = isJson ? '' : text.replace(/^---\s*\n[\s\S]*?\n---\s*(\n|$)/, '');
 
   const colors = new Map();
+  const colorByName = new Map();
+  const fontFamilies = new Set();
   const spacing = new Set();
   const fontSizes = new Set();
   const radii = new Set();
@@ -62,8 +66,16 @@ export function loadTokens(file) {
       return;
     }
     const pathStr = keys.join('.').toLowerCase();
+    if (/font-?family|families/.test(pathStr) && typeof node === 'string') {
+      fontFamilies.add(node.split(',')[0].replace(/["']/g, '').trim());
+      return;
+    }
     const color = parseColor(String(node));
-    if (color) { colors.set(toHex(color), keys.join('.')); return; }
+    if (color) {
+      colors.set(toHex(color), keys.join('.'));
+      colorByName.set(keys[keys.length - 1].toLowerCase(), toHex(color));
+      return;
+    }
     const px = toPx(node);
     if (px == null) return;
     if (/spac|space|gap|margin|padding|inset|gutter/.test(pathStr)) spacing.add(px);
@@ -74,6 +86,9 @@ export function loadTokens(file) {
 
   return {
     source: file,
+    body,
+    colorByName,
+    fontFamilies: [...fontFamilies],
     colors,
     spacing: [...spacing].sort((a, b) => a - b),
     fontSizes: [...fontSizes].sort((a, b) => a - b),
@@ -97,4 +112,18 @@ export function nearestColor(hex, palette) {
 
 export function onScale(value, scale, tolerance = 0.5) {
   return scale.some((s) => Math.abs(s - value) <= tolerance);
+}
+
+/** WCAG 2.x contrast ratio between two hex colours. */
+export function contrastRatio(hexA, hexB) {
+  const lum = (hex) => {
+    const c = parseColor(hex);
+    const ch = [c.r, c.g, c.b].map((v) => {
+      const x = v / 255;
+      return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  };
+  const [a, b] = [lum(hexA), lum(hexB)].sort((x, y) => y - x);
+  return (a + 0.05) / (b + 0.05);
 }

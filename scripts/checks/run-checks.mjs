@@ -8,6 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { parseArgs, readJson, writeJson, MIN_TARGET, MIN_TEXT } from '../lib/config.mjs';
 import { loadTokens, nearestColor, onScale, parseColor } from '../lib/tokens.mjs';
+import { designSystemFindings } from './design-system.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: run-checks.mjs --run <runDir>'); process.exit(2); }
@@ -293,6 +294,7 @@ for (const screen of manifest.screens) {
   }
 }
 
+if (tokens) findings.push(...designSystemFindings(tokens, manifest.design));
 if (!tokens) notes.push({ screen: '*', note: manifest.design ? `No tokens found in ${manifest.design}; token checks skipped.` : 'No DESIGN.md configured; token checks skipped.' });
 
 const order = { P0: 0, P1: 1, P2: 2, P3: 3 };

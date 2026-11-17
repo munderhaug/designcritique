@@ -51,6 +51,22 @@ node PLUGIN_ROOT/scripts/checks/run-checks.mjs --run <RUN_DIR>
 Read the manifest warnings and look at one standard-light screenshot per screen. Fix
 mis-renders (phone-frame canvases, missing assets) and capture again.
 
+The checks also review `DESIGN.md` itself: text/surface token contrast, colour roles, a
+4-based spacing scale, and whether it covers the eight essentials of the Smpl design-system
+guide (buttons and their states, forms, navigation, empty and error states, voice).
+
+**Motion (HTML mockups).** Static screenshots can't show motion, so use the transitions.dev
+scanner (Jakub Antalik; deterministic, local, no account):
+
+```bash
+node PLUGIN_ROOT/scripts/checks/motion.mjs plan --run <RUN_DIR>    # prints one scan command per mockup folder
+npx transitions-agent --json --dir "<folder>" > "<RUN_DIR>/motion/scan-1.json"   # as printed
+node PLUGIN_ROOT/scripts/checks/motion.mjs import --run <RUN_DIR>
+```
+
+Its duration scale is a web scale, so off-scale timing stays P3; missing reduced-motion
+handling and overlays without transitions are P2. Skip this step if `npx` can't reach npm.
+
 ## 4. References from shipped apps
 
 Unless `mockups.yaml` lists `references:`, gather comparable screens and flows for the key
@@ -70,7 +86,9 @@ Neither sees the other's output or how the screens were made.
   without its web detector, by its own rules. Skip this critic if Impeccable isn't installed.
 
 Save each JSON reply unchanged to `RUN_DIR/critique/anthropic-design.json` (`-2`, … for batches)
-and `RUN_DIR/critique/impeccable.json`. If a reply isn't valid JSON, ask once for only the JSON.
+and `RUN_DIR/critique/impeccable.json`. This plugin's hook validates each file as it's saved
+(schema, screen ids, principle IDs) and reports problems back; fix them, asking the critic
+again if needed. `node PLUGIN_ROOT/scripts/report/validate-critique.mjs <file>` does the same by hand.
 
 ## 6. Report and build stack
 
@@ -78,8 +96,9 @@ and `RUN_DIR/critique/impeccable.json`. If a reply isn't valid JSON, ask once fo
 node PLUGIN_ROOT/scripts/report/render-report.mjs --run <RUN_DIR>
 ```
 
-This merges all findings and writes `findings.json`, `report.md` and `report.html`. The report
-ends with **To build this**: design system and components, tokens, platform skills,
+This merges all findings and writes `findings.json`, `report.md` and `report.html`. If an
+earlier run of the same mockups exists, it adds **Since last run**: fixed, new and still-open
+findings (`--base <run>` to choose the run, `--no-compare` to skip). The report ends with **To build this**: design system and components, tokens, platform skills,
 design-quality skills, design inputs and device checks for the platform and stack in
 PRODUCT.md. Every pick comes from `PLUGIN_ROOT/catalog/stack.yaml` with its source, ranked by
 what the findings show. Never add tools that aren't in the catalog; propose catalog additions
@@ -87,7 +106,8 @@ separately, with sources.
 
 ## 7. Reply
 
-The problem in one line, plus open assumptions; the verdict for each key task; the top P0/P1
+The problem in one line, plus open assumptions; what changed since the last run, if there was
+one; the verdict for each key task; the top P0/P1
 findings (five at most, each with its principle and the user it affects); what works; the first
 two build-stack steps; which critics ran and which were missing. Point to `report.html`. Don't
 edit the mockups unless asked.

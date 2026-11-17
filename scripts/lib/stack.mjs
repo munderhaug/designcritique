@@ -15,6 +15,7 @@ const ROLES = [
   ['design-skill', 'Add design-quality skills'],
   ['design-input', 'Connect design inputs and references'],
   ['verify', 'Check it on a simulator or device'],
+  ['prototype', 'While you prototype in HTML'],
 ];
 
 const STACK_WORDS = [
@@ -47,7 +48,7 @@ export function loadCatalog(file = CATALOG_PATH) {
 /**
  * @returns {{verified, platform, stacks, decided, stackText, steps: Array<{role,title,picks}>, notes: string[]}}
  */
-export function recommendStack({ productText, fallbackPlatform, findings = [], catalog = loadCatalog() }) {
+export function recommendStack({ productText, fallbackPlatform, findings = [], prototype = false, catalog = loadCatalog() }) {
   const { platform, platforms, stacks, stackText } = readProductStack(productText, fallbackPlatform);
   const decided = stacks.length > 0;
   const notes = [];
@@ -59,7 +60,9 @@ export function recommendStack({ productText, fallbackPlatform, findings = [], c
   const need = {};
   for (const f of findings) need[f.category] = (need[f.category] || 0) + (weight[f.severity] || 1);
 
-  const fits = (e) => e.platforms.some((p) => platforms.includes(p)) && (!decided || e.stacks.some((s) => stacks.includes(s)));
+  const fits = (e) => e.role === 'prototype'
+    ? prototype
+    : e.platforms.some((p) => platforms.includes(p)) && (!decided || e.stacks.some((s) => stacks.includes(s)));
   const steps = [];
   for (const [role, title] of ROLES) {
     const picks = catalog.entries.filter((e) => e.role === role && fits(e)).map((e) => {
@@ -73,7 +76,7 @@ export function recommendStack({ productText, fallbackPlatform, findings = [], c
     }).sort((a, b) => b.score - a.score);
     if (picks.length) steps.push({ role, title, picks });
   }
-  return { verified: catalog.verified, platform, stacks, decided, stackText, steps, notes };
+  return { verified: catalog.verified, platform, stacks, decided, stackText, steps, notes, watch: catalog.watch || [] };
 }
 
 export function stackMarkdown(rec) {
@@ -84,12 +87,15 @@ export function stackMarkdown(rec) {
     L.push(`### ${i + 1}. ${s.title}`, '');
     for (const p of s.picks) {
       const alt = p.group && s.picks.filter((x) => x.group === p.group).length > 1;
-      const stackNote = rec.decided ? '' : ` _(for ${p.stacks.join(', ')})_`;
+      const stackNote = rec.decided || s.role === 'prototype' ? '' : ` _(for ${p.stacks.join(', ')})_`;
       L.push(`- **${p.name}**, ${p.by} (${p.trust})${stackNote}${alt ? ' · alternative: pick one of the marked options' : ''}  `);
       L.push(`  ${p.why}${p.because ? ` ${p.because}.` : ''}  `);
       L.push(`  Install: \`${p.install}\` · Source: ${p.sources.join(', ')}`);
     }
     L.push('');
   });
+  if (rec.watch?.length) {
+    L.push('_Watched, not recommended yet:_ ' + rec.watch.map((w) => `${w.name} (${w.why_not_yet})`).join(' '), '');
+  }
   return L.join('\n');
 }

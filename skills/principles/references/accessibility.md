@@ -17,6 +17,7 @@ on HTML mockups. A critic adds what needs judgment, and covers image-only mockup
 | `WCAG-1.4.4` | Resize text (AA) | Text can grow to 200% without loss. On phones, think Dynamic Type / font scale |
 | `WCAG-1.4.10` | Reflow (AA) | No horizontal scrolling at 320 CSS px width |
 | `WCAG-1.4.11` | Non-text contrast (AA) | 3:1 for control boundaries, focus indicators, meaningful icons |
+| `WCAG-2.3.3` | Animation from interactions (AAA) | Motion triggered by interaction can be turned off; respect the OS reduce-motion setting (`prefers-reduced-motion`, iOS Reduce Motion, Android Remove animations) |
 | `WCAG-2.4.4` | Link purpose, in context (A) | Link text says where it goes ("Terms of Service", not "here") |
 | `WCAG-2.4.6` | Headings and labels (AA) | Headings and labels describe topic or purpose |
 | `WCAG-2.5.1` | Pointer gestures (A) | Multi-point or path gestures have a single-tap alternative |
