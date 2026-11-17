@@ -10,6 +10,8 @@ import { validateCritique } from '../lib/validate.mjs';
 import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
 import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.mjs';
 import { evaluateGate } from '../lib/gate.mjs';
+import { section, assumptionsOf, titleOf } from '../lib/framing.mjs';
+import { mergeAcrossSources, groupChecksByCause } from '../lib/merge.mjs';
 import { DEFAULT_GATE } from '../lib/config.mjs';
 
 const args = parseArgs(process.argv.slice(2));
@@ -97,7 +99,9 @@ for (const f of all) {
 }
 // ---------- your decisions (.designcritique/decisions.yaml) ----------
 const decisions = loadDecisions(manifest.baseDir);
-const { open, decided } = applyDecisions([...byKey.values()], decisions);
+// One finding per problem: merge what several sources raised, group checks across screens.
+const onePerProblem = groupChecksByCause(mergeAcrossSources([...byKey.values()]));
+const { open, decided } = applyDecisions(onePerProblem, decisions);
 const findings = open.sort((a, b) =>
   SEV.indexOf(a.severity) - SEV.indexOf(b.severity)
   || (a.screen === '*' ? -1 : b.screen === '*' ? 1 : (screenOrder.get(a.screen) ?? 0) - (screenOrder.get(b.screen) ?? 0))
@@ -107,23 +111,7 @@ const counts = Object.fromEntries(SEV.map((s) => [s, findings.filter((f) => f.se
 
 // ---------- framing ----------
 const framingText = manifest.framingSnapshot ? fs.readFileSync(path.join(runDir, manifest.framingSnapshot), 'utf8') : '';
-function section(md, name) {
-  const m = md.match(new RegExp(`^##\\s+${name}[^\\n]*\\n([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, 'mi'));
-  return m ? m[1].trim() : '';
-}
-// An [assumption] line plus its wrapped continuation lines (up to the next blank line or list item).
-function assumptionsOf(md) {
-  const lines = md.split('\n');
-  const out = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (!/\[assumption\]/i.test(lines[i])) continue;
-    let text = lines[i].replace(/^\s*[-*\d.]+\s*/, '').trim();
-    while (i + 1 < lines.length && lines[i + 1].trim() && !/^\s*([-*]|\d+\.)\s/.test(lines[i + 1]) && !/^#/.test(lines[i + 1])) text += ' ' + lines[++i].trim();
-    out.push(text);
-  }
-  return out;
-}
-const productTitle = (framingText.match(/^#\s+(.+)$/m) || [])[1] || 'Untitled product';
+const productTitle = titleOf(framingText) || 'Untitled product';
 const firstSection = (...names) => names.map((n) => section(framingText, n)).find(Boolean) || '';
 const framing = {
   title: productTitle === 'Product' ? (manifest.screens[0]?.mockupId ? path.basename(manifest.baseDir) : 'Untitled product') : productTitle,
@@ -208,10 +196,12 @@ for (const sev of SEV) {
   if (!list.length) continue;
   L.push(`### ${sev}`, '');
   for (const f of list) {
-    L.push(`**${f.n}. ${md(f.title)}**${f.status === 'new' ? ' _(new)_' : ''}  `, `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''} · ${f.basis.join(', ')} · ${f.source}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
+    L.push(`**${f.n}. ${md(f.title)}**${f.status === 'new' ? ' _(new)_' : ''}${agreementNote(f) ? ` _(${agreementNote(f)})_` : ''}  `, `${whereOf(f)} · ${f.basis.join(', ')} · ${(f.raisedBy || [f.source]).join(' + ')}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
     L.push(`- Evidence: ${md(f.evidence).replace(/\n/g, '; ')}`);
     if (f.impact) L.push(`- Impact: ${md(f.impact)}`);
-    L.push(`- Fix: ${md(f.recommendation)}`, '');
+    L.push(`- Fix: ${md(f.recommendation)}`);
+    for (const a of f.also || []) L.push(`- Also raised by ${a.source} (${a.severity}): ${md(a.title)}${a.evidence ? `. ${md(a.evidence).replace(/\n/g, '; ')}` : ''}`);
+    L.push('');
   }
 }
 if (strengths.length) L.push('## What works', '', ...strengths.map((s) => `- ${md(s.text)}${s.screen && s.screen !== '*' ? ` (${screenTitle(s.screen)})` : ''}${s.basis?.length ? ` · ${s.basis.join(', ')}` : ''}`), '');
@@ -239,20 +229,37 @@ if (notes.length || warnings.length) L.push('## Notes', '', ...notes.map((n) => 
 L.push('---', 'Principle IDs refer to the designcritique principles library (skills/principles). Severity follows Nielsen\'s frequency, impact and persistence, weighted by task criticality.');
 fs.writeFileSync(path.join(runDir, 'report.md'), L.join('\n') + '\n');
 
+function whereOf(f) {
+  if (f.screens) return `${f.screens.length} screens: ${f.screens.map(screenTitle).join(', ')}`;
+  return `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''}`;
+}
+function agreementNote(f) {
+  if (f.agreement === 'both-critics') return 'raised by both critics: higher confidence';
+  if (f.agreement === 'check-and-critic') return 'measured by a check and raised by a critic';
+  return '';
+}
 function md(s) { return String(s ?? '').replace(/\|/g, '\\|'); }
 
 // ---------- report.html ----------
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const mdInline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 
+function findingItem(f, anchor) {
+  const badge = f.agreement === 'both-critics' ? ' <span class="agree">both critics</span>' : f.agreement === 'check-and-critic' ? ' <span class="agree">check + critic</span>' : '';
+  const where = f.screens ? `<div class="meta">On ${f.screens.length} screens: ${f.screens.map((id) => esc(screenTitle(id))).join(', ')}</div>` : '';
+  const also = (f.also || []).map((a) => `<p><em>Also raised by ${esc(a.source)} (${esc(a.severity)}):</em> ${esc(a.title)}${a.evidence ? `. ${mdInline(a.evidence)}` : ''}</p>`).join('');
+  return `<li${anchor ? ` id="${anchor}"` : ''} value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}${badge}<div class="meta">${esc(f.basis.join(', '))} · ${esc((f.raisedBy || [f.source]).join(' + '))}${f.platform && !f.screens ? ` · ${esc(f.platform)}` : ''}</div>${where}<details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p>${also}</details></li>`;
+}
+
 function screenCard(screen) {
   const main = screen.captures.find((c) => c.variant === 'light' && (c.device === 'standard' || c.device === 'frame')) || screen.captures[0];
   const others = screen.captures.filter((c) => c !== main && c.variant !== 'light');
-  const own = findings.filter((f) => f.screen === screen.id);
+  const own = findings.filter((f) => f.screen === screen.id || f.screens?.includes(screen.id));
+  const elementOn = (f) => (f.screens ? f.instances?.find((i) => i.screen === screen.id && (!i.platform || i.platform === main.platform))?.element : f.element);
   const vw = main.viewport?.width || 1;
   const vh = main.viewport?.height || 1;
-  const markers = own.filter((f) => f.element?.box && f.element.box.y < vh && (!f.platform || f.platform === main.platform)).map((f) => {
-    const b = f.element.box;
+  const markers = own.filter((f) => elementOn(f)?.box && elementOn(f).box.y < vh && (f.screens || !f.platform || f.platform === main.platform)).map((f) => {
+    const b = elementOn(f).box;
     const st = `left:${(b.x / vw) * 100}%;top:${(b.y / vh) * 100}%;width:${(Math.max(b.w, 8) / vw) * 100}%;height:${(Math.max(b.h, 8) / vh) * 100}%`;
     return `<a class="box sev-${f.severity}" style="${st}" href="#f${f.n}" title="${esc(f.title)}"><span>${f.n}</span></a>`;
   }).join('');
@@ -261,7 +268,7 @@ function screenCard(screen) {
   <div class="screen-body">
     <figure class="shot"><div class="frame"><img src="${esc(main.screenshot)}" alt="${esc(screen.title)}, ${esc(main.variant)}">${markers}</div><figcaption>${esc(main.deviceName)} · ${esc(main.variant)}</figcaption></figure>
     <div class="side">
-      <ol class="flist">${own.map((f) => `<li id="f${f.n}" value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}<div class="meta">${esc(f.basis.join(', '))} · ${esc(f.source)}${f.platform ? ` · ${esc(f.platform)}` : ''}</div><details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p></details></li>`).join('') || '<li class="none">No findings for this screen.</li>'}</ol>
+      <ol class="flist">${own.map((f) => `${findingItem(f, f.screens ? '' : `f${f.n}`)}`).join('') || '<li class="none">No findings for this screen.</li>'}</ol>
       ${others.length ? `<div class="thumbs">${others.map((c) => `<figure><a href="${esc(c.screenshot)}"><img src="${esc(c.screenshot)}" alt="${esc(c.variant)}"></a><figcaption>${esc(c.platform)} ${esc(c.device)} · ${esc(c.variant)}</figcaption></figure>`).join('')}</div>` : ''}
     </div>
   </div>
@@ -290,6 +297,7 @@ table { border-collapse:collapse; width:100%; } td, th { text-align:left; paddin
 .sev-P1 { border-color:var(--p1); } .sev-P1 span, span.sev-P1 { background:var(--p1); }
 .sev-P2 { border-color:var(--p2); } .sev-P2 span, span.sev-P2 { background:var(--p2); }
 .sev-P3 { border-color:var(--p3); } .sev-P3 span, span.sev-P3 { background:var(--p3); }
+span.agree { font-size:11px; font-weight:700; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:0 5px; margin-left:4px; }
 span.new { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--p1); border:1px solid var(--p1); border-radius:6px; padding:0 5px; margin-left:4px; }
 span.sev { color:#fff; border-radius:6px; padding:1px 6px; font-size:12px; font-weight:700; }
 .flist { padding-left:20px; margin:0; } .flist li { margin-bottom:10px; } .flist .none { list-style:none; color:var(--muted); }
@@ -308,7 +316,7 @@ ${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>
 ${comparison ? `<h2>Since last run</h2><div class="frame-box"><p>Compared with ${esc(path.basename(comparison.base))}: <strong>${comparison.fixed.length} fixed</strong>, <strong>${comparison.introduced.length} new</strong>, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.</p>${comparison.fixed.length ? `<ul class="plain">${comparison.fixed.map((f) => `<li><s>${esc(f.title)}</s> <span class="meta">${esc(f.severity)} · ${esc(screenTitle(f.screen))}</span></li>`).join('')}</ul>` : ''}</div>` : ''}
 <h2>Findings</h2>
 <p class="counts">${SEV.map((s) => `<span><span class="sev sev-${s}">${s}</span> ${counts[s]}</span>`).join('')}</p>
-${global.length ? `<div class="screen"><h3>Across all screens</h3><ol class="flist">${global.map((f) => `<li id="f${f.n}" value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong><div class="meta">${esc(f.basis.join(', '))} · ${esc(f.source)}</div><details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p></details></li>`).join('')}</ol></div>` : ''}
+${global.length ? `<div class="screen"><h3>Across screens</h3><ol class="flist">${global.map((f) => `${findingItem(f, `f${f.n}`)}`).join('')}</ol></div>` : ''}
 ${manifest.screens.map(screenCard).join('\n')}
 ${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)}${s.basis?.length ? ` <span class="meta">${esc(s.basis.join(', '))}</span>` : ''}</li>`).join('')}</ul>` : ''}
 ${manifest.taste?.length ? `<h2>Against the direction you chose</h2><div class="frame-box"><div class="thumbs">${manifest.taste.map((t) => `<figure><a href="${esc(t)}"><img src="${esc(t)}" alt="reference"></a></figure>`).join('')}</div>${tasteChecks.map((t) => `<p><strong>${esc(t.score)}/10</strong> <span class="meta">${esc(t.source)}</span> ${esc(t.summary)}</p>${t.gaps?.length ? `<ul class="plain">${t.gaps.map((g) => `<li>${esc(screenTitle(g.screen))}${g.reference ? ` vs ${esc(g.reference)}` : ''}: ${esc(g.text)}</li>`).join('')}</ul>` : ''}`).join('') || '<p class="sub">No critic judged the screens against these references.</p>'}</div>` : ''}

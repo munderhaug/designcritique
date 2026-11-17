@@ -29,6 +29,12 @@ If Impeccable or the Anthropic design plugin is missing, offer once to run
 when an installer can't download). If the person declines, continue with what is available and
 say which critic ran in fallback mode.
 
+Then check the reference sources the same way, before any critique work: a connected MCP server
+can still refuse searches (Mobbin needs a paid plan). Run the one-call probe in
+[references.md](references/references.md#check-the-source-first) for Mobbin, then Refero, and tell
+the person the result up front: connected and working, connected but needs a paid plan, or not
+connected. Use the first that works in step 4.
+
 ## 1. Frame the problem
 
 Use the **frame** skill unless `PRODUCT.md` already has Platform, Users, Product Purpose, a
@@ -58,17 +64,15 @@ The checks also review `DESIGN.md` itself: text/surface token contrast, colour r
 4-based spacing scale, and whether it covers the eight essentials of the Smpl design-system
 guide (buttons and their states, forms, navigation, empty and error states, voice).
 
-**Motion (HTML mockups).** Static screenshots can't show motion, so use the transitions.dev
-scanner (Jakub Antalik; deterministic, local, no account):
+**Motion (HTML mockups).** Static screenshots can't show motion, so run the transitions.dev
+scanner (Jakub Antalik; deterministic, local, no account), installed by setup at a pinned version:
 
 ```bash
-node PLUGIN_ROOT/scripts/checks/motion.mjs plan --run <RUN_DIR>    # prints one scan command per mockup folder
-npx transitions-agent --json --dir "<folder>" > "<RUN_DIR>/motion/scan-1.json"   # as printed
-node PLUGIN_ROOT/scripts/checks/motion.mjs import --run <RUN_DIR>
+node PLUGIN_ROOT/scripts/checks/motion.mjs scan --run <RUN_DIR>
 ```
 
 Its duration scale is a web scale, so off-scale timing stays P3; missing reduced-motion
-handling and overlays without transitions are P2. Skip this step if `npx` can't reach npm.
+handling and overlays without transitions are P2.
 
 ## 4. References from shipped apps
 

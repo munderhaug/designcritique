@@ -23,6 +23,7 @@
     "adm-zip": "^0.5.18",
     "ajv": "^8.20.0",
     "playwright": "^1.50.0",
+    "transitions-agent": "0.11.2",
     "yaml": "^2.6.0"
   }
 }

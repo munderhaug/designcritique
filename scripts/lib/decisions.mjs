@@ -36,7 +36,7 @@ export function decisionMatches(d, f) {
   if (deterministic(f) && d.id) return d.id === f.id;
   const cites = [f.rule, ...(f.basis || [])].some((id) => idMatches(id, d.rule));
   if (!cites) return false;
-  if (d.source && d.source !== f.source) return false;
+  if (d.source && !(f.raisedBy || [f.source]).includes(d.source)) return false;
   if (!d.title) return true;
   return (d.element && d.element === where(f)) || similarity(d.title, f.title) >= 0.45;
 }

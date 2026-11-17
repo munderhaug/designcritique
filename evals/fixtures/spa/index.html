@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>App</title>
+<style>
+  :root { --surface: #FFFFFF; --on-surface: #16181D; --primary: #2457D6; --on-primary: #FFFFFF; --container: #F3F5F9; }
+  @media (prefers-color-scheme: dark) { :root { --surface: #121418; --on-surface: #ECEEF3; --primary: #8FB0FF; --on-primary: #0B1F55; --container: #1E2128; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 1rem/1.5 system-ui, sans-serif; background: var(--surface); color: var(--on-surface); }
+  header { position: sticky; top: 0; display: flex; align-items: center; gap: 0.5rem; padding: calc(env(safe-area-inset-top) + 0.5rem) 1rem 0.5rem; background: var(--container); }
+  header h1 { flex: 1; font-size: 1.25rem; }
+  header button, main button { min-height: 2.75rem; min-width: 2.75rem; padding: 0 1rem; border: 0; border-radius: 0.75rem; font: inherit; background: var(--primary); color: var(--on-primary); }
+  main { padding: 1rem; display: grid; gap: 1rem; }
+  .crisis { --surface: #000000; --on-surface: #FFFFFF; --primary: #FFFFFF; --on-primary: #000000; min-height: 100vh; background: var(--surface); color: var(--on-surface); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <header><h1 id="title">Home</h1><button id="open-settings">Settings</button></header>
+  <main id="home"><p id="greeting">Welcome</p><button id="start">Start</button></main>
+  <main id="settings" hidden><label for="name">Name</label><input id="name"><button id="save">Save</button><p id="saved" hidden>Saved</p></main>
+  <main id="help" class="crisis" hidden><h2>Need help now?</h2><button>Call</button></main>
+  <script>
+    const show = (id) => {
+      for (const m of document.querySelectorAll('main')) m.hidden = m.id !== id;
+      document.getElementById('title').textContent = id[0].toUpperCase() + id.slice(1);
+    };
+    const route = () => show((location.hash || '#home').slice(1));
+    window.addEventListener('hashchange', route);
+    document.getElementById('open-settings').onclick = () => { location.hash = '#settings'; };
+    document.getElementById('start').onclick = () => { location.hash = '#help'; };
+    document.getElementById('save').onclick = () => { document.getElementById('saved').hidden = false; };
+    const user = localStorage.getItem('user');
+    if (user) document.getElementById('greeting').textContent = `Welcome back, ${user}`;
+    route();
+  </script>
+</body>
+</html>

@@ -7,7 +7,8 @@
 # trust: official   = made by the platform or tool owner (Apple, Google, Expo, Figma, Anthropic…)
 #        practitioner = a named, established practitioner or firm (e.g. Antoine van der Lee, Callstack)
 #        community  = maintained open source without an established author track record
-# role (order in the report): foundation, tokens, platform-skill, design-skill, design-input, verify
+# role (order in the report): foundation, tokens, platform-api, platform-skill, design-skill, design-input, verify
+# stacks: swiftui, compose, expo, react-native, flutter, capacitor (web app in a native shell), web (PWA / mobile web)
 # group: entries sharing a group are alternatives; the report says "pick one".
 
 verified: 2026-11-17
@@ -97,13 +98,27 @@ entries:
       - https://docs.flutter.dev/ui/widgets
 
   # ---------- 2. Tokens ----------
+  - id: ionic-framework
+    role: foundation
+    name: "Ionic Framework components (iOS and Material Design modes)"
+    by: "Ionic"
+    trust: official
+    platforms: [ios, android, web]
+    stacks: [capacitor, web]
+    why: "Web components that take on iOS styling on iPhone and Material Design on Android, with native-style navigation, sheets, lists and toggles, so a web or Capacitor app follows each platform instead of one web look."
+    install: "npm install @ionic/react (or @ionic/vue, @ionic/angular)"
+    helps_with: [platform, a11y, layout]
+    sources:
+      - https://ionicframework.com/docs
+      - https://ionicframework.com/docs/theming/platform-styles
+
   - id: design-md
     role: tokens
     name: "DESIGN.md token file"
     by: "Google Labs"
     trust: official
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "One file of colour, type, spacing and radius tokens with the reasons behind them, read by coding agents and by designcritique's token checks."
     install: "start from templates/DESIGN.md in this repo, or /impeccable document"
     helps_with: [tokens, color, typography, layout]
@@ -115,14 +130,56 @@ entries:
     name: "Design-system rule in CLAUDE.md"
     by: "Smpl (Andreas Melvær) and Figma"
     trust: practitioner
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Tell agents the rules: read DESIGN.md before building any UI, use only its tokens and components, stop and ask when something is missing. Snippet in templates/CLAUDE-design-system.md; Figma's create-design-system-rules skill generates the same kind of rules from your Figma file."
     install: "append templates/CLAUDE-design-system.md to your CLAUDE.md"
     helps_with: [tokens, visual]
     sources:
       - https://smpl.as
       - https://developers.figma.com/docs/figma-mcp-server/skill-create-design-system-rules
+
+  # ---------- Native behaviour in a web view (web and Capacitor apps) ----------
+  - id: capacitor-text-zoom
+    role: platform-api
+    name: "Capacitor Text Zoom plugin"
+    by: "Ionic (Capacitor)"
+    trust: official
+    platforms: [ios, android]
+    stacks: [capacitor]
+    why: "Reads the user's preferred text size and applies it as the web view's text zoom. iOS WKWebView doesn't follow Dynamic Type by itself; Android's WebView scales text with the system font size unless the app pins it. On iPad it needs preferredContentMode: mobile in the Capacitor config."
+    install: "npm install @capacitor/text-zoom && npx cap sync"
+    helps_with: [a11y, typography]
+    sources:
+      - https://capacitorjs.com/docs/apis/text-zoom
+      - https://github.com/ionic-team/capacitor-plugins/tree/main/text-zoom
+
+  - id: web-safe-area
+    role: platform-api
+    name: "Safe-area insets in CSS: env(safe-area-inset-*) with viewport-fit=cover"
+    by: "W3C CSS / WebKit"
+    trust: official
+    platforms: [ios, android, web]
+    stacks: [capacitor, web]
+    why: "Pads bars by the status bar, notch or Dynamic Island and home indicator. Without viewport-fit=cover in the viewport meta the insets stay 0 on iOS."
+    install: "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"> and padding: env(safe-area-inset-top) …"
+    helps_with: [layout, platform]
+    sources:
+      - https://webkit.org/blog/7929/designing-websites-for-iphone-x/
+      - https://developer.mozilla.org/en-US/docs/Web/CSS/env
+
+  - id: web-dynamic-type
+    role: platform-api
+    name: "iOS Dynamic Type in web content (font: -apple-system-body)"
+    by: "WebKit"
+    trust: official
+    platforms: [ios]
+    stacks: [capacitor, web]
+    why: "Setting the root font to the -apple-system-body text style makes rem-based type follow the iOS text-size setting in Safari and WKWebView; plain web pages, PWAs included, otherwise ignore it."
+    install: "html { font: -apple-system-body; } then size type in rem"
+    helps_with: [a11y, typography]
+    sources:
+      - https://webkit.org/blog/3709/using-the-system-font-in-web-content/
 
   # ---------- 3. Platform skills ----------
   - id: xcode-skills
@@ -239,8 +296,8 @@ entries:
     name: "Impeccable"
     by: "Paul Bakaus"
     trust: practitioner
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Design vocabulary and anti-pattern rules while building (shape, init, polish, harden, clarify, adapt), with native iOS and Android references."
     install: "npx impeccable install -y --providers=claude --scope=project"
     helps_with: [visual, ux, content, layout, typography]
@@ -252,8 +309,8 @@ entries:
     name: "Anthropic design plugin (design-critique, accessibility-review, ux-copy, design-system)"
     by: "Anthropic"
     trust: official
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Structured critique, WCAG audits, interface copy and design-system management while building."
     install: "claude plugin marketplace add anthropics/knowledge-work-plugins && claude plugin install design@knowledge-work-plugins"
     helps_with: [a11y, content, ux, tokens]
@@ -266,8 +323,8 @@ entries:
     name: "Figma MCP server (remote) via Figma's Claude Code plugin"
     by: "Figma"
     trust: official
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Layout, variables and Code Connect mappings from your Figma files instead of guessing from images."
     install: "claude plugin install figma@claude-plugins-official"
     helps_with: [tokens, visual]
@@ -280,8 +337,8 @@ entries:
     name: "Mobbin MCP"
     by: "Mobbin"
     trust: official
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Largest library of shipped iOS and web screens and flows to design and judge key tasks against. No Android library, so Android apps get task patterns only. Paid plans."
     install: "claude mcp add --transport http mobbin https://api.mobbin.com/mcp"
     helps_with: [ux, task-fit, platform]
@@ -294,8 +351,8 @@ entries:
     name: "Refero MCP"
     by: "Refero"
     trust: official
-    platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    platforms: [ios, android, web]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
     why: "Real product screens and user flows from websites and iOS apps, plus curated styles. Smaller than Mobbin; freemium."
     install: "claude mcp add --transport http refero https://api.refero.design/mcp --header \"Authorization: Bearer <token>\""
     helps_with: [ux, task-fit, visual]
@@ -303,13 +360,39 @@ entries:
       - https://doc.refero.design/mcp/getting-started
 
   # ---------- 6. Check it on a device ----------
+  - id: playwright-devices
+    role: verify
+    name: "Playwright device emulation"
+    by: "Microsoft"
+    trust: official
+    platforms: [ios, android, web]
+    stacks: [web, capacitor]
+    why: "Renders the web app at phone sizes, in dark mode and with touch, and screenshots it, so the agent can check its own UI; it's what designcritique uses for HTML. It can't show native shells, keyboards or system text settings."
+    install: "npm install -D @playwright/test && npx playwright install chromium"
+    helps_with: [visual, layout, a11y]
+    sources:
+      - https://playwright.dev/docs/emulation
+
+  - id: capacitor-run
+    role: verify
+    name: "Capacitor CLI: run on a simulator or device"
+    by: "Ionic (Capacitor)"
+    trust: official
+    platforms: [ios, android]
+    stacks: [capacitor]
+    why: "Builds and launches the real native shell, so safe areas, the keyboard and the system text size can be checked where the browser can't show them."
+    install: "npx cap run ios  /  npx cap run android"
+    helps_with: [platform, layout, a11y]
+    sources:
+      - https://capacitorjs.com/docs/cli/commands/run
+
   - id: mobilebuildmcp
     role: verify
     name: "MobileBuildMCP (formerly XcodeBuildMCP)"
     by: "Sentry (created by Cameron Cooke)"
     trust: official
     platforms: [ios]
-    stacks: [swiftui, expo, react-native, flutter]
+    stacks: [swiftui, expo, react-native, flutter, capacitor]
     why: "Build, run, tap and screenshot on the iOS Simulator so the agent can check its own UI. Note: sends Sentry error telemetry by default (opt-out); renamed from XcodeBuildMCP in v2.7.1 (Sep 2026), so move old .xcodebuildmcp/ configs by hand; the maintainer since Cameron Cooke left Sentry is inferred from release signatures, not announced."
     install: "claude mcp add MobileBuildMCP -- npx -y mobilebuildmcp@latest mcp"
     helps_with: [visual, a11y]
@@ -391,7 +474,7 @@ entries:
     by: "mobile-next"
     trust: community
     platforms: [ios, android]
-    stacks: [swiftui, compose, expo, react-native, flutter]
+    stacks: [swiftui, compose, expo, react-native, flutter, capacitor]
     why: "One API for iOS simulators, Android emulators and real devices through accessibility snapshots."
     install: "claude mcp add mobile-mcp -- npx -y @mobilenext/mobile-mcp@latest"
     helps_with: [a11y]

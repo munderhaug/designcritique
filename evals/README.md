@@ -58,6 +58,6 @@ into an eval case here (a neutral screen showing the pattern, with `max_major` o
 
 ## Fixtures
 
-- `fixtures/inputs.yaml`: smoke test for zip, phone-frame canvas and image inputs (not scored).
+- `fixtures/inputs.yaml`: smoke test for zip, phone-frame canvas and image inputs, and a single-page app (`fixtures/spa/`) captured in three states through `steps:`, one of them `appearance: dark-only`, plus a returning-user state seeded by a `setup:` script that reloads the page (not scored). All nine screens should capture without warnings.
 - `fixtures/sample-critique/anthropic-design.json`: a hand-written example of the critic output format, used to
   test the report. It is not a real critique.

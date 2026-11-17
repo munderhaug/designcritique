@@ -32,6 +32,25 @@ mockups:
   #   artifact: https://claude.ai/artifact/XXXXXXXX
   #   phone_frame: ".phone"   # if the page shows several phone frames side by side
 
+  # A single-page app: one page, several screens reached by steps after it loads.
+  # Steps: click, fill + value, press, scroll, wait (ms or selector), goto (#hash or ?query), eval (JS).
+  # Selectors are Playwright selectors: CSS, text=Settings, role=button[name="Save"].
+  # - id: app
+  #   file: dist/             # or a .zip; entry: picks the page if there are several
+  #   entry: index.html
+  #   setup: mockups/seed.js  # optional JS run in the page first (e.g. seed localStorage, then reload)
+  #   flow: main
+  #   states:
+  #     - id: home
+  #     - id: settings
+  #       steps:
+  #         - click: "text=Settings"
+  #         - wait: ".settings-list"
+  #     - id: crisis
+  #       appearance: dark-only # one appearance on purpose: no "missing dark mode" finding
+  #       steps:
+  #         - goto: "#/help"
+
   # A zip or folder export: every HTML page (or image) becomes a screen.
   # - id: prototype
   #   file: exports/prototype.zip

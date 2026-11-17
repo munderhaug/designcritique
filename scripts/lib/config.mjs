@@ -86,7 +86,10 @@ export function loadConfig(configPath) {
       flow: m.flow || null,
       step: m.step ?? null,
       group: m.group || null,
-      states: m.states || null,
+      states: normalizeStates(m, rel),
+      steps: normalizeSteps(m.steps, m.id),
+      setup: setupFile(m, rel),
+      appearance: normalizeAppearance(m.appearance, m.id),
       notes: m.notes || null,
       reference: rel(m.reference),
     });
@@ -127,6 +130,54 @@ export function normalizeGate(raw = {}) {
   gate.target_score = gate.target_score == null ? null : Number(gate.target_score);
   if (gate.target_score != null && !(gate.target_score >= 0 && gate.target_score <= 10)) throw new Error('gate.target_score must be 0-10');
   return gate;
+}
+
+const APPEARANCES = ['both', 'light-only', 'dark-only'];
+function normalizeAppearance(v, id) {
+  if (v == null) return 'both';
+  if (!APPEARANCES.includes(v)) throw new Error(`Mockup ${id}: appearance must be ${APPEARANCES.join(', ')} (got ${v})`);
+  return v;
+}
+
+// Steps that bring a single-page app to a screen after it loads. Each step is one of:
+//   click: <selector>   fill: <selector> + value: <text>   press: <key>   scroll: <selector>
+//   wait: <ms or selector>   goto: <#hash or ?query, relative to the page>   eval: <JS>
+// Selectors are Playwright selectors: CSS, text=Settings, role=button[name="Save"].
+const STEP_KINDS = ['click', 'fill', 'press', 'scroll', 'wait', 'goto', 'eval'];
+export function normalizeSteps(steps, id) {
+  if (steps == null) return [];
+  if (!Array.isArray(steps)) throw new Error(`Mockup ${id}: steps must be a list`);
+  return steps.map((st, i) => {
+    const step = typeof st === 'string' ? { click: st } : st;
+    const kinds = STEP_KINDS.filter((k) => step && step[k] != null);
+    if (kinds.length !== 1) throw new Error(`Mockup ${id}: step ${i + 1} needs exactly one of ${STEP_KINDS.join(', ')}: ${JSON.stringify(st)}`);
+    if (kinds[0] === 'fill' && step.value == null) throw new Error(`Mockup ${id}: step ${i + 1} fill needs value:`);
+    return step;
+  });
+}
+
+function setupFile(m, rel) {
+  if (!m.setup) return null;
+  const f = rel(m.setup);
+  if (!fs.existsSync(f)) throw new Error(`Mockup ${m.id}: setup script not found: ${f}`);
+  return f;
+}
+
+// states: several screens from one page, each reached by its own steps (single-page apps).
+function normalizeStates(m, rel) {
+  if (m.states == null) return null;
+  if (!Array.isArray(m.states) || !m.states.length) throw new Error(`Mockup ${m.id}: states must be a non-empty list`);
+  const seen = new Set();
+  return m.states.map((st, i) => {
+    if (!st?.id || !/^[A-Za-z0-9_-]+$/.test(st.id)) throw new Error(`Mockup ${m.id}: state ${i + 1} needs an id (letters, digits, - and _)`);
+    if (seen.has(st.id)) throw new Error(`Mockup ${m.id}: duplicate state id ${st.id}`);
+    seen.add(st.id);
+    return {
+      id: st.id, title: st.title || st.id, notes: st.notes || null,
+      steps: normalizeSteps(st.steps, `${m.id}/${st.id}`),
+      appearance: st.appearance ? normalizeAppearance(st.appearance, `${m.id}/${st.id}`) : null,
+    };
+  });
 }
 
 export function kindOf(file) {

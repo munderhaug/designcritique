@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
+import { section } from './framing.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const CATALOG_PATH = path.resolve(here, '../../catalog/stack.yaml');
@@ -11,6 +12,7 @@ export const CATALOG_PATH = path.resolve(here, '../../catalog/stack.yaml');
 const ROLES = [
   ['foundation', 'Start with: design system and components'],
   ['tokens', 'Keep tokens in one place'],
+  ['platform-api', 'Get native behaviour in the web view'],
   ['platform-skill', 'Add platform skills'],
   ['design-skill', 'Add design-quality skills'],
   ['design-input', 'Connect design inputs and references'],
@@ -24,12 +26,11 @@ const STACK_WORDS = [
   ['expo', /\bexpo\b/i],
   ['react-native', /\breact[ -]?native\b/i],
   ['flutter', /\bflutter\b|\bdart\b/i],
+  ['capacitor', /\bcapacitor\b|\bionic\b|\bcordova\b/i],
+  ['web', /\bpwa\b|progressive web app|\bweb[ -]?app\b|\bmobile web\b|\breact\b(?![ -]?native)|\bvue\b|\bsvelte\b|\bangular\b|\bnext\.?js\b|\bvite\b|\bhtml\b/i],
 ];
 
-function section(md, name) {
-  const m = md.match(new RegExp(`^##\\s+${name}[^\\n]*\\n([\\s\\S]*?)(?=^##\\s|(?![\\s\\S]))`, 'mi'));
-  return m ? m[1].replace(/<!--[\s\S]*?-->/g, '').trim() : '';
-}
+
 
 export function readProductStack(md, fallbackPlatform) {
   const platformText = section(md || '', 'Platform').toLowerCase();
@@ -38,7 +39,12 @@ export function readProductStack(md, fallbackPlatform) {
   const stacks = STACK_WORDS.filter(([, re]) => re.test(stackText)).map(([s]) => s);
   // Expo is React Native, so React Native entries apply too.
   if (stacks.includes('expo') && !stacks.includes('react-native')) stacks.push('react-native');
-  return { platform, platforms: platform === 'adaptive' ? ['ios', 'android'] : [platform], stacks, stackText };
+  // A Capacitor app is a web app in a native shell, so web entries apply too.
+  if (stacks.includes('capacitor') && !stacks.includes('web')) stacks.push('web');
+  const platforms = platform === 'adaptive' ? ['ios', 'android'] : [platform];
+  // A PWA also runs as a web page, so web picks apply whatever the target phone platform is.
+  if (stacks.includes('web') && !stacks.includes('capacitor') && !platforms.includes('web')) platforms.push('web');
+  return { platform, platforms, stacks, stackText };
 }
 
 export function loadCatalog(file = CATALOG_PATH) {
@@ -52,7 +58,7 @@ export function recommendStack({ productText, fallbackPlatform, findings = [], p
   const { platform, platforms, stacks, stackText } = readProductStack(productText, fallbackPlatform);
   const decided = stacks.length > 0;
   const notes = [];
-  if (platform === 'web') notes.push('PRODUCT.md says the platform is web; this catalog covers mobile apps only.');
+  if (platform === 'web' && !stacks.some((x) => x === 'web' || x === 'capacitor')) notes.push('PRODUCT.md says the platform is web; name the web stack under ## Stack (for example React PWA) for web picks.');
   if (!decided) notes.push('PRODUCT.md has no decided ## Stack, so each step lists the options per stack. Decide the stack first; it narrows everything below.');
 
   // What the findings say needs most help, by category, weighted by severity.

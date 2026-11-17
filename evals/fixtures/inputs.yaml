@@ -10,3 +10,26 @@ mockups:
     phone_frame: ".phone"
   - id: exported
     file: checkout-export.png
+  - id: app
+    title: App
+    file: spa/index.html
+    flow: app
+    states:
+      - id: home
+      - id: settings-saved
+        title: Settings, saved
+        steps:
+          - click: "#open-settings"
+          - fill: "#name"
+            value: "Ana"
+          - click: "text=Save"
+          - wait: "#saved"
+      - id: help
+        title: Crisis help
+        appearance: dark-only
+        steps:
+          - goto: "#help"
+  - id: app-returning
+    title: App, returning user
+    file: spa/index.html
+    setup: spa/seed.js

@@ -160,3 +160,84 @@ test('validation warns when a task score and verdict disagree', () => {
   assert.ok(w({ task: 'Pay', verdict: 'blocked', score: 6 }).length);
   assert.ok(w({ task: 'Pay', verdict: 'supported', score: 5 }).length);
 });
+
+import { assumptionsOf, section } from '../scripts/lib/framing.mjs';
+
+test('framing: HTML comments are never read as content', () => {
+  const md = '# App\n<!-- Tag statements [confirmed], [inferred] or [assumption]. -->\n\n## Users\n<!-- who -->\nNurses on night shifts [confirmed]\n\n## Evidence\n- Most use Android phones [assumption] (if not, the\n  iOS layout leads)\n<!-- - Commented [assumption] -->\n';
+  assert.deepEqual(assumptionsOf(md), ['Most use Android phones [assumption] (if not, the iOS layout leads)']);
+  assert.equal(section(md, 'Users'), 'Nurses on night shifts [confirmed]');
+});
+
+import { mergeAcrossSources, groupChecksByCause } from '../scripts/lib/merge.mjs';
+
+test('merge: same problem from two critics, or a critic and a check, becomes one finding', () => {
+  const f = [
+    { id: 'ad-1', source: 'anthropic-design', screen: 'checkout', rule: 'IOS-DESTRUCTIVE', basis: ['IOS-DESTRUCTIVE', 'NN-H5'], severity: 'P1', title: 'Delete order looks the same as Pay now', element: { region: 'bottom action area' } },
+    { id: 'imp-1', source: 'impeccable', screen: 'checkout', rule: 'IOS-DESTRUCTIVE', basis: ['IOS-DESTRUCTIVE'], severity: 'P2', title: 'Delete order is styled as a second primary button', element: { region: 'bottom action area' } },
+    { id: 'ad-2', source: 'anthropic-design', screen: 'checkout', rule: 'NN-H9', basis: ['NN-H9'], severity: 'P1', title: 'Vague error' },
+    { id: 'chk-1', source: 'check', screen: 'login', rule: 'CHK-TEXT-SCALE', basis: ['WCAG-1.4.4', 'IOS-TYPE'], severity: 'P1', title: 'Text does not scale' },
+    { id: 'imp-3', source: 'impeccable', screen: 'login', rule: 'IOS-TYPE', basis: ['IOS-TYPE'], severity: 'P1', title: 'Login text is fixed in px' },
+    { id: 'imp-4', source: 'impeccable', screen: 'login', rule: 'NN-H4', basis: ['NN-H4', 'IOS-TYPE'], severity: 'P2', title: 'Off-brand orange' },
+  ];
+  const out = mergeAcrossSources(f);
+  assert.equal(out.length, 4);
+  const del = out.find((x) => x.rule === 'IOS-DESTRUCTIVE');
+  assert.deepEqual(del.raisedBy.sort(), ['anthropic-design', 'impeccable']);
+  assert.equal(del.agreement, 'both-critics');
+  assert.equal(del.severity, 'P1');
+  assert.equal(del.also[0].evidence, undefined);
+  const scale = out.find((x) => x.rule === 'CHK-TEXT-SCALE');
+  assert.deepEqual(scale.raisedBy, ['check', 'impeccable']);
+  assert.ok(out.some((x) => x.id === 'imp-4'), 'a critic citing the check principle only in its basis stays separate');
+});
+
+test('group: a check failing on many screens is reported once with the screen list', () => {
+  const mk = (screen, rule, extra = {}) => ({ id: `chk-${screen}-${rule}`, source: 'check', screen, rule, basis: ['WCAG-2.5.8'], severity: 'P2', title: `x on ${screen}`, evidence: `e ${screen}`, raisedBy: ['check'], ...extra });
+  const out = groupChecksByCause([
+    mk('a', 'CHK-TARGET'), mk('b', 'CHK-TARGET', { severity: 'P1' }), mk('c', 'CHK-TARGET'),
+    mk('a', 'CHK-SAFE-AREA', { cause: 'status bar' }), mk('b', 'CHK-SAFE-AREA', { cause: 'home indicator' }),
+    mk('a', 'CHK-DARK'),
+  ]);
+  const t = out.find((f) => f.rule === 'CHK-TARGET');
+  assert.equal(t.screen, '*');
+  assert.deepEqual(t.screens, ['a', 'b', 'c']);
+  assert.equal(t.severity, 'P1');
+  assert.match(t.title, /3 screens/);
+  assert.equal(out.filter((f) => f.rule === 'CHK-SAFE-AREA').length, 2);
+  assert.equal(out.find((f) => f.rule === 'CHK-DARK').screen, 'a');
+});
+
+test('merge: differently worded findings on the same principle and place are one problem', () => {
+  const out = mergeAcrossSources([
+    { id: 'ad-9', source: 'anthropic-design', screen: 'welcome', rule: 'TELL-WEB-IDIOMS', basis: ['TELL-WEB-IDIOMS'], severity: 'P2', title: 'Website navigation on an iOS first-run screen', element: { region: 'top bar and footer' } },
+    { id: 'imp-15', source: 'impeccable', screen: 'welcome', rule: 'TELL-WEB-IDIOMS', basis: ['TELL-WEB-IDIOMS'], severity: 'P2', title: 'Welcome is a ported marketing website', element: { region: 'top bar, feature cards and footer' } },
+    { id: 'ad-3', source: 'anthropic-design', screen: 'welcome', rule: 'NN-H4', basis: ['NN-H4'], severity: 'P3', title: 'Icons mix styles', element: { region: 'feature cards' } },
+    { id: 'imp-2', source: 'impeccable', screen: 'welcome', rule: 'NN-H4', basis: ['NN-H4'], severity: 'P3', title: 'Buttons differ from the kit', element: { region: 'call-to-action stack' } },
+  ]);
+  assert.equal(out.length, 3);
+  assert.equal(out.find((f) => f.rule === 'TELL-WEB-IDIOMS').agreement, 'both-critics');
+  assert.equal(out.filter((f) => f.rule === 'NN-H4').length, 2, 'distinct problems under one principle stay apart');
+});
+
+import { readProductStack } from '../scripts/lib/stack.mjs';
+
+test('stack: web and Capacitor are recognised, React Native is not web', () => {
+  const st = (s, p = 'adaptive') => readProductStack(`## Platform\n${p}\n\n## Stack\n${s}\n`).stacks.sort();
+  assert.deepEqual(st('React + Capacitor + PWA'), ['capacitor', 'web']);
+  assert.deepEqual(st('React Native with Expo'), ['expo', 'react-native']);
+  assert.deepEqual(st('react-native'), ['react-native']);
+  assert.deepEqual(st('Vue PWA'), ['web']);
+  assert.deepEqual(st('<!-- SwiftUI | Compose | Expo --> undecided'), []);
+  assert.ok(readProductStack('## Platform\nios\n\n## Stack\nPWA\n').platforms.includes('web'));
+});
+
+import { textScaleAdvice } from '../scripts/lib/advice.mjs';
+
+test('text-size fix follows the stack', () => {
+  assert.match(textScaleAdvice('ios', ['capacitor', 'web']), /-apple-system-body|text-zoom/);
+  assert.match(textScaleAdvice('android', ['capacitor', 'web']), /WebView/);
+  assert.match(textScaleAdvice('ios', ['web']), /Dynamic Type/);
+  assert.match(textScaleAdvice('ios', []), /SwiftUI/);
+  assert.match(textScaleAdvice('android', ['compose']), /sp in Compose/);
+});

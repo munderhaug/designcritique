@@ -131,10 +131,29 @@ export function expandMockup(mockup, workDir) {
       flow: mockup.flow,
       step: mockup.step ?? (files.length > 1 ? i + 1 : null),
       group: mockup.group,
-      states: mockup.states,
+      steps: mockup.steps || [],
+      setup: mockup.setup || null,
+      appearance: mockup.appearance || 'both',
       notes: mockup.notes,
       reference: mockup.reference,
     };
   });
-  return { screens, warnings };
+  if (!mockup.states) return { screens, warnings };
+
+  // A single-page app: one page, several states, each reached by its own steps after load.
+  if (screens.length !== 1 || screens[0].kind !== 'html') {
+    throw new Error(`${mockup.id}: states: need exactly one HTML page (found ${screens.length}${screens[0]?.kind === 'image' ? ' image' : ''}); set entry: to the app's page`);
+  }
+  const page = screens[0];
+  const states = mockup.states.map((st, i) => ({
+    ...page,
+    id: `${mockup.id}--${st.id}`,
+    title: `${mockup.title}: ${st.title}`,
+    step: mockup.flow ? i + 1 : page.step,
+    steps: [...page.steps, ...st.steps],
+    appearance: st.appearance || page.appearance,
+    notes: st.notes || page.notes,
+    state: st.id,
+  }));
+  return { screens: states, warnings };
 }

@@ -1,19 +1,22 @@
 #!/usr/bin/env node
-// Motion stage: imports transitions-agent (transitions.dev, Jakub Antalik) scan results for
-// HTML mockups. The scanner is deterministic and local; this script never runs it itself.
+// Motion stage: scans HTML mockups with transitions-agent (transitions.dev, Jakub Antalik) and
+// imports its findings. The scanner is deterministic and local, installed by setup.sh at the
+// version pinned in package.json, so a critique never downloads it.
 //
-//   node scripts/checks/motion.mjs plan   --run <runDir>   # writes motion/plan.json, prints the scan commands
-//   (run the printed `npx transitions-agent --json --dir …` commands)
+//   node scripts/checks/motion.mjs scan   --run <runDir>   # plan, run the pinned scanner, import
+//   node scripts/checks/motion.mjs plan   --run <runDir>   # writes motion/plan.json, prints the commands
 //   node scripts/checks/motion.mjs import --run <runDir>   # writes checks/motion.json
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
-if (!['plan', 'import'].includes(cmd) || !args.run) {
-  console.error('Usage: motion.mjs plan|import --run <runDir>');
+if (!['scan', 'plan', 'import'].includes(cmd) || !args.run) {
+  console.error('Usage: motion.mjs scan|plan|import --run <runDir>');
   process.exit(2);
 }
 const runDir = path.resolve(args.run);
@@ -37,14 +40,30 @@ const SKIP = new Set(['hover-without-transition', 'recipe-available']);
 
 const htmlScreens = manifest.screens.filter((s) => s.kind === 'html');
 
-if (cmd === 'plan') {
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const SCANNER = path.join(ROOT, 'node_modules', 'transitions-agent', 'bin', 'transitions-agent.mjs');
+const scannerCommand = (p) => `node "${SCANNER}" --json --dir "${p.dir}" > "${p.out}"`;
+
+if (cmd === 'plan' || cmd === 'scan') {
   const dirs = [...new Set(htmlScreens.map((s) => path.dirname(path.resolve(manifest.baseDir, s.source))))];
   const plan = dirs.map((dir, i) => ({ dir, out: path.join(runDir, 'motion', `scan-${i + 1}.json`) }));
   writeJson(planPath, plan);
   if (!plan.length) { console.log('No HTML mockups: nothing for the motion scan.'); process.exit(0); }
-  console.log('Run these (transitions-agent scans locally, no account needed):');
-  for (const p of plan) console.log(`npx transitions-agent --json --dir "${p.dir}" > "${p.out}"`);
-  process.exit(0);
+  if (cmd === 'plan') {
+    console.log('Run these (the pinned transitions-agent, local, no account needed):');
+    for (const p of plan) console.log(scannerCommand(p));
+    process.exit(0);
+  }
+  if (!fs.existsSync(SCANNER)) {
+    console.error(`transitions-agent isn't installed at ${SCANNER}. Run: bash ${path.join(ROOT, 'scripts', 'setup.sh')}`);
+    process.exit(1);
+  }
+  for (const p of plan) {
+    const r = spawnSync(process.execPath, [SCANNER, '--json', '--dir', p.dir], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    if (r.status !== 0 && !r.stdout.trim()) { console.error(`motion scan failed for ${p.dir}: ${(r.stderr || '').split('\n')[0]}`); continue; }
+    fs.mkdirSync(path.dirname(p.out), { recursive: true });
+    fs.writeFileSync(p.out, r.stdout);
+  }
 }
 
 // import

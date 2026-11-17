@@ -26,7 +26,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $ONLY -eq 0 ]]; then
-  if [[ ! -d "$ROOT/node_modules" ]]; then
+  # Install when any dependency in package.json is missing (e.g. the pinned motion scanner after an update).
+  if ! (cd "$ROOT" && node -e 'const fs=require("fs");const d=require("./package.json").dependencies;for(const n in d)if(!fs.existsSync("node_modules/"+n+"/package.json"))process.exit(1)' 2>/dev/null); then
     echo "Installing script dependencies…"
     npm install --prefix "$ROOT" --no-audit --no-fund --silent
   fi

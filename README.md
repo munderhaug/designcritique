@@ -21,14 +21,14 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 |---|---|---|
 | Problem framing (PRODUCT.md) | Impeccable `init` (Paul Bakaus) | Problem, ranked Key Tasks and Success Criteria (ISO 9241-210/-11, jobs to be done), evidence tags |
 | References | Mobbin MCP or Refero MCP (official) | How to pick and cite comparable screens per key task |
-| Rendering | Playwright (Microsoft) | Phone sizes per platform; light, dark and large-text variants; zip, folder, artifact and phone-frame inputs |
+| Rendering | Playwright (Microsoft) | Phone sizes per platform; light, dark and large-text variants; zip, folder, artifact and phone-frame inputs; single-page app states reached by `steps:` and a `setup:` script |
 | Accessibility rules | axe-core (Deque) | Mobile checks with no existing tool for mockups: 44pt/48dp targets, safe areas, text scaling, overflow, text overlapping text at large sizes (thresholds after AutoDesign's DOM audit), token drift against DESIGN.md |
 | Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
 | Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
 | Platform guidance | Material 3 skill (hamen), Expo skills, when installed | Routing the right guidance to the reviewer |
-| Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan | Importing its findings for HTML mockups, mobile-aware severities |
+| Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan, pinned in package.json | Running it and importing its findings for HTML mockups, mobile-aware severities |
 | Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
-| Merged report | | De-duplication, severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
+| Merged report | | One finding per problem: the same problem from both critics (or a check and a critic) is merged and marked as higher confidence; a check failing on many screens is reported once with the screen list. Severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
 | Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved inside a run (exit 2) |
 | Independent judging | | The reviewer runs on a model you choose (`critics.judge_model`), ideally not the one that made the mockups; extra judges on other tools (`critics.external`, e.g. Codex) use the same brief and format |
 | Scores and gate | | Each critic scores every key task 0â€“10 against fixed anchors; the gate fails on open findings at `fail_on` or a key task below `target_score` (lowest critic counts). `gate.mjs` exits 2 for CI or a Stop hook |

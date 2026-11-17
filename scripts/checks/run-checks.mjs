@@ -9,6 +9,8 @@ import crypto from 'node:crypto';
 import { parseArgs, readJson, writeJson, MIN_TARGET, MIN_TEXT } from '../lib/config.mjs';
 import { loadTokens, nearestColor, onScale, parseColor } from '../lib/tokens.mjs';
 import { designSystemFindings } from './design-system.mjs';
+import { readProductStack } from '../lib/stack.mjs';
+import { textScaleAdvice } from '../lib/advice.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: run-checks.mjs --run <runDir>'); process.exit(2); }
@@ -59,6 +61,7 @@ const AXE_BASIS = {
 
 function add(f) {
   const id = `chk-${f.screen}-${f.rule}-${hash(f.key || f.element?.selector || '')}`;
+  f.cause = f.key ?? null; // groups the same problem across screens in the report
   delete f.key;
   const basis = f.rule.startsWith('AXE-')
     ? (AXE_BASIS[f.rule.slice(4)] || (f.wcag?.length ? f.wcag : ['WCAG-4.1.2']))
@@ -71,6 +74,10 @@ function primaryCapture(screen, platform) {
   const caps = screen.captures.filter((c) => c.platform === platform && c.variant === 'light');
   return caps.find((c) => c.device === 'standard') || caps.find((c) => c.device === 'frame') || caps[0];
 }
+
+// The stack named in PRODUCT.md decides how fixes are worded (rem vs Dynamic Type vs sp vs web view zoom).
+const framingPath = manifest.framingSnapshot ? path.join(runDir, manifest.framingSnapshot) : null;
+const productStacks = framingPath && fs.existsSync(framingPath) ? readProductStack(fs.readFileSync(framingPath, 'utf8')).stacks : [];
 
 for (const screen of manifest.screens) {
   if (screen.kind !== 'html') {
@@ -157,9 +164,7 @@ for (const screen of manifest.screens) {
           title: share >= 0.9 ? 'Text does not scale with the user\'s text size' : `${Math.round(share * 100)}% of text does not scale with the user's text size`,
           element: { selector: fixed[0].selector, text: fixed[0].text },
           evidence: `${fixed.length} of ${pairs.length} text elements kept their size when text was enlarged 135%. Examples: ${fixed.slice(0, 3).map((t) => `"${t.text}" ${t.fontSize}px`).join(', ')}.`,
-          recommendation: platform === 'ios'
-            ? 'Size type relative to the root (rem in mockups; Dynamic Type text styles in SwiftUI) so it follows the user\'s setting.'
-            : 'Size type relative to the root (rem in mockups; sp in Compose) so it follows the user\'s font scale.',
+          recommendation: textScaleAdvice(platform, productStacks),
           seenIn: [tagOf(lt)], key: 'scale',
         });
         break;
@@ -240,8 +245,15 @@ for (const screen of manifest.screens) {
     }
 
     // --- safe areas (status bar / Dynamic Island, home indicator / gesture bar) ---
+    // A page that pads with env(safe-area-inset-*) handles insets itself, but the browser
+    // reports them as 0, so its controls would look misplaced here. Skip it, with a note.
     const sa = [];
-    for (const el of mainData.interactive.filter((e) => !e.disabled && e.box.y < mainData.viewport.height)) {
+    if (mainData.safeAreaCss) {
+      notes.push({ screen: screen.id, note: mainData.viewportFitCover
+        ? 'Uses env(safe-area-inset-*) with viewport-fit=cover; safe areas not checked in the browser (insets read as 0). Check on a device or simulator.'
+        : 'Uses env(safe-area-inset-*) but the viewport meta lacks viewport-fit=cover, so on iOS the insets stay 0 in a web view. Check on a device or simulator.' });
+    }
+    for (const el of mainData.safeAreaCss ? [] : mainData.interactive.filter((e) => !e.disabled && e.box.y < mainData.viewport.height)) {
       if (el.box.y < main.safeTop && el.box.y + el.box.h > 0) sa.push({ el, where: platform === 'ios' ? 'status bar / Dynamic Island' : 'status bar' });
       else if (el.fixed && el.box.y + el.box.h > mainData.viewport.height - main.safeBottom + 1) sa.push({ el, where: platform === 'ios' ? 'home indicator' : 'gesture navigation bar' });
     }
@@ -264,7 +276,9 @@ for (const screen of manifest.screens) {
       const lightColors = Object.keys(mainData.colors).sort().join();
       const darkColors = Object.keys(load(dark.data).colors).sort().join();
       if (lightColors === darkColors) {
-        if (manifest.requires?.darkMode) {
+        if (screen.appearance && screen.appearance !== 'both') {
+          notes.push({ screen: screen.id, note: `Single appearance by design (appearance: ${screen.appearance}); dark mode not required.` });
+        } else if (manifest.requires?.darkMode) {
           add({
             ...base, rule: 'CHK-DARK', category: 'color', severity: 'P2',
             title: 'No dark appearance',

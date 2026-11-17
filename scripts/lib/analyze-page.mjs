@@ -203,11 +203,23 @@ export function analyzePage({ frameAttr }) {
   }
 
   const hasViewportMeta = !!document.querySelector('meta[name=viewport]');
+  // Pages that pad with env(safe-area-inset-*) handle insets themselves, but a desktop browser
+  // reports those insets as 0, so the safe-area check can't judge them from a render.
+  let safeAreaCss = false;
+  const hasInset = (t) => /env\(\s*safe-area-inset-/i.test(t || '');
+  for (const sheet of document.styleSheets) {
+    try { for (const rule of sheet.cssRules) if (hasInset(rule.cssText)) { safeAreaCss = true; break; } } catch { /* cross-origin sheet */ }
+    if (safeAreaCss) break;
+  }
+  if (!safeAreaCss) safeAreaCss = [...document.querySelectorAll('[style]')].some((el) => hasInset(el.getAttribute('style')));
+  const viewportFitCover = /viewport-fit\s*=\s*cover/i.test(document.querySelector('meta[name=viewport]')?.content || '');
   return {
     viewport,
     scrollWidth,
     scrollHeight: frameAttr ? root.scrollHeight : document.documentElement.scrollHeight,
     hasViewportMeta,
+    safeAreaCss,
+    viewportFitCover,
     title: document.title || null,
     interactive,
     texts,

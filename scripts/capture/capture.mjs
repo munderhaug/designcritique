@@ -74,18 +74,84 @@ async function launch() {
   throw new Error(`Could not start a browser. Run: npx playwright install chromium\n${last?.message?.split('\n')[0]}`);
 }
 
-async function preparePage(context, url, variant) {
+async function preparePage(context, url, variant, screen = {}) {
   const page = await context.newPage();
   if (args.offline) {
     await page.route('**/*', (route) => (route.request().url().startsWith('file:') || route.request().url().startsWith('data:') ? route.continue() : route.abort()));
   }
   await page.goto(url, { waitUntil: 'load', timeout: 30000 });
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-  await page.addStyleTag({ content: FREEZE_CSS });
-  if (variant === 'large-text') await page.addStyleTag({ content: LARGE_TEXT_CSS });
+  await runSetupAndSteps(page, screen, variant);
+  await injectStyles(page, variant);
   await page.evaluate(() => document.fonts && document.fonts.ready);
   await page.waitForTimeout(150);
   return page;
+}
+
+// Capture's own CSS (frozen animation, enlarged text). Added once per document, so it is
+// re-added after a setup script or step reloads or navigates the page.
+async function injectStyles(page, variant) {
+  await settle(page);
+  await page.evaluate(({ freeze, large }) => {
+    if (document.getElementById('dc-capture-styles')) return;
+    const el = document.createElement('style');
+    el.id = 'dc-capture-styles';
+    el.textContent = freeze + (large || '');
+    (document.head || document.documentElement).appendChild(el);
+  }, { freeze: FREEZE_CSS, large: variant === 'large-text' ? LARGE_TEXT_CSS : '' });
+}
+
+const navigated = (e) => /context was destroyed|navigat/i.test(e?.message || '');
+
+// Run code in the page; a reload or navigation it causes (seed storage, then reload) is fine.
+async function evaluateAllowingNavigation(page, code) {
+  try { await page.evaluate(`(async () => { ${code}\n })()`); }
+  catch (e) { if (!navigated(e)) throw e; }
+  await settle(page);
+}
+
+// Wait until the page has a loaded document that answers, riding out a reload in progress.
+async function settle(page) {
+  for (let i = 0; i < 50; i++) {
+    try {
+      await page.waitForLoadState('load', { timeout: 15000 });
+      if (await page.evaluate(() => document.readyState === 'complete')) break;
+    } catch (e) { if (!navigated(e)) throw e; }
+    await page.waitForTimeout(100);
+  }
+  await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
+}
+
+// Bring a single-page app to the screen: the mockup's setup script, then its steps (mockups.yaml).
+async function runSetupAndSteps(page, screen, variant) {
+  if (screen.setup) {
+    try { await evaluateAllowingNavigation(page, fs.readFileSync(screen.setup, 'utf8')); }
+    catch (e) { throw new Error(`setup ${path.basename(screen.setup)} failed: ${e.message.split('\n')[0]}`); }
+  }
+  if (screen.steps?.length) await injectStyles(page, variant);
+  for (const [i, st] of (screen.steps || []).entries()) {
+    const what = Object.entries(st).map(([k, v]) => `${k} ${JSON.stringify(v)}`).join(', ');
+    try {
+      if (st.click != null) await page.locator(st.click).first().click({ timeout: 5000 });
+      else if (st.fill != null) await page.locator(st.fill).first().fill(String(st.value), { timeout: 5000 });
+      else if (st.press != null) await page.keyboard.press(String(st.press));
+      else if (st.scroll != null) await page.locator(st.scroll).first().scrollIntoViewIfNeeded({ timeout: 5000 });
+      else if (st.goto != null) {
+        const target = new URL(String(st.goto), page.url()).href;
+        await page.evaluate((u) => { if (u.split('#')[0] === location.href.split('#')[0]) location.hash = new URL(u).hash; else location.href = u; }, target);
+        await page.waitForLoadState('load', { timeout: 10000 }).catch(() => {});
+      } else if (st.eval != null) await evaluateAllowingNavigation(page, st.eval);
+      else if (st.wait != null) {
+        if (typeof st.wait === 'number') await page.waitForTimeout(st.wait);
+        else await page.locator(String(st.wait)).first().waitFor({ state: 'visible', timeout: 10000 });
+      }
+    } catch (e) {
+      throw new Error(`step ${i + 1} (${what}) failed: ${e.message.split('\n')[0]}`);
+    }
+    await page.waitForTimeout(50);
+    await injectStyles(page, variant);
+  }
+  if (screen.steps?.length || screen.setup) await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
 }
 
 async function runAxe(page, frameIndex) {
@@ -113,7 +179,7 @@ async function captureHtml(browser, screen) {
   let frameCount = 1;
   if (frameMode) {
     const ctx = await browser.newContext({ viewport: FRAME_CANVAS, deviceScaleFactor: 1 });
-    const page = await preparePage(ctx, url, 'light');
+    const page = await preparePage(ctx, url, 'light', screen);
     frameCount = await page.locator(screen.phoneFrame).count();
     await ctx.close();
     if (!frameCount) {
@@ -140,7 +206,7 @@ async function captureHtml(browser, screen) {
           colorScheme: step.variant === 'dark' ? 'dark' : 'light',
           hasTouch: true,
         });
-        const page = await preparePage(ctx, url, step.variant);
+        const page = await preparePage(ctx, url, step.variant, sub);
         const tag = `${sub.id}__${platform}-${step.device}__${step.variant}`;
         const shotPath = path.join(runDir, 'screenshots', `${tag}.png`);
         fs.mkdirSync(path.dirname(shotPath), { recursive: true });
