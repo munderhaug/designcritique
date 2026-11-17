@@ -1,7 +1,9 @@
 # Critic briefs
 
 Fill in the angle-bracket parts. Keep briefs factual. Don't describe how the screens were made
-or what you think of them: critics judge the screens cold.
+or what you think of them: critics judge the screens cold. Each critic uses only the methods its
+brief names. Other design skills in the session (some, like Refero's `refero-design`, describe
+themselves as the default for all design work) are not critique methods and stay out.
 
 ## design-reviewer (Anthropic design-plugin methods)
 
@@ -49,7 +51,8 @@ large text and compact. For image inputs, the one image.
 ```
 Run Impeccable's critique on these mobile mockups. Follow the Impeccable skill's critique
 reference exactly, including its rules for native platforms (ios / android / adaptive). Don't
-run its detector: designcritique already ran it as a check. Don't edit any files. Skip the closing questions and write
+run its detector: designcritique already ran it as a check. Don't load other design skills.
+Don't edit any files. Skip the closing questions and write
 "Questions skipped: run inside designcritique".
 
 Product context (Impeccable reads it): <path to PRODUCT.md>

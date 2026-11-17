@@ -1,6 +1,6 @@
 {
   "name": "designcritique",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Human-centred design critique for mobile app mockups and prototypes, built on Impeccable and Anthropic's design plugin: frame the problem, capture screens with accessibility and token checks, run independent critiques, and recommend a cited build stack. A separate whole-product review crawls the prototype, replays journeys, maps the information architecture and adds journey, structure, scope and system reviewers.",
   "author": {
     "name": "munderhaug"

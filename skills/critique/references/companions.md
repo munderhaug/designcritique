@@ -53,7 +53,7 @@ first, and its native ports aren't published yet.
 | Tool | By | Role |
 |---|---|---|
 | Mobbin MCP | Mobbin (official, paid) | Shipped iOS and web screens and flows for reference |
-| Refero MCP | Refero (official, freemium) | Alternative reference source: websites and iOS apps |
+| Refero MCP | Refero (official, paid for search) | Alternative reference source: websites and iOS apps. Install Refero's plugin (`/plugin marketplace add referodesign/refero_skill`, then `/plugin install refero@refero`) for the connector, or add the MCP server alone; sign in when prompted |
 | Figma MCP | Figma (official) | Figma frames as inputs; variables into DESIGN.md |
 | Claude artifact tools | Anthropic | Pull Claude artifacts into a run |
 | `material-3` skill | hamen | Companion guidance for Android screens |
@@ -78,6 +78,7 @@ Reviewed against the primary sources in the principles index. Re-check before ad
 | Crawljax, DroidBot, TESTAR | Java or Python and Android-only or heavyweight; their methods (state-flow crawling, two-level state IDs, replay to backtrack) are reimplemented in scripts/crawl/ with citations |
 | LLM browser agents (Playwright MCP, agent-browser, Stagehand, browser-use) | Explore one action at a time, nondeterministically, at model cost; no exhaustive state graph |
 | IA, OOUX, JTBD, opportunity-tree and state-matrix skills on GitHub | 0–8 stars, no credible author or sources; the lenses cite the primary sources directly |
+| Refero's `refero-design` skill (shipped in Refero's plugin) | A method for building designs, not critiquing them: research, lock references, then implement. Its style research covers websites, not app screens, and its craft notes rarely cite sources. Its description claims priority over every other design skill and tells agents not to use them alongside it, which would undo the two independent critics. designcritique uses only Refero's connector; critics, reviewers and the iterate builder don't load this skill |
 | unslopovich as a skill (its fix workflow and research notes) | Only its detector is used, as a pinned library. The skill's fixing workflow overlaps Impeccable and edits the app; its research notes are secondary sources, and the index cites the primary ones |
 | Impeccable `audit`, `polish`, `typeset`, `layout` | Fixing and building commands. Its `critique` is a critic and its detector a check; the rest edits the design, which designcritique leaves to the person or `/designcritique:iterate` |
 | anti-slop (miqdadbadjuber) | A prompt list of AI tells without sources; the tells it names are in `ai-tells.md` or detected by the two engines above |

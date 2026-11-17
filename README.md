@@ -99,8 +99,9 @@ git clone -q --depth 1 https://github.com/munderhaug/designcritique /tmp/dc-setu
   || echo "designcritique companions not installed"
 rm -rf /tmp/dc-setup
 ``` Connect a reference source with
-`claude mcp add --transport http mobbin https://api.mobbin.com/mcp` (paid) or Refero
-(`https://api.refero.design/mcp`, freemium). Node 20+ is required.
+`claude mcp add --transport http mobbin https://api.mobbin.com/mcp` (paid) or Refero's plugin
+(`/plugin marketplace add referodesign/refero_skill`, `/plugin install refero@refero`; paid for
+search). designcritique uses only Refero's connector, not its design skill. Node 20+ is required.
 
 ## Two modes
 

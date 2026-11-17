@@ -353,11 +353,12 @@ entries:
     trust: official
     platforms: [ios, android, web]
     stacks: [swiftui, compose, expo, react-native, flutter, capacitor, web]
-    why: "Real product screens and user flows from websites and iOS apps, plus curated styles. Smaller than Mobbin; freemium."
-    install: "claude mcp add --transport http refero https://api.refero.design/mcp --header \"Authorization: Bearer <token>\""
+    why: "Real product screens and user flows from websites and iOS apps, plus curated website styles. Smaller than Mobbin; live search needs a paid plan."
+    install: "/plugin marketplace add referodesign/refero_skill && /plugin install refero@refero (or: claude mcp add --transport http refero https://api.refero.design/mcp), then sign in"
     helps_with: [ux, task-fit, visual]
     sources:
       - https://doc.refero.design/mcp/getting-started
+      - https://github.com/referodesign/refero_skill
 
   # ---------- 6. Check it on a device ----------
   - id: playwright-devices

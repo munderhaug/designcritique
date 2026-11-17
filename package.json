@@ -1,6 +1,6 @@
 {
   "name": "designcritique",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Mobile design critique for mockups and prototypes, as a Claude Code plugin",
   "type": "module",
   "private": true,

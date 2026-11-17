@@ -36,7 +36,8 @@ still comes from the critique skill's critics; this skill only orchestrates roun
    (id, screen, evidence, recommendation), `PRODUCT.md`, `DESIGN.md` with the rule in
    `PLUGIN_ROOT/templates/CLAUDE-design-system.md`, the taste references if any, and the mockup
    HTML paths. It edits only those files, uses only DESIGN.md tokens and components (or stops and
-   asks), and returns which finding ids it addressed and how.
+   asks), fixes what the findings say rather than re-designing (no other design skill sets the
+   direction), and returns which finding ids it addressed and how.
 6. Next round.
 
 ## When the loop stops
