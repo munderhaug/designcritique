@@ -1,6 +1,7 @@
 ---
 name: critique
 description: Human-centred design critique of mobile app mockups and prototypes (HTML, images, .zip exports, folders, Claude artifacts, Figma frames). Frames the problem first (Impeccable init), grounds the review in shipped apps (Mobbin or Refero), captures screens at phone sizes, runs axe-core and mobile checks, then runs two independent critiques - Impeccable's critique and Anthropic's design-plugin methods - and ends with a cited build stack. Use when asked to review, critique or audit app screens, a prototype or a flow.
+argument-hint: "[mockups.yaml | file | folder | artifact link]"
 ---
 
 # Critique mobile mockups
@@ -24,6 +25,11 @@ all design work) don't change this workflow and are never given to a critic.
 `PLUGIN_ROOT` is two folders up from this skill's base directory. Scripts are in
 `PLUGIN_ROOT/scripts`, the citation index in `PLUGIN_ROOT/skills/principles/references`, and
 tool details in [companions.md](references/companions.md).
+
+Invoked as `/designcritique:critique`, the input is: $ARGUMENTS
+
+With no input, use `mockups.yaml` in the current project. If there is none, ask which mockups to
+critique, then create one from `PLUGIN_ROOT/templates/mockups.yaml`. Always frame the problem first.
 
 ## 0. Setup
 

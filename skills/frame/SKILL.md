@@ -1,6 +1,7 @@
 ---
 name: frame
 description: Human-centred problem framing for a mobile app before designing or critiquing it - who it is for, what problem it solves, context of use, ranked key tasks and success criteria - recorded in PRODUCT.md. Builds on Impeccable's init (product record) and adds the human-centred layer the critique needs. Use when PRODUCT.md is missing, thin, or has no key tasks; the critique skill runs it first.
+argument-hint: "[path to PRODUCT.md or mockups]"
 ---
 
 # Frame the problem
@@ -11,6 +12,12 @@ record. It uses **Impeccable's `init`** (Paul Bakaus), which interviews you and 
 Constraints, Accessibility. Then it adds the human-centred sections the critique judges against
 (ISO 9241-210 / 9241-11, jobs to be done). [framing-guide.md](references/framing-guide.md)
 explains each one.
+
+`PLUGIN_ROOT` is two folders up from this skill's base directory.
+
+Invoked as `/designcritique:frame`, the input is: $ARGUMENTS
+
+With no input, frame the app in the current project.
 
 ## Steps
 

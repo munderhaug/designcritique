@@ -132,7 +132,7 @@ several rounds.
 
 ```
 catalog/               stack.yaml (build stack), styles.yaml (style starting points), vocabulary.yaml (words per language)
-commands/              /designcritique:critique, :review, :frame, :iterate, :decide
+commands/              /designcritique:decide (the other slash commands are the skills themselves)
 skills/frame/          problem framing on top of Impeccable init
 skills/critique/       orchestration; references/: checks, inputs, references, severity, output format, critic briefs, companions
 skills/review/         whole-product review and its lens briefs (references/lenses/)

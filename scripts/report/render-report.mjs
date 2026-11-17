@@ -10,7 +10,7 @@ import { validateCritique } from '../lib/validate.mjs';
 import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
 import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.mjs';
 import { evaluateGate } from '../lib/gate.mjs';
-import { section, assumptionsOf, titleOf } from '../lib/framing.mjs';
+import { section, assumptionsOf, titleOf, unfilledSections, unfilledMessage } from '../lib/framing.mjs';
 import { mergeAcrossSources, groupChecksByCause } from '../lib/merge.mjs';
 import { productModel, parseKeyTasks } from '../lib/product.mjs';
 import { iaMapSvg, iaMapMermaid, rankProposals } from '../lib/review-report.mjs';
@@ -128,6 +128,7 @@ const framing = {
   tasks: firstSection('Key tasks'),
   assumptions: assumptionsOf(framingText),
 };
+const unfilled = framingText ? unfilledSections(framingText) : [];
 
 // ---------- compare with the previous run ----------
 let comparison = null;
@@ -199,6 +200,7 @@ L.push(`**Gate: ${gate.pass ? 'passed' : 'not passed'}** (fail on ${gate.gate.fa
 L.push('## The problem', '');
 if (!framingText) L.push('_No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first._', '');
 else {
+  if (unfilled.length) L.push(`_${unfilledMessage(unfilled)}_`, '');
   if (framing.problem) L.push(framing.problem, '');
   if (framing.users) L.push('**Users**', '', framing.users, '');
   if (framing.tasks) L.push('**Key tasks**', '', framing.tasks, '');
@@ -429,7 +431,7 @@ table.matrix td, table.matrix th { text-align:center; } table.matrix td:first-ch
 <p class="sub">${esc(merged.generatedAt.slice(0, 10))} · ${merged.coverage.screens} screens · ${merged.coverage.renders} renders · critics: ${esc(merged.coverage.critics.join(', ') || 'none yet (checks only)')}</p>
 <p class="gate ${gate.pass ? 'pass' : 'fail'}"><strong>Gate: ${gate.pass ? 'passed' : 'not passed'}</strong> · fail on ${esc(gate.gate.fail_on)} · target score ${esc(gate.gate.target_score ?? 'none')}${gate.pass ? '' : `<br>${gate.reasons.map(esc).join('<br>')}`}</p>
 <h2>The problem</h2>
-<div class="frame-box">${framingText ? `${framing.problem ? `<p>${mdInline(framing.problem)}</p>` : ''}${framing.users ? `<p><strong>Users</strong><br>${mdInline(framing.users)}</p>` : ''}${framing.tasks ? `<p><strong>Key tasks</strong><br>${mdInline(framing.tasks)}</p>` : ''}${framing.assumptions.length ? `<p><strong>Open assumptions</strong></p><ul class="plain">${framing.assumptions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : '<p>No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first.</p>'}
+<div class="frame-box">${framingText ? `${unfilled.length ? `<p><strong>${esc(unfilledMessage(unfilled))}</strong></p>` : ''}${framing.problem ? `<p>${mdInline(framing.problem)}</p>` : ''}${framing.users ? `<p><strong>Users</strong><br>${mdInline(framing.users)}</p>` : ''}${framing.tasks ? `<p><strong>Key tasks</strong><br>${mdInline(framing.tasks)}</p>` : ''}${framing.assumptions.length ? `<p><strong>Open assumptions</strong></p><ul class="plain">${framing.assumptions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : '<p>No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first.</p>'}
 ${frameCheck ? `<p><strong>Fit to the problem: ${esc(frameCheck.fit)}.</strong> ${esc(frameCheck.summary || '')}</p>` : ''}</div>
 ${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>Score</th><th>Why</th><th>Critic</th></tr>${tasks.map((t) => `<tr><td>${t.id ? `${esc(t.id)} ` : ''}${esc(t.task)}</td><td class="verdict v-${esc(t.verdict)}">${esc(t.verdict)}</td><td>${typeof t.score === 'number' ? `${esc(t.score)}/10${t.coverage === 'partial' ? ' <span class="meta">(partial view, not gated)</span>' : ''}` : '–'}</td><td>${esc(t.summary || '')}</td><td class="meta">${esc(t.source)}</td></tr>`).join('')}</table>` : ''}
 ${comparison ? `<h2>Since last run</h2><div class="frame-box"><p>Compared with ${esc(path.basename(comparison.base))}: <strong>${comparison.fixed.length} fixed</strong>, <strong>${comparison.introduced.length} new</strong>, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.</p>${comparison.fixed.length ? `<ul class="plain">${comparison.fixed.map((f) => `<li><s>${esc(f.title)}</s> <span class="meta">${esc(f.severity)} · ${esc(screenTitle(f.screen))}</span></li>`).join('')}</ul>` : ''}</div>` : ''}

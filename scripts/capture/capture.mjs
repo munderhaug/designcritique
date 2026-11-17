@@ -5,6 +5,7 @@
 // Usage: node scripts/capture/capture.mjs [--config mockups.yaml] [--out <runDir>] [--only id,id] [--offline]
 import fs from 'node:fs';
 import path from 'node:path';
+import { unfilledSections, unfilledMessage } from '../lib/framing.mjs';
 import { AxeBuilder } from '@axe-core/playwright';
 import {
   loadConfig, parseArgs, timestamp, writeJson, platformsFor, DEVICE_PRESETS, isRemote, pageUrl,
@@ -266,7 +267,10 @@ function stepLabel(st) {
 }
 
 // Snapshot the frame and tokens the run was judged against, so old reports stay interpretable.
-if (manifest.product) { fs.copyFileSync(manifest.product, path.join(runDir, 'framing.md')); manifest.framingSnapshot = 'framing.md'; }
+if (manifest.product) { fs.copyFileSync(manifest.product, path.join(runDir, 'framing.md')); manifest.framingSnapshot = 'framing.md';
+  const unfilled = unfilledSections(fs.readFileSync(manifest.product, 'utf8'));
+  if (unfilled.length) manifest.warnings.push(unfilledMessage(unfilled));
+}
 else manifest.warnings.push('No PRODUCT.md: run the frame skill first so the critique can judge task fit.');
 if (manifest.design) { fs.copyFileSync(manifest.design, path.join(runDir, 'DESIGN.md')); manifest.designSnapshot = 'DESIGN.md'; }
 if (manifest.content) { fs.copyFileSync(manifest.content, path.join(runDir, 'content.md')); manifest.contentSnapshot = 'content.md'; }

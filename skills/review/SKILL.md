@@ -1,6 +1,7 @@
 ---
 name: review
 description: Whole-product review of a mobile app prototype - crawls every screen and state, replays the journeys, maps the information architecture, audits consistency and states, and runs independent lens reviewers (journeys, structure/IA, concept and scope, system consistency and spec) alongside the screen critics. Ends with an IA map, journey maps, a feature × problem matrix, ranked cut/add/move proposals and a gate. Slower and costlier than /designcritique:critique; use it when asked to review the whole product, its structure, flows or scope.
+argument-hint: "[mockups.yaml]"
 ---
 
 # Review the whole product
@@ -10,6 +11,11 @@ where things belong, whether journeys hold together, whether every feature earns
 whether the system is consistent. It costs several times a critique: say so before starting.
 
 `PLUGIN_ROOT` is two folders up from this skill's base directory.
+
+Invoked as `/designcritique:review`, the input is: $ARGUMENTS
+
+With no input, use `mockups.yaml` in the current project. Before starting, also say which
+reviewers will run.
 
 ## 0. Setup
 

@@ -660,3 +660,16 @@ test('gate: every key task must be scored by a critic that walked the whole task
   const ok = evaluateGate({ findings: [], tasks: [...tasks, { id: 'T2', task: 'Log in', score: 7, source: 'impeccable' }], critics: ['a'], keyTasks }, g);
   assert.equal(ok.pass, true);
 });
+
+import { unfilledSections } from '../scripts/lib/framing.mjs';
+test('framing: the untouched template is reported as unfilled, a filled frame is not', () => {
+  const template = fs.readFileSync(new URL('../templates/PRODUCT.md', import.meta.url), 'utf8');
+  assert.deepEqual(unfilledSections(template), ['Users', 'Problem', 'Key Tasks']);
+  const filled = '# App\n\n## Users\n\nCouriers on a route.\n\n## Problem\n\nProof of delivery takes too long.\n\n## Key Tasks\n\n1. **Confirm a drop** (must not fail): When I hand over a parcel, I want to confirm it, so I can move on.\n';
+  assert.deepEqual(unfilledSections(filled), []);
+  assert.deepEqual(unfilledSections(filled.replace(/## Problem[\s\S]*?(?=## Key)/, '')), ['Problem']);
+  for (const f of ['../evals/PRODUCT.md', '../evals/review/PRODUCT.md']) {
+    const url = new URL(f, import.meta.url);
+    if (fs.existsSync(url)) assert.deepEqual(unfilledSections(fs.readFileSync(url, 'utf8')), [], f);
+  }
+});

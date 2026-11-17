@@ -1,6 +1,7 @@
 ---
 name: iterate
 description: Fix HTML mobile mockups and re-critique them in rounds until they pass the designcritique gate (no open finding at the fail_on severity, every key task at the target score) or the round limit is reached. Each round uses fresh critics who don't know what changed. Use when asked to improve mockups until they're good, to loop or "cook" a design, or to fix the findings of a critique.
+argument-hint: "[mockups.yaml] [--rounds N]"
 ---
 
 # Iterate: fix, re-critique, repeat
@@ -10,6 +11,11 @@ critics judge the result cold, and the report compares each round with the last.
 still comes from the critique skill's critics; this skill only orchestrates rounds.
 
 `PLUGIN_ROOT` is two folders up from this skill's base directory.
+
+Invoked as `/designcritique:iterate`, the input is: $ARGUMENTS
+
+With no config given, use `mockups.yaml` in the current project. `--rounds N` overrides
+`iterate.max_rounds`.
 
 ## Before the first round
 

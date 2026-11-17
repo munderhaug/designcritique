@@ -23,3 +23,17 @@ export function assumptionsOf(md) {
 }
 
 export const titleOf = (md) => (stripComments(md).match(/^#\s+(.+)$/m) || [])[1] || null;
+
+/**
+ * Sections the critique judges against that are missing, empty or still hold the template's
+ * <placeholder> text. An empty list means the frame is filled in.
+ */
+export function unfilledSections(md) {
+  const placeholder = /<[A-Z][^<>\n]*>|When …, I want to …/;
+  return [['Users', 'Users'], ['Problem', 'Problem'], ['Key Tasks', 'Key tasks']]
+    .filter(([, name]) => { const body = section(md, name); return !body || placeholder.test(body); })
+    .map(([label]) => label);
+}
+
+export const unfilledMessage = (names) =>
+  `PRODUCT.md is not filled in (${names.join(', ')}): run the frame skill, or the critique has no problem, user or key tasks to judge against.`;
