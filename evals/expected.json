@@ -45,5 +45,13 @@
         { "any": ["IOS-DESTRUCTIVE", "NN-H5", "GESTALT-SIMILARITY"] }
       ]
     }
+  },
+  "signup": {
+    "checks": { "must": ["CHK-PRESELECTED-CONSENT", "CHK-ASYMMETRIC-CHOICE", "CHK-CONFIRMSHAMING"] },
+    "critic": { "must": [] }
+  },
+  "choices": {
+    "checks": { "clean": true },
+    "critic": { "max_major": 0 }
   }
 }

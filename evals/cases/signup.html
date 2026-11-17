@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Settings</title>
+<style>
+  :root {
+    --primary: #2457D6; --on-primary: #FFFFFF; --surface: #FFFFFF; --on-surface: #16181D;
+    --on-surface-variant: #5B6170; --container: #F3F5F9; --outline: #D5D9E2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #8FB0FF; --on-primary: #0B1F55; --surface: #121418; --on-surface: #ECEEF3;
+      --on-surface-variant: #A8AEBB; --container: #1E2128; --outline: #363B46;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 100%; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: var(--surface); color: var(--on-surface); font-size: 1.0625rem; line-height: 1.35; padding-bottom: 8rem; }
+  button, input { font: inherit; color: inherit; background: none; border: 0; }
+  header { padding: 4rem 1rem 0.5rem; }
+  h1 { font-size: 2.125rem; font-weight: 700; }
+  .search { margin: 0.75rem 1rem 1.5rem; }
+  .search input { width: 100%; min-height: 2.75rem; border-radius: 0.75rem; background: var(--container); padding: 0 0.75rem; font-size: 1.0625rem; }
+  .search input::placeholder { color: var(--on-surface-variant); }
+  .section-title { font-size: 0.8125rem; color: var(--on-surface-variant); text-transform: uppercase; letter-spacing: 0.02em; padding: 0 2rem 0.5rem; }
+  .group { margin: 0 1rem 2rem; background: var(--container); border-radius: 0.75rem; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 0.75rem; width: 100%; min-height: 2.75rem; padding: 0.75rem 1rem; text-align: left; }
+  .row + .row { border-top: 1px solid var(--outline); }
+  .row .label { flex: 1; }
+  .row .value { color: var(--on-surface-variant); }
+  .icon { width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; background: var(--primary); flex: none; }
+  .knob { width: 3.25rem; height: 2rem; border-radius: 999px; background: var(--primary); position: relative; flex: none; }
+  .knob::after { content: ""; position: absolute; right: 0.25rem; top: 0.25rem; width: 1.5rem; height: 1.5rem; border-radius: 999px; background: var(--on-primary); }
+  .row[aria-checked="false"] .knob { background: var(--outline); }
+  .row[aria-checked="false"] .knob::after { right: auto; left: 0.25rem; }
+  .chevron { width: 0.5rem; height: 0.75rem; flex: none; }
+  .chevron path { stroke: var(--on-surface-variant); fill: none; stroke-width: 2; }
+  .intro { margin: 0 1rem 1.5rem; color: var(--on-surface-variant); }
+  .cta { display: block; margin: 0 1rem; width: calc(100% - 2rem); min-height: 3.5rem; border-radius: 0.75rem; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: 1.125rem; text-align: center; }
+  .decline { display: block; margin: 0.75rem auto 0; font-size: 0.75rem; color: var(--on-surface-variant); text-align: center; }
+</style>
+</head>
+<body>
+  <header><h1>Almost done</h1></header>
+  <p class="intro">Create your account to get started.</p>
+
+  <p class="section-title">Email</p>
+  <div class="group">
+    <button class="row" role="switch" aria-checked="true"><span class="label">Offers and news</span><span class="knob" aria-hidden="true"></span></button>
+  </div>
+
+  <p class="section-title">Data</p>
+  <div class="group">
+    <button class="row" role="switch" aria-checked="true"><span class="label">Share data with partners</span><span class="knob" aria-hidden="true"></span></button>
+  </div>
+
+  <button class="cta">Accept all and continue</button>
+  <button class="decline">No thanks, I don't like good deals</button>
+</body>
+</html>

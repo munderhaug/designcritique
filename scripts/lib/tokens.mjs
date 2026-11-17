@@ -90,6 +90,34 @@ export function markdownTokens(md) {
   return out;
 }
 
+const ALIAS = /^\{([^{}]+)\}$/;
+/**
+ * Resolve token references ("{color.primitive.blue.500}", W3C Design Tokens Community Group
+ * format; also used by DESIGN.md front matter) to the values they point at, following chains and
+ * stopping on cycles. Semantic tokens keep their own names, so roles survive.
+ */
+export function resolveAliases(data) {
+  const lookup = (pathStr) => {
+    let node = data;
+    for (const k of pathStr.split('.')) { if (node == null || typeof node !== 'object') return undefined; node = node[k]; }
+    return node && typeof node === 'object' && '$value' in node ? node.$value : node;
+  };
+  const resolve = (value, seen = new Set()) => {
+    if (typeof value !== 'string') return value;
+    const m = value.trim().match(ALIAS);
+    if (!m || seen.has(m[1])) return m ? undefined : value;
+    seen.add(m[1]);
+    const target = lookup(m[1]);
+    return typeof target === 'string' ? resolve(target, seen) : target;
+  };
+  const walk = (node) => {
+    if (Array.isArray(node)) return node.map(walk);
+    if (node && typeof node === 'object') return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, walk(v)]));
+    return resolve(node);
+  };
+  return walk(data);
+}
+
 export function loadTokens(file) {
   if (!file || !fs.existsSync(file)) return null;
   const text = fs.readFileSync(file, 'utf8');
@@ -98,7 +126,7 @@ export function loadTokens(file) {
   const body = isJson ? '' : text.replace(/^---\s*\n[\s\S]*?\n---\s*(\n|$)/, '');
   const fromMarkdown = isJson ? [] : markdownTokens(body);
   if (!front && !fromMarkdown.length) return null;
-  const data = front || {};
+  const data = resolveAliases(front || {});
 
   const colors = new Map();
   const colorByName = new Map();

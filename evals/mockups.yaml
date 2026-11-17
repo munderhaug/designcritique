@@ -32,3 +32,11 @@ mockups:
     title: Checkout
     file: cases/checkout.html
     notes: "Task 1, pay for the order. Reached from the cart; the error shows after a declined card."
+  - id: signup
+    title: Sign up
+    file: cases/signup.html
+    notes: "Task 7, finish creating an account."
+  - id: choices
+    title: Choices
+    file: cases/choices.html
+    notes: "Task 7, choose what to share."

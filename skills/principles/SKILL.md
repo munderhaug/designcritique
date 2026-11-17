@@ -28,6 +28,7 @@ summarises its primary sources and names them. Read only the files the task need
 | [states.md](references/states.md) | The UI stack: empty, error, loading, partial, offline, first run; numbers that agree | `STATE-*` |
 | [consistency.md](references/consistency.md) | One component, icon, term and format per meaning | `CONS-*` |
 | [spec.md](references/spec.md) | The prototype against the owner's own spec | `SPEC-*` |
+| [ethics.md](references/ethics.md) | Deceptive patterns: pre-ticked consent, asymmetric choices, confirmshaming, obstruction, sneaking, false pressure, forced action, nagging | `ETHICS-*` |
 
 ## How to use the principles
 

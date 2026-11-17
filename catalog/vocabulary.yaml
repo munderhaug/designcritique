@@ -1,5 +1,6 @@
 # Words the plugin needs to recognise in a prototype's own language: controls the crawler must
-# not press, generic navigation labels, and words that show a screen's state (empty, error...).
+# not press, generic navigation labels, words that show a screen's state (empty, error...), and
+# for the deceptive-pattern checks: consent topics, accept and decline labels, confirmshaming.
 # Languages come from the pages' <html lang> or `language:` in mockups.yaml; English is always
 # included. Add words for a project with `vocabulary:` in mockups.yaml (same keys), or add a
 # language here. Entries are matched as whole words or phrases, case-insensitively; an entry
@@ -7,6 +8,10 @@
 
 en:
   avoid: [delete, remove, erase, log out, logout, sign out, reset, pay, buy, purchase, checkout, unsubscribe, cancel subscription, deactivate, close account]
+  consent: [newsletter, marketing, offers, promotions, partners, third parties, share my data, share data, tracking, personalised ads, personalized ads, advertising, cookies]
+  accept: [accept, accept all, allow, allow all, agree, i agree, subscribe, yes, turn on, enable, opt in]
+  decline: [decline, reject, reject all, no thanks, not now, skip, deny, "don't allow", manage, manage options, customise, customize, maybe later, later, opt out]
+  shaming: ["re:^no,? thanks?[,.]? i\\b", "re:^i (don't|do not) (want|like|care)", "re:^i('ll| will) (pay|stay|miss|keep)", "re:^no,? i (prefer|like|want|enjoy)"]
   back: [back, close, cancel, done, ok, save, dismiss]
   of: of
   states:
@@ -18,6 +23,10 @@ en:
     partial: [incomplete, almost done, partially]
 de:
   avoid: [löschen, entfernen, abmelden, ausloggen, zurücksetzen, bezahlen, kaufen, kündigen]
+  consent: [newsletter, werbung, angebote, partner, dritte, daten teilen, tracking, personalisierte werbung, cookies]
+  accept: [akzeptieren, alle akzeptieren, zulassen, erlauben, zustimmen, ich stimme zu, abonnieren, ja]
+  decline: [ablehnen, alle ablehnen, nein danke, nicht jetzt, überspringen, verweigern, einstellungen, später]
+  shaming: ["re:^nein,? danke[,.]? ich\\b"]
   back: [zurück, schließen, abbrechen, fertig, speichern]
   of: von
   states:
@@ -29,6 +38,10 @@ de:
     partial: [unvollständig, fast fertig]
 fr:
   avoid: [supprimer, effacer, déconnexion, se déconnecter, réinitialiser, payer, acheter, se désabonner]
+  consent: [newsletter, offres, promotions, partenaires, tiers, partager mes données, suivi, publicité personnalisée, cookies]
+  accept: [accepter, tout accepter, autoriser, j'accepte, s'abonner, oui]
+  decline: [refuser, tout refuser, non merci, pas maintenant, ignorer, paramétrer, plus tard]
+  shaming: ["re:^non,? merci[,.]? je\\b"]
   back: [retour, fermer, annuler, terminé, enregistrer]
   of: sur
   states:
@@ -40,6 +53,10 @@ fr:
     partial: [incomplet, presque terminé]
 es:
   avoid: [eliminar, borrar, cerrar sesión, restablecer, pagar, comprar, darse de baja]
+  consent: [boletín, ofertas, promociones, socios, terceros, compartir mis datos, seguimiento, publicidad personalizada, cookies]
+  accept: [aceptar, aceptar todo, permitir, acepto, suscribirse, sí]
+  decline: [rechazar, rechazar todo, no gracias, ahora no, omitir, configurar, más tarde]
+  shaming: ["re:^no,? gracias[,.]? (yo|prefiero|no)\\b"]
   back: [atrás, volver, cerrar, cancelar, listo, guardar]
   of: de
   states:
@@ -51,6 +68,10 @@ es:
     partial: [incompleto, casi listo]
 nb:
   avoid: [slett, fjern, logg ut, tilbakestill, nullstill, betal, kjøp, avslutt abonnement]
+  consent: [nyhetsbrev, markedsføring, tilbud, kampanjer, partnere, tredjeparter, dele mine data, sporing, tilpasset reklame, reklame, informasjonskapsler]
+  accept: [godta, godta alle, tillat, jeg godtar, abonner, ja, slå på]
+  decline: [avslå, avvis, avvis alle, nei takk, ikke nå, hopp over, administrer, tilpass, senere]
+  shaming: ["re:^nei,? takk[,.]? jeg\\b"]
   back: [tilbake, lukk, avbryt, ferdig, lagre]
   of: av
   states:
@@ -62,6 +83,10 @@ nb:
     partial: [ufullstendig, nesten ferdig]
 sv:
   avoid: [radera, ta bort, logga ut, återställ, betala, köp, avsluta prenumeration]
+  consent: [nyhetsbrev, marknadsföring, erbjudanden, partner, tredje part, dela mina data, spårning, anpassad reklam, reklam, kakor]
+  accept: [godkänn, godkänn alla, tillåt, jag godkänner, prenumerera, ja]
+  decline: [avböj, neka, neka alla, nej tack, inte nu, hoppa över, hantera, anpassa, senare]
+  shaming: ["re:^nej,? tack[,.]? jag\\b"]
   back: [tillbaka, stäng, avbryt, klar, spara]
   of: av
   states:
@@ -73,6 +98,10 @@ sv:
     partial: [ofullständig, nästan klar]
 da:
   avoid: [slet, fjern, log ud, nulstil, betal, køb, afmeld]
+  consent: [nyhedsbrev, markedsføring, tilbud, partnere, tredjeparter, dele mine data, sporing, tilpasset reklame, reklame, cookies]
+  accept: [accepter, accepter alle, tillad, jeg accepterer, abonner, ja]
+  decline: [afvis, afvis alle, nej tak, ikke nu, spring over, administrer, tilpas, senere]
+  shaming: ["re:^nej,? tak[,.]? jeg\\b"]
   back: [tilbage, luk, annuller, færdig, gem]
   of: af
   states:

@@ -11,6 +11,8 @@ import { loadTokens, nearestColor, onScale, parseColor } from '../lib/tokens.mjs
 import { designSystemFindings } from './design-system.mjs';
 import { readProductStack } from '../lib/stack.mjs';
 import { textScaleAdvice } from '../lib/advice.mjs';
+import { ethicsFindings } from '../lib/ethics.mjs';
+import { loadVocabulary, languagesOf } from '../lib/vocabulary.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: run-checks.mjs --run <runDir>'); process.exit(2); }
@@ -52,6 +54,9 @@ const BASIS = {
   'CHK-TOKEN-SPACE': () => ['NN-H4', 'VIS-SPACING'],
   'CHK-TOKEN-TYPE': () => ['NN-H4', 'VIS-TYPE'],
   'CHK-TOKEN-RADIUS': (p) => ['NN-H4', p === 'ios' ? 'IOS-LAYOUT' : 'AND-SHAPE'],
+  'CHK-PRESELECTED-CONSENT': () => ['ETHICS-PRESELECTED', 'NN-H3'],
+  'CHK-ASYMMETRIC-CHOICE': () => ['ETHICS-ASYMMETRY', 'VIS-HIERARCHY'],
+  'CHK-CONFIRMSHAMING': () => ['ETHICS-CONFIRMSHAMING', 'NN-H2'],
 };
 const AXE_BASIS = {
   'color-contrast': ['WCAG-1.4.3'], 'button-name': ['WCAG-4.1.2'], 'link-name': ['WCAG-2.4.4', 'WCAG-4.1.2'],
@@ -78,6 +83,9 @@ function primaryCapture(screen, platform) {
 // The stack named in PRODUCT.md decides how fixes are worded (rem vs Dynamic Type vs sp vs web view zoom).
 const framingPath = manifest.framingSnapshot ? path.join(runDir, manifest.framingSnapshot) : null;
 const productStacks = framingPath && fs.existsSync(framingPath) ? readProductStack(fs.readFileSync(framingPath, 'utf8')).stacks : [];
+
+// Words in the prototype's languages (deceptive-pattern checks).
+const vocab = loadVocabulary(languagesOf([manifest.language, manifest.pageLanguages]), manifest.vocabulary || {});
 
 for (const screen of manifest.screens) {
   if (screen.kind !== 'html') {
@@ -269,6 +277,11 @@ for (const screen of manifest.screens) {
         recommendation: 'Keep controls inside the safe area: pad bars by the top and bottom insets (safeAreaInset / WindowInsets).',
         seenIn: [tagOf(main)], key: where,
       });
+    }
+
+    // --- deceptive patterns (ETHICS-*) ---
+    for (const f of ethicsFindings({ interactive: mainData.interactive, text: [...mainData.texts.map((t) => t.text), ...mainData.interactive.map((i) => i.name)].join('\n'), pageBg: mainData.pageBg, vocab })) {
+      add({ ...base, ...f, category: 'ethics', seenIn: [tagOf(main)], key: f.rule });
     }
 
     // --- dark appearance ---

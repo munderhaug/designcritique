@@ -31,7 +31,9 @@ Tokens live in the YAML front matter above, loosely modelled on Google's DESIGN.
 (github.com/google-labs-code/design.md) but not identical to it. designcritique reads any colour, spacing, font-size and
 radius values it finds there, whatever the exact key names. It also reads Markdown tables and
 "- name: value" lists under headings such as Colours, Spacing, Typography and Radius: the first
-column is the token name, and a column headed "Dark" holds the dark value.
+column is the token name, and a column headed "Dark" holds the dark value. References such as
+`"{colors.brand}"` (and the W3C DTCG format's `{color.primitive.blue.500}` in a tokens.json) are
+resolved, so semantic roles keep their names.
 
 ## Intent
 

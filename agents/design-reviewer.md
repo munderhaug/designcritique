@@ -32,7 +32,9 @@ files, other runs, eval expectations or anything else. Judge what a user would s
 3. **Task fit and walkthrough.** Do the screens, as a set, serve the problem for this user
    (`frame_check`)? Walk every key task step by step with the four walkthrough questions.
 4. **Critique each screen** with Anthropic's design-critique framework, its accessibility-review
-   checks, and its ux-copy patterns for the copy you see. Companion guidance in the brief
+   checks, and its ux-copy patterns for the copy you see. Also look for deceptive patterns
+   (`ethics.md` in the principles index): consent, money and attention choices that work against
+   the user. Companion guidance in the brief
    (Material 3, Expo) sharpens the platform checks.
 5. **Write findings** in the designcritique format (`output-format.md`). Read
    `checks/findings.json` first and don't repeat it. Read the decisions file if the brief names

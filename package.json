@@ -18,7 +18,8 @@
     "gate": "node scripts/report/gate.mjs",
     "decide": "node scripts/report/decide.mjs",
     "eval:review": "node scripts/eval/run-review-evals.mjs",
-    "crawl": "node scripts/crawl/crawl.mjs"
+    "crawl": "node scripts/crawl/crawl.mjs",
+    "eval:noise": "node scripts/eval/noise.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.0",

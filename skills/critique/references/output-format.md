@@ -65,7 +65,8 @@ Field rules:
 - `screen`: a screen id from the manifest, or `"*"` for the whole set.
 - `rule`: the single most specific principle ID; `basis` lists all that apply, most specific first. IDs come from the principles library.
 - `category`: one of `task-fit, ux, content, visual, layout, typography, color, a11y, platform, tokens`,
-  and in a whole-product review also `journey, ia, scope, consistency, logic, spec, states`.
+  and in a whole-product review also `journey, ia, scope, consistency, logic, spec, states`; `ethics` for
+  deceptive patterns (`ETHICS-*`) in either mode.
 - `level` (review): `screen`, `journey` or `system`. Journey and system findings set `screen: "*"`
   and list `affected_screens` (screen ids from the manifest); journey findings name the `journey`.
 - `move_to` (review): where a misplaced thing should go, as `{ item, from, to, reason }`. It is a
@@ -91,6 +92,13 @@ gate uses the lowest score any critic gave a task, so score what you can defend,
 | 5–6 | A P1 on the path: many users will err or need help |
 | 3–4 | A step fails for the described user, or a must-not-fail step has a P1 |
 | 0–2 | The task can't be done with these screens, or a P0 blocks it |
+
+**Assess before you score.** For each key task, first score `subscores.effectiveness` (can the
+user complete it, with what errors?), `subscores.efficiency` (steps, time, thinking) and
+`subscores.satisfaction` (confidence, trust, effort) 0–10, each on its own, from the success
+criteria in PRODUCT.md. Only then give the task its overall `score`. Separate assessments made
+before a holistic judgement reduce noise (Kahneman, Sibony & Sunstein, *Noise*, 2021: the
+"mediating assessments protocol"). The task score usually sits near the lowest subscore.
 
 A score must agree with the findings and verdict: a task with an open P1 on its path can't
 score above 6; `blocked` means 0–4 and 0–4 means `blocked`; `supported` means 7–10. The validator

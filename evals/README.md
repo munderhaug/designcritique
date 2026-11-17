@@ -24,6 +24,9 @@ mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 - **login**: Seeded flaws (checks): px-only type (no text scaling), 28px close button with no label in the status-bar area, 24px icon-only password toggle, low-contrast helper and legal text, 10px legal text, off-token orange and greys, off-scale spacing, a 420px social row that overflows, no dark mode.
 - **welcome**: Seeded flaws (critic): generic purple-blue gradient hero, emoji used as feature icons, everything centred in identical cards, three competing primary buttons, made-up stats, a hamburger menu as primary navigation on iOS, and a web-style footer link row.
 - **settings**, **trips**: clean. Token-compliant, accessible, dark mode, scalable type.
+- **signup**: Seeded flaws (checks): marketing and data-sharing switches already on, a large filled
+  "accept all" button against a small grey decline link, and a decline option worded to shame.
+- **choices**: clean. The same choices, off by default, with equal-weight accept and reject.
 
 ## Whole-product review (`npm run eval:review`)
 

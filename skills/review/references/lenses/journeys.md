@@ -15,5 +15,8 @@ using the key-task anchors. Look across steps for:
 - **Ways back and dead ends:** use `checks/structure.json`; judge how much they hurt on this
   journey (`JOURNEY-WAY-BACK`, `JOURNEY-DEAD-END`).
 - **Loops:** does the end lead into the next stage the product promises (`JOURNEY-CLOSE`)?
+- **Help and recourse:** where a journey can fail or the app decides something about the user,
+  is a person reachable and is the decision explained with a way to contest it
+  (`JOURNEY-HELP`, `JOURNEY-CONTEST`; Downe, *Good Services*, 2020)?
 - **Peak and end:** is the most stressful step and the ending designed with care
   (`JOURNEY-PEAK-END`; Impeccable's emotional journey)?

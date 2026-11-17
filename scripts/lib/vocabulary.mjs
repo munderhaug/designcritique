@@ -35,6 +35,10 @@ export function loadVocabulary(languages = ['en'], extra = {}) {
     languages: langs,
     unknown: languages.filter((l) => !all[l]),
     avoid: words(pick((v) => v.avoid), false),
+    consent: words(pick((v) => v.consent), false),
+    accept: words(pick((v) => v.accept), false),
+    decline: words(pick((v) => v.decline), false),
+    shaming: pick((v) => v.shaming).length ? new RegExp(pick((v) => v.shaming).map((w) => String(w).replace(/^re:/, '')).join('|'), 'iu') : /(?!)/,
     back: words(pick((v) => v.back), true),
     states: Object.fromEntries(KINDS.map((k) => [k, words(states[k], false)])),
   };

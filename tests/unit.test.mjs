@@ -461,3 +461,53 @@ test('review report: IA map and ranked proposals', () => {
   assert.deepEqual(ranked.map((p) => [p.id, p.item, p.sources.length]), [['M2', 'Card lost', 2], ['S1', 'Crypto trading', 1], ['M1', 'Export statements', 1]]);
   assert.equal(ranked.find((p) => p.id === 'M1').decision.decision, 'reject');
 });
+
+test('tokens: DTCG aliases resolve and semantic roles keep their names', () => {
+  const file = tmp('tokens.json', JSON.stringify({ color: { $type: 'color',
+    primitive: { blue: { 500: { $value: '#3b82f6' } }, gray: { 900: { $value: '#111827' }, 50: { $value: '#f9fafb' } } },
+    semantic: { primary: { $value: '{color.primitive.blue.500}' }, surface: { $value: '{color.primitive.gray.50}' }, 'on-surface': { $value: '{color.semantic.text}' }, text: { $value: '{color.primitive.gray.900}' }, loop: { $value: '{color.semantic.loop}' } } } }));
+  const t = loadTokens(file);
+  assert.equal(t.colorByName.get('primary'), '#3b82f6');
+  assert.equal(t.colorByName.get('surface'), '#f9fafb');
+  assert.equal(t.colorByName.get('on-surface'), '#111827', 'chains of aliases resolve');
+  assert.ok(!t.colorByName.has('loop'), 'cycles are dropped, not looped');
+  const md = tmp('DESIGN.md', '---\ncolors:\n  brand: "#2457D6"\n  primary: "{colors.brand}"\n---\n# X\n');
+  assert.equal(loadTokens(md).colorByName.get('primary'), '#2457d6');
+});
+
+import { ethicsFindings } from '../scripts/lib/ethics.mjs';
+
+test('ethics: pre-ticked consent, asymmetric choice, confirmshaming; none on a plain dialog', () => {
+  const vocab = loadVocabulary(['en']);
+  const c = (name, extra = {}) => ({ name, box: { x: 16, y: 600, w: 361, h: 50 }, style: { bg: null, size: 17, weight: '400' }, ...extra });
+  const seeded = ethicsFindings({
+    pageBg: '#ffffff', text: 'Get offers from our partners',
+    interactive: [
+      c('Send me offers by email', { type: 'checkbox', checked: true }),
+      c('Accept all and continue', { style: { bg: '#2457d6', size: 17, weight: '600' } }),
+      c("No thanks, I don't like saving money", { box: { x: 120, y: 670, w: 150, h: 20 }, style: { bg: null, size: 12, weight: '400' } }),
+    ],
+    vocab,
+  });
+  assert.deepEqual(seeded.map((f) => f.rule).sort(), ['CHK-ASYMMETRIC-CHOICE', 'CHK-CONFIRMSHAMING', 'CHK-PRESELECTED-CONSENT']);
+  const plain = ethicsFindings({
+    pageBg: '#ffffff', text: 'Delete this photo?',
+    interactive: [c('Allow', { style: { bg: '#2457d6', size: 17, weight: '600' } }), c('Cancel', { box: { x: 16, y: 660, w: 80, h: 44 } }), c('Push notifications', { role: 'switch', checked: true })],
+    vocab,
+  });
+  assert.equal(plain.length, 0, 'not a consent screen; notifications are not marketing consent');
+});
+
+import { compareJudgements } from '../scripts/lib/noise.mjs';
+
+test('noise: task-score spread, verdict agreement and finding overlap between two judgements', () => {
+  const f = (id, screen, rule, title, severity) => ({ id, screen, rule, basis: [rule], title, severity });
+  const a = { tasks: [{ task: 'Pay', score: 3, verdict: 'blocked' }, { task: 'Log in', score: 6, verdict: 'at-risk' }], findings: [f('a1', 'checkout', 'IOS-DESTRUCTIVE', 'Delete looks like Pay', 'P1'), f('a2', 'login', 'NN-H9', 'Vague error', 'P2')] };
+  const b = { tasks: [{ task: 'pay', score: 4, verdict: 'blocked' }, { task: 'Log in', score: 9, verdict: 'supported' }], findings: [f('b1', 'checkout', 'IOS-DESTRUCTIVE', 'Delete styled like Pay', 'P2'), f('b2', 'feed', 'NN-H1', 'No unread state', 'P3')] };
+  const r = compareJudgements(a, b);
+  assert.equal(r.meanScoreDiff, 2);
+  assert.equal(r.maxScoreDiff, 3);
+  assert.equal(r.verdictAgreement, 0.5);
+  assert.deepEqual(r.findings, { a: 2, b: 2, both: 1, overlap: 1 / 3 });
+  assert.equal(r.severityAgreement, 0);
+});

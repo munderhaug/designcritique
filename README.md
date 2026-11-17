@@ -29,6 +29,7 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan, pinned in package.json | Running it and importing its findings for HTML mockups, mobile-aware severities |
 | Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
 | Merged report | | One finding per problem: the same problem from both critics (or a check and a critic) is merged and marked as higher confidence; a check failing on many screens is reported once with the screen list. Severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
+| Deceptive patterns | Gray et al. (CHI 2018), Mathur et al. (CSCW 2019), Brignull (2023), CJEU *Planet49* (2019), EDPB Guidelines 03/2022 | `ETHICS-*` principles; checks for pre-ticked consent, lopsided accept/decline choices and confirmshaming on every HTML screen, in the prototype's language; reviewers look for obstruction, sneaking, false urgency, forced actions and nagging |
 | Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved inside a run (exit 2) |
 | Independent judging | | The reviewer runs on a model you choose (`critics.judge_model`), ideally not the one that made the mockups; extra judges on other tools (`critics.external`, e.g. Codex) use the same brief and format |
 | Scores and gate | | Each critic scores every key task 0â€“10 against fixed anchors; the gate fails on open findings at `fail_on` or a key task below `target_score` (lowest critic counts). `gate.mjs` exits 2 for CI or a Stop hook |
@@ -159,6 +160,8 @@ node scripts/report/gate.mjs --run .designcritique/runs/<run>   # exit 2 with re
 
 ```bash
 npm run eval     # capture, checks and scoring on the eval set (no model)
+npm run eval:noise -- prepare --run <run> --out <copy>   # then run the critics on the copy, and:
+npm run eval:noise -- compare --a <run> --b <copy>       # how much the critics' judgement varies between runs
 npm run eval:review   # whole-product review: crawl, journeys, structure and consistency on a seeded and a clean prototype
 npm test         # unit tests
 ```

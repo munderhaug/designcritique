@@ -104,6 +104,27 @@
             "minimum": 0,
             "maximum": 10,
             "description": "0-10 for this key task, per the anchors in output-format.md"
+          },
+          "subscores": {
+            "type": "object",
+            "description": "Independent 0-10 assessments made before the task score (ISO 9241-11; mediating assessments, Kahneman, Sibony & Sunstein, Noise, 2021).",
+            "properties": {
+              "effectiveness": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "efficiency": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "satisfaction": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              }
+            }
           }
         }
       }
@@ -143,6 +164,7 @@
               "color",
               "consistency",
               "content",
+              "ethics",
               "ia",
               "journey",
               "layout",

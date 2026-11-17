@@ -125,6 +125,7 @@ export function analyzePage({ frameAttr }) {
         radius: Math.round(parseFloat(s.borderTopLeftRadius) || 0), weight: s.fontWeight, size: Math.round(parseFloat(s.fontSize)),
       },
       icon: iconSignature(el),
+      checked: el.checked === true || el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-pressed') === 'true',
     });
   }
 
@@ -244,6 +245,7 @@ export function analyzePage({ frameAttr }) {
     scrollHeight: frameAttr ? root.scrollHeight : document.documentElement.scrollHeight,
     hasViewportMeta,
     lang: document.documentElement.lang || null,
+    pageBg: effectiveBg(document.body),
     safeAreaCss,
     viewportFitCover,
     title: document.title || null,
