@@ -64,7 +64,12 @@ Field rules:
 - `frame_check` and `tasks`: design-reviewer; Impeccable puts its scores in `frame_check.summary`. `comparisons`: only when screens share a `group`.
 - `screen`: a screen id from the manifest, or `"*"` for the whole set.
 - `rule`: the single most specific principle ID; `basis` lists all that apply, most specific first. IDs come from the principles library.
-- `category`: one of `task-fit, ux, content, visual, layout, typography, color, a11y, platform, tokens`.
+- `category`: one of `task-fit, ux, content, visual, layout, typography, color, a11y, platform, tokens`,
+  and in a whole-product review also `journey, ia, scope, consistency, logic, spec, states`.
+- `level` (review): `screen`, `journey` or `system`. Journey and system findings set `screen: "*"`
+  and list `affected_screens` (screen ids from the manifest); journey findings name the `journey`.
+- `move_to` (review): where a misplaced thing should go, as `{ item, from, to, reason }`. It is a
+  proposal for the person, never an edit.
 - `severity`: `P0`–`P3`, per severity.md.
 - `evidence`: what is visible and where, naming the screenshot file and variant. No evidence, no finding.
 - `impact`: which user, in which task, and how. Use the words of PRODUCT.md.
@@ -91,3 +96,15 @@ A score must agree with the findings and verdict: a task with an open P1 on its 
 score above 6; `blocked` means 0–4 and 0–4 means `blocked`; `supported` means 7–10. The validator
 warns when they disagree. Model judges tend to grade generously; when
 between two scores, pick the lower and say why in `summary`.
+
+## Review mode (/designcritique:review)
+
+Lens reviewers add, alongside `findings`:
+
+- `journeys`: one per journey they judged: `{ journey, verdict, score, summary, steps: [{ step,
+  screen, action, verdict: ok | friction | blocked, note, finding_ids }] }`.
+- `moves`: proposed structural moves: `{ item, from, to, reason, impact, finding_id }`.
+- `scope`: feature against problem: `{ feature, verdict: keep | cut | add | move | defer |
+  rethink, job, task, phase, reason, finding_id }`.
+
+Scores for journeys use the same anchors as key tasks.

@@ -45,6 +45,8 @@ export function loadConfig(configPath) {
     variants: raw.variants || DEFAULT_VARIANTS,
     requires: { darkMode: false, ...(raw.requires || {}) },
     taste: expandImages(raw.taste, baseDir),
+    language: raw.language ? [].concat(raw.language).map(String) : [],
+    vocabulary: raw.vocabulary || {},
     critics: normalizeCritics(raw.critics),
     gate: normalizeGate(raw.gate),
     iterate: { max_rounds: Number(raw.iterate?.max_rounds ?? 3) },
@@ -184,7 +186,7 @@ function normalizeStates(m, rel) {
 }
 
 // journeys: named end-to-end paths, replayed tap by tap from a start mockup and captured at
-// every step. `steps` items are accessible names to tap ("Krise") or step objects.
+// every step. `steps` items are accessible names to tap ("Checkout") or step objects.
 function normalizeJourneys(list, mockups) {
   if (list == null) return [];
   if (!Array.isArray(list)) throw new Error('journeys must be a list');

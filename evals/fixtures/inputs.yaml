@@ -25,7 +25,7 @@ mockups:
           - click: "text=Save"
           - wait: "#saved"
       - id: help
-        title: Crisis help
+        title: Help screen
         appearance: dark-only
         steps:
           - goto: "#help"

@@ -36,12 +36,15 @@ const manifest = {
   references: cfg.references.filter((r) => fs.existsSync(r)),
   requires: cfg.requires,
   critics: cfg.critics,
+  language: cfg.language,
+  vocabulary: cfg.vocabulary,
   gate: cfg.gate,
   iterate: cfg.iterate,
   taste: [],
   devices: cfg.devices,
   variants: cfg.variants,
   screens: [],
+  pageLanguages: [],
   warnings: [],
 };
 
@@ -136,6 +139,7 @@ async function captureHtml(browser, screen) {
         const data = await page.evaluate(analyzePage, { frameAttr });
         data.insets = page.dcInsets || null;
         if (!frameMode) data.fingerprint = await pageFingerprint(page);
+        if (data.lang && !manifest.pageLanguages.includes(data.lang)) manifest.pageLanguages.push(data.lang);
         let fullPath = null;
         if (!frameMode && data.scrollHeight > preset.height * 1.1) {
           fullPath = path.join(runDir, 'screenshots', `${tag}__full.png`);

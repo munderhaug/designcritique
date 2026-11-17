@@ -278,3 +278,116 @@ test('tokens: read from Markdown tables and lists when there is no front matter'
   assert.deepEqual(t.radii, [12]);
   assert.equal(loadTokens(tmp('DESIGN.md', '# Kit\n\nNo tokens here.\n')), null);
 });
+
+import { productModel } from '../scripts/lib/product.mjs';
+
+test('product model: journeys, concept model, scope, feature map, navigation', () => {
+  const md = `# Bikes
+## Journeys
+<!-- 1. **example** (during): A → B -->
+1. **report-crash** (must not fail, during, leads to repair): Home → Help → I had a crash → Send → Status
+2. **repair** (after): Status -> Book repair -> Confirm
+
+## Concept model
+| Object | Relates to | Actions |
+|---|---|---|
+| Rider | bikes, trips | sign up, edit |
+| Trip | rider; bike | start, end |
+
+## Scope
+### MVP
+- Crash report
+- Trips
+### Later
+- Group rides
+### Out of scope
+- Insurance sales
+
+## Feature map
+| Feature | Problem part | Key task | Phase | Seen as |
+|---|---|---|---|---|
+| Crash report | Not knowing what to do after a fall | Task 1 | MVP | Help, I had a crash |
+| Ride history | Losing track of rides | Task 3 | v1 | Ride history |
+
+## Navigation
+1. Home
+2. Trips (tab)
+3. Help
+`;
+  const p = productModel(md);
+  assert.equal(p.journeys.length, 2);
+  assert.deepEqual(p.journeys[0], { id: 'report-crash', title: 'report-crash', critical: true, stage: 'during', leads_to: 'repair', steps: ['Home', 'Help', 'I had a crash', 'Send', 'Status'] });
+  assert.deepEqual(p.journeys[1].steps, ['Status', 'Book repair', 'Confirm']);
+  assert.deepEqual(p.concepts[1], { object: 'Trip', relations: ['rider', 'bike'], actions: ['start', 'end'], attributes: [] });
+  assert.deepEqual(p.scope, { mvp: ['Crash report', 'Trips'], v1: [], later: ['Group rides'], out: ['Insurance sales'] });
+  assert.deepEqual(p.features[0].seenAs, ['Crash report', 'Help', 'I had a crash']);
+  assert.equal(p.features[1].phase, 'v1');
+  assert.deepEqual(p.navigation, ['Home', 'Trips', 'Help']);
+});
+
+import { mentions, stateKindsOf, coverage, screenGraph, structureFindings } from '../scripts/lib/structure.mjs';
+
+test('structure: mentions, state kinds, coverage, graph and continuity findings', () => {
+  assert.ok(mentions('- button "Öffnungszeiten ändern"', 'öffnungszeiten ändern'), 'whole words in any script');
+  assert.ok(!mentions('Tripadvisor', 'Trip'));
+  assert.deepEqual(stateKindsOf('No rides yet'), ['empty']);
+  assert.deepEqual(stateKindsOf('Noch keine Fahrten', '', loadVocabulary(['en', 'de'])), ['empty']);
+  assert.deepEqual(stateKindsOf('- heading "Home"'), ['ideal']);
+  const inventory = {
+    states: [
+      { id: 's01', title: 'Home', depth: 0, snapshot: 'Home Help Trips', actions: [{ label: 'Help', to: 's02' }, { label: 'Trips', to: 's03' }] },
+      { id: 's02', title: 'Help', depth: 1, snapshot: 'I had a crash', actions: [{ label: 'I had a crash', to: 's04' }] },
+      { id: 's03', title: 'Trips', depth: 1, snapshot: 'Trips Home', actions: [{ label: 'Home', to: 's01' }] },
+      { id: 's04', title: 'Sent', depth: 2, snapshot: 'Sent', actions: [{ label: 'OK', to: 's04', effect: 'no visible change' }] },
+    ],
+    screens: [{ screenKey: 'a', title: 'Home', states: ['s01'] }, { screenKey: 'b', title: 'Help', states: ['s02'] }, { screenKey: 'c', title: 'Trips', states: ['s03'] }, { screenKey: 'd', title: 'Sent', states: ['s04'] }],
+    transitions: [{ from: 's01', to: 's02', label: 'Help' }, { from: 's01', to: 's03', label: 'Trips' }, { from: 's02', to: 's04', label: 'I had a crash' }, { from: 's03', to: 's01', label: 'Home' }],
+  };
+  const model = {
+    features: [{ feature: 'Crash report', seenAs: ['Crash report', 'I had a crash'], task: 'Task 1' }, { feature: 'Group rides', seenAs: ['Ride together'], task: '' }, { feature: 'Ride history', seenAs: ['Ride history'] }],
+    journeys: [{ id: 'report-crash', critical: true, steps: ['Help', 'I had a crash', 'Send'], leads_to: 'repair' }, { id: 'repair', steps: ['Book repair', 'Confirm'] }],
+    scope: { out: ['Insurance sales'] }, navigation: ['Home', 'Trips', 'Help'],
+  };
+  const screens = [{ id: 'home', title: 'Home', text: 'Home Help Trips Ride history Insurance sales', screenKey: 'a' }, { id: 'help', title: 'Help', text: 'I had a crash', screenKey: 'b' }];
+  const journeysRun = [{ id: 'report-crash', title: 'Report a crash', critical: true, steps: ['Help', 'I had a crash', 'Send'], screens: ['j0', 'j1', 'j2'], brokenAt: 3, error: 'nothing visible named "Send"' }];
+  const cov = coverage({ screens, model, journeysRun, inventory });
+  assert.equal(cov.share, 2 / 3);
+  assert.equal(cov.features.find((f) => f.feature === 'Ride history').reachable, false);
+  assert.deepEqual(cov.journeys.map((j) => [j.id, j.scripted, j.completed]), [['report-crash', true, false], ['repair', false, false]]);
+  const graph = screenGraph(inventory);
+  const f = structureFindings({ model, cov, inventory, graph, journeysRun, startText: 'Home Help Trips', corpus: screens.map((s) => s.text).join('\n') });
+  const rules = f.map((x) => x.rule).sort();
+  assert.deepEqual(rules, ['CHK-DEAD-END', 'CHK-JOURNEY-BROKEN', 'CHK-NO-WAY-BACK', 'CHK-ORPHAN', 'CHK-SCOPE-OUT', 'CHK-SPEC-NAV-ORDER']);
+  assert.equal(f.find((x) => x.rule === 'CHK-JOURNEY-BROKEN').severity, 'P0');
+  assert.deepEqual(f.find((x) => x.rule === 'CHK-NO-WAY-BACK').affected.sort(), ['Help', 'Sent']);
+});
+
+import { navigationOf } from '../scripts/lib/structure.mjs';
+
+test('structure: navigation order is read from the navigation landmark', () => {
+  const snap = '- banner:\n  - heading "Home" [level=1]\n- main:\n  - paragraph: 12 items in stock\n- navigation "Main":\n  - button "Home"\n  - button "Plan"\n  - button "Stock"\n- contentinfo';
+  assert.equal(navigationOf(snap), 'Home\nPlan\nStock');
+  const model = { features: [], journeys: [], scope: {}, navigation: ['Home', 'Stock', 'Plan'] };
+  const f = structureFindings({ model, cov: { features: [] }, startText: snap });
+  assert.equal(f[0].rule, 'CHK-SPEC-NAV-ORDER');
+  assert.match(f[0].evidence, /shows: Home, Plan, Stock/);
+});
+
+import { loadVocabulary, languagesOf } from '../scripts/lib/vocabulary.mjs';
+
+test('vocabulary: per-language words, English always, project additions', () => {
+  assert.deepEqual(languagesOf(['de-DE', 'no']), ['en', 'de', 'nb']);
+  const en = loadVocabulary(['en']);
+  assert.ok(en.avoid.test('Delete account'));
+  assert.ok(!en.avoid.test('Deleted items'));
+  assert.ok(en.back.test(' Back '));
+  assert.ok(!en.back.test('Back to start'));
+  assert.ok(en.states.partial.test('Step 2 of 5'));
+  assert.ok(!en.states.empty.test('Tom Smith'));
+  const de = loadVocabulary(['en', 'de'], { avoid: ['Archivieren'] });
+  assert.ok(de.avoid.test('Konto löschen'));
+  assert.ok(de.avoid.test('archivieren'));
+  assert.ok(de.states.offline.test('Keine Verbindung'));
+  assert.ok(de.states.partial.test('2 von 5'));
+  assert.deepEqual(loadVocabulary(['en', 'xx']).unknown, ['xx']);
+});

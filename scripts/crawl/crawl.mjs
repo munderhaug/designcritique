@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 import { loadConfig, parseArgs, writeJson, timestamp, slug, DEVICE_PRESETS } from '../lib/config.mjs';
 import { expandMockup } from '../lib/sources.mjs';
 import { launch, preparePage, pageFingerprint, settle, runSetupAndSteps } from '../lib/browser.mjs';
+import { loadVocabulary, languagesOf } from '../lib/vocabulary.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const cfg = loadConfig(args.config || 'mockups.yaml');
@@ -23,9 +24,6 @@ const runDir = path.resolve(args.out || path.join(cfg.output, timestamp()));
 const opts = { ...(cfg.crawl || { start: cfg.mockups[0].id, max_states: 60, max_actions: 40, max_depth: 8, avoid: [], fill: {} }) };
 if (args['max-states']) opts.max_states = Number(args['max-states']);
 
-// Controls the crawler never presses: destructive, paying, signing out, leaving.
-const AVOID = /\b(delete|remove|erase|slett|fjern|log ?out|logg ut|sign ?out|reset|tilbakestill|nullstill|pay|betal|buy|kjøp|purchase|unsubscribe|avslutt abonnement)\b/i;
-const avoided = (name) => AVOID.test(name) || opts.avoid.some((a) => name.toLowerCase().includes(a.toLowerCase()));
 
 const startMockup = cfg.mockups.find((m) => m.id === opts.start);
 const page0 = expandMockup(startMockup, runDir).screens[0];
@@ -35,6 +33,10 @@ const preset = DEVICE_PRESETS[page0.platform === 'android' ? 'android' : 'ios'].
 fs.mkdirSync(path.join(runDir, 'crawl'), { recursive: true });
 
 const browser = await launch();
+// Controls the crawler never presses (destructive, paying, signing out), in the prototype's
+// languages (catalog/vocabulary.yaml, <html lang>, `language:` and `vocabulary:` in mockups.yaml).
+let vocab = null;
+const avoided = (name) => vocab.avoid.test(name) || opts.avoid.some((a) => name.toLowerCase().includes(a.toLowerCase()));
 async function open(steps) {
   const ctx = await browser.newContext({ viewport: { width: preset.width, height: preset.height }, deviceScaleFactor: 1, hasTouch: true, colorScheme: 'light' });
   ctx.on('page', (p) => { if (p !== ctx.pages()[0]) p.close().catch(() => {}); });
@@ -85,7 +87,7 @@ const addState = async (page, fp, steps, depth) => {
   const id = `s${String(ordered.length + 1).padStart(2, '0')}-${slug(fp.title).slice(0, 30)}`;
   const shot = path.join(runDir, 'crawl', `${id}.png`);
   await page.screenshot({ path: shot }).catch(() => {});
-  const st = { id, title: fp.title, kind: fp.kind, screenKey: fp.screenKey, stateKey: fp.stateKey, depth, steps, screenshot: path.relative(runDir, shot), actions: [] };
+  const st = { id, title: fp.title, kind: fp.kind, screenKey: fp.screenKey, stateKey: fp.stateKey, depth, steps, screenshot: path.relative(runDir, shot), snapshot: fp.snapshot, actions: [] };
   states.set(fp.stateKey, st);
   ordered.push(st);
   return st;
@@ -94,6 +96,9 @@ const addState = async (page, fp, steps, depth) => {
 try {
   {
     const { ctx, page } = await open([]);
+    const lang = await page.evaluate(() => document.documentElement.lang || null);
+    vocab = loadVocabulary(languagesOf([cfg.language, lang]), cfg.vocabulary);
+    if (vocab.unknown.length) process.stderr.write(`warning: no vocabulary for ${vocab.unknown.join(', ')} in catalog/vocabulary.yaml; using ${vocab.languages.join(', ')}\n`);
     await addState(page, await pageFingerprint(page), [], 0);
     await ctx.close();
   }
@@ -144,6 +149,7 @@ const inventory = {
   generatedAt: new Date().toISOString(),
   start: opts.start,
   device: preset.name,
+  languages: vocab?.languages || ['en'],
   limits: { max_states: opts.max_states, max_actions: opts.max_actions, max_depth: opts.max_depth, reached: limited },
   method: 'Event-driven state-flow crawl (Crawljax) with accessibility-snapshot state IDs (DroidBot-style screen and state keys)',
   states: ordered,

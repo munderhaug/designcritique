@@ -56,7 +56,7 @@ directly on a mockup apply to all its states. If a step fails, capture names the
 that screen. Animations are frozen before the steps run, so states settle immediately.
 
 `appearance: dark-only` (or `light-only`), on a mockup or a state, marks a screen that has one
-appearance on purpose, such as a crisis screen, so a missing dark mode isn't reported.
+appearance on purpose, such as an emergency or night screen, so a missing dark mode isn't reported.
 
 Capture emulates each device's system-bar insets (status bar or Dynamic Island, home indicator
 or gesture bar), so pages that pad with `env(safe-area-inset-*)` are judged as on a phone. As on

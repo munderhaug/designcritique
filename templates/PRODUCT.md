@@ -51,3 +51,42 @@ ios
 ## Accessibility & Inclusion
 
 <Known user needs or required standard, e.g. WCAG 2.2 AA, large text, screen readers.>
+
+## Journeys
+
+<!-- End to end, across before, during and after. One per line:
+     N. **id** (must not fail, before|during|after, leads to <id>): Step → Step → Step
+     Steps are the labels the user taps or the screens they pass. -->
+1. **<journey-id>** (must not fail, during): <Start> → <Step> → <Step> → <End>
+
+## Concept model
+
+<!-- The user's objects and how they relate (OOUX: objects, relationships, actions, attributes). -->
+| Object | Relates to | Actions | Attributes |
+|---|---|---|---|
+| <Object> | <other objects> | <what the user does with it> | <what it has> |
+
+## Scope
+
+<!-- From the roadmap. Phases: MVP, v1, later, out of scope. -->
+### MVP
+- <feature>
+### v1
+- <feature>
+### Later
+- <feature>
+### Out of scope
+- <feature>
+
+## Feature map
+
+<!-- Each feature linked to the problem part and key task it serves. "Seen as" lists the labels or
+     headings that show the feature on screen, so the review can tell whether it was captured. -->
+| Feature | Problem part | Key task | Phase | Seen as |
+|---|---|---|---|---|
+| <Feature> | <which part of ## Problem> | <Task n> | MVP | <label, heading> |
+
+## Navigation
+
+<!-- Optional: the top-level destinations in order (tab bar or home), so drift is caught. -->
+1. <Destination>

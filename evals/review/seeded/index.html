@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>App</title>
+<style>
+  :root { --surface: #FFFFFF; --on-surface: #16181D; --muted: #5B6170; --container: #F3F5F9; --primary: #2457D6; --on-primary: #FFFFFF; --error: #C62828; }
+  @media (prefers-color-scheme: dark) { :root { --surface: #121418; --on-surface: #ECEEF3; --muted: #A8AEBB; --container: #1E2128; --primary: #8FB0FF; --on-primary: #0B1F55; --error: #FF8A80; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 1rem/1.5 system-ui, sans-serif; background: var(--surface); color: var(--on-surface); padding-bottom: 5rem; }
+  header { padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+  header h1 { flex: 1; font-size: 1.75rem; }
+  main { padding: 0 1rem 1rem; display: grid; gap: 0.75rem; }
+  .card { background: var(--container); border-radius: 0.75rem; padding: 1rem; display: grid; gap: 0.5rem; }
+  .muted { color: var(--muted); font-size: 0.875rem; }
+  button { font: inherit; min-height: 2.75rem; border: 0; border-radius: 0.75rem; padding: 0 1rem; background: var(--container); color: var(--on-surface); text-align: left; }
+  button.primary { background: var(--primary); color: var(--on-primary); text-align: center; font-weight: 600; }
+  button.primary-b { background: var(--primary); color: var(--on-primary); border-radius: 999px; font-weight: 700; text-align: center; }
+  button.primary-c { background: transparent; color: var(--primary); border: 2px solid var(--primary); border-radius: 0.25rem; text-align: center; font-weight: 600; }
+  button.icon { display: flex; align-items: center; gap: 0.5rem; }
+  button.icon svg { width: 1.5rem; height: 1.5rem; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--container); padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; background: none; text-align: center; border-radius: 0; min-height: 3.5rem; }
+  nav button[aria-current="page"] { color: var(--primary); font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="currentColor"/></symbol></svg>
+
+<section data-view="home">
+  <header><h1>Home</h1><button data-go="menu">Menu</button></header>
+  <main>
+    <div class="card"><strong>Your money</strong><p>Balance 1,240.00</p><p class="muted">3 accounts</p></div>
+    <button class="primary" data-go="help">Help</button>
+    <button class="icon" data-go="security"><svg><use href="#shield"/></svg>Security</button>
+    <button data-go="accounts">Overview</button>
+  </main>
+</section>
+<section data-view="accounts" hidden>
+  <header><h1>Accounts</h1></header>
+  <main>
+    <p>Balance 1,204.00</p>
+    <div class="card"><strong>Everyday account</strong><p class="muted">Main account</p></div>
+    <div class="card"><strong>Savings</strong><p class="muted">Rainy day</p></div>
+    <button class="primary-b" data-go="open">Open a wallet</button>
+  </main>
+</section>
+<section data-view="open" hidden>
+  <header><h1>Open an account</h1><button data-go="accounts">Cancel</button></header>
+  <main>
+    <label for="name">Account name</label><input id="name"><button class="primary-c" data-go="accounts">Save</button>
+  </main>
+</section>
+<section data-view="cards" hidden>
+  <header><h1>Cards</h1></header>
+  <main>
+    <div class="card"><strong>Debit card</strong><p class="muted">Ends in 4821</p></div>
+    <button data-go="order">Order new card</button>
+    <button data-go="home">Overview</button>
+  </main>
+</section>
+<section data-view="order" hidden>
+  <header><h1>Order new card</h1><button data-go="cards">Cancel</button></header>
+  <main>
+    <p>A new card arrives in 5 working days.</p><button class="primary" data-go="cards">Confirm</button>
+  </main>
+</section>
+<section data-view="security" hidden>
+  <header><h1>Security</h1><button data-go="home">Back</button></header>
+  <main>
+    <p>Two-step sign-in is on.</p>
+  </main>
+</section>
+<section data-view="help" hidden>
+  <header><h1>Help</h1></header>
+  <main>
+    <button class="icon" data-go="lost"><svg><use href="#shield"/></svg>Card lost</button>
+    <button data-go="stolen">Card stolen</button>
+  </main>
+</section>
+<section data-view="lost" hidden>
+  <header><h1>Card lost</h1></header>
+  <main>
+    <ol><li>Freeze the card</li><li>Check recent payments</li><li>Call us if you see fraud</li></ol>
+    <button class="primary" data-go="done">Done</button>
+  </main>
+</section>
+<section data-view="stolen" hidden>
+  <header><h1>Card stolen</h1></header>
+  <main>
+    <p>Freeze the card and report it to the police.</p><button class="primary" data-go="done">Done</button>
+  </main>
+</section>
+<section data-view="done" hidden>
+  <header><h1>Card frozen</h1></header>
+  <main>
+    <p>Nobody can use the card now.</p>
+  </main>
+</section>
+<section data-view="menu" hidden>
+  <header><h1>Menu</h1><button data-go="home">Close</button></header>
+  <main>
+    <button data-go="more">More</button><button data-go="crypto">Crypto trading</button>
+  </main>
+</section>
+<section data-view="crypto" hidden>
+  <header><h1>Crypto trading</h1><button data-go="menu">Back</button></header>
+  <main>
+    <p>Buy and sell coins.</p>
+  </main>
+</section>
+<section data-view="more" hidden>
+  <header><h1>More</h1><button data-go="menu">Back</button></header>
+  <main>
+    <button data-go="advanced">Advanced</button>
+  </main>
+</section>
+<section data-view="advanced" hidden>
+  <header><h1>Advanced</h1><button data-go="more">Back</button></header>
+  <main>
+    <button data-go="export">Export statements</button>
+  </main>
+</section>
+<section data-view="export" hidden>
+  <header><h1>Export statements</h1><button data-go="advanced">Back</button></header>
+  <main>
+    <p>Download your statements as a file.</p>
+  </main>
+</section>
+
+<nav aria-label="Main" data-tabs>
+  <button data-go="home">Home</button>
+  <button data-go="cards">Cards</button>
+  <button data-go="accounts">Accounts</button>
+</nav>
+
+<script>
+  const tabs = ['home', 'accounts', 'cards'];
+  const show = (view) => {
+    for (const s of document.querySelectorAll('[data-view]')) s.hidden = s.dataset.view !== view;
+    const nav = document.querySelector('[data-tabs]');
+    nav.hidden = !tabs.includes(view);
+    for (const b of nav.querySelectorAll('button')) { b.removeAttribute('aria-current'); if (b.dataset.go === view) b.setAttribute('aria-current', 'page'); }
+  };
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) { location.hash = b.dataset.go; } });
+  window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'home'));
+  show(location.hash.slice(1) || 'home');
+</script>
+</body>
+</html>

@@ -28,10 +28,15 @@ explains each one.
    already answered. Use the question tool when available.
 3. **Tag evidence.** Mark each added statement `[confirmed]`, `[inferred]` (name the clue) or
    `[assumption]` (say what changes if it's wrong). Never invent research, personas or numbers.
-4. **Point at research when it's thin.** If key tasks rest on assumptions, suggest Anthropic's
+4. **For a whole-product review, add the product sections** (`## Journeys`, `## Concept model`,
+   `## Scope`, `## Feature map`, optionally `## Navigation`; formats in the template). Read the
+   project's documents first (roadmap, spec, content guide, DESIGN.md, decisions) and derive them,
+   naming the source document for each line; then ask only about what's missing, at most three
+   questions at a time. If mockups.yaml has no `journeys:`, offer to write them from `## Journeys`.
+5. **Point at research when it's thin.** If key tasks rest on assumptions, suggest Anthropic's
    `user-research` skill (design plugin) or the `hcd-interviewer` skill to plan real interviews.
    If Mobbin or Refero is connected, looking at how shipped apps handle the key tasks helps make
    them concrete; record what you learn as `[inferred]`.
-5. **Check before finishing.** The file names a specific primary user, a problem without a
+6. **Check before finishing.** The file names a specific primary user, a problem without a
    solution in it, ranked key tasks with one must-not-fail, and judgeable success criteria.
    Then report in two or three lines what changed and which assumptions are open.

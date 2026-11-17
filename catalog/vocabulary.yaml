@@ -1,0 +1,84 @@
+# Words the plugin needs to recognise in a prototype's own language: controls the crawler must
+# not press, generic navigation labels, and words that show a screen's state (empty, error...).
+# Languages come from the pages' <html lang> or `language:` in mockups.yaml; English is always
+# included. Add words for a project with `vocabulary:` in mockups.yaml (same keys), or add a
+# language here. Entries are matched as whole words or phrases, case-insensitively; an entry
+# starting with "re:" is a regular expression.
+
+en:
+  avoid: [delete, remove, erase, log out, logout, sign out, reset, pay, buy, purchase, checkout, unsubscribe, cancel subscription, deactivate, close account]
+  back: [back, close, cancel, done, ok, save, dismiss]
+  of: of
+  states:
+    empty: [empty, nothing here, nothing yet, no items, no results, nothing to show, "re:no \\w+ yet"]
+    error: [error, failed, could not, "couldn't", something went wrong, declined]
+    loading: [loading, please wait]
+    offline: [offline, no connection, no internet]
+    first-run: [welcome, get started, first time, onboarding]
+    partial: [incomplete, almost done, partially]
+de:
+  avoid: [löschen, entfernen, abmelden, ausloggen, zurücksetzen, bezahlen, kaufen, kündigen]
+  back: [zurück, schließen, abbrechen, fertig, speichern]
+  of: von
+  states:
+    empty: [leer, nichts hier, noch keine, keine einträge]
+    error: [fehler, fehlgeschlagen, konnte nicht]
+    loading: [lädt, wird geladen]
+    offline: [offline, keine verbindung, kein internet]
+    first-run: [willkommen, erste schritte, "los geht's"]
+    partial: [unvollständig, fast fertig]
+fr:
+  avoid: [supprimer, effacer, déconnexion, se déconnecter, réinitialiser, payer, acheter, se désabonner]
+  back: [retour, fermer, annuler, terminé, enregistrer]
+  of: sur
+  states:
+    empty: [vide, rien ici, pas encore, aucun élément]
+    error: [erreur, échec, impossible de]
+    loading: [chargement]
+    offline: [hors ligne, pas de connexion]
+    first-run: [bienvenue, commencer]
+    partial: [incomplet, presque terminé]
+es:
+  avoid: [eliminar, borrar, cerrar sesión, restablecer, pagar, comprar, darse de baja]
+  back: [atrás, volver, cerrar, cancelar, listo, guardar]
+  of: de
+  states:
+    empty: [vacío, nada aquí, aún no hay]
+    error: [error, falló, no se pudo]
+    loading: [cargando]
+    offline: [sin conexión, fuera de línea]
+    first-run: [bienvenido, bienvenida, empezar, comenzar]
+    partial: [incompleto, casi listo]
+nb:
+  avoid: [slett, fjern, logg ut, tilbakestill, nullstill, betal, kjøp, avslutt abonnement]
+  back: [tilbake, lukk, avbryt, ferdig, lagre]
+  of: av
+  states:
+    empty: [tomt, ingenting her, "re:ingen \\w+ ennå"]
+    error: [feil, mislyktes, kunne ikke]
+    loading: [laster, henter]
+    offline: [frakoblet, ingen nett, ingen internett, uten nett]
+    first-run: [velkommen, kom i gang]
+    partial: [ufullstendig, nesten ferdig]
+sv:
+  avoid: [radera, ta bort, logga ut, återställ, betala, köp, avsluta prenumeration]
+  back: [tillbaka, stäng, avbryt, klar, spara]
+  of: av
+  states:
+    empty: [tomt, inget här, "re:inga \\w+ ännu"]
+    error: [misslyckades, kunde inte, ett fel]
+    loading: [laddar]
+    offline: [ingen anslutning, offline]
+    first-run: [välkommen, kom igång]
+    partial: [ofullständig, nästan klar]
+da:
+  avoid: [slet, fjern, log ud, nulstil, betal, køb, afmeld]
+  back: [tilbage, luk, annuller, færdig, gem]
+  of: af
+  states:
+    empty: [tomt, intet her, "re:ingen \\w+ endnu"]
+    error: [fejl, mislykkedes, kunne ikke]
+    loading: [indlæser]
+    offline: [ingen forbindelse, offline]
+    first-run: [velkommen, kom i gang]
+    partial: [ufuldstændig, næsten færdig]

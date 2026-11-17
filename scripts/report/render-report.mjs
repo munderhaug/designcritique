@@ -21,6 +21,7 @@ const manifest = readJson(path.join(runDir, 'manifest.json'));
 const checkFindings = [
   ...readJson(path.join(runDir, 'checks', 'findings.json'), []),
   ...readJson(path.join(runDir, 'checks', 'motion.json'), []),
+  ...readJson(path.join(runDir, 'checks', 'structure.json'), []),
 ];
 const notes = [
   ...readJson(path.join(runDir, 'checks', 'notes.json'), []),
@@ -30,7 +31,7 @@ const warnings = [...(manifest.warnings || [])];
 
 const SEV = ['P0', 'P1', 'P2', 'P3'];
 const DECISIONS_REL = '.designcritique/decisions.yaml';
-const CATEGORIES = new Set(['task-fit', 'ux', 'content', 'visual', 'layout', 'typography', 'color', 'a11y', 'platform', 'tokens']);
+const CATEGORIES = new Set(['task-fit', 'ux', 'content', 'visual', 'layout', 'typography', 'color', 'a11y', 'platform', 'tokens', 'journey', 'ia', 'scope', 'consistency', 'logic', 'spec', 'states']);
 const screenIds = new Set(manifest.screens.map((s) => s.id));
 const screenOrder = new Map(manifest.screens.map((s, i) => [s.id, i]));
 

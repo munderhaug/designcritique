@@ -1,6 +1,6 @@
 ---
 name: principles
-description: Citation index of established design principles with stable IDs - Nielsen's heuristics, Norman, the cognitive walkthrough, Gestalt, Fitts and Hick, WCAG 2.2, Apple HIG, Material 3 and common AI-generated UI tells - each summarised from its primary source. Use to cite the principle behind a design finding or decision on a mobile screen.
+description: Citation index of established design principles with stable IDs - Nielsen's heuristics, Norman, the cognitive walkthrough, Gestalt, Fitts and Hick, WCAG 2.2, Apple HIG, Material 3, common AI-generated UI tells, information architecture, journeys, scope, states, consistency and spec conformance - each summarised from its primary source. Use to cite the principle behind a design finding or decision on a mobile screen.
 ---
 
 # Design principles: citation index
@@ -22,6 +22,12 @@ summarises its primary sources and names them. Read only the files the task need
 | [android.md](references/android.md) | Material 3 and Android conventions | `AND-*` |
 | [design-systems.md](references/design-systems.md) | Colour roles, token contrast, scales, the eight essentials, agent rules | `DS-*` |
 | [ai-tells.md](references/ai-tells.md) | Patterns that make generated UI look generic | `TELL-*` |
+| [ia.md](references/ia.md) | Information architecture: placement, depth, objects (OOUX), duplicates, orphans, labels | `IA-*` |
+| [journeys.md](references/journeys.md) | Whole journeys: entry, hand-offs, dead ends, ways back, closing loops, peak–end | `JOURNEY-*` |
+| [scope.md](references/scope.md) | Feature against problem: jobs, gaps, alternatives, phase | `SCOPE-*` |
+| [states.md](references/states.md) | The UI stack: empty, error, loading, partial, offline, first run; numbers that agree | `STATE-*` |
+| [consistency.md](references/consistency.md) | One component, icon, term and format per meaning | `CONS-*` |
+| [spec.md](references/spec.md) | The prototype against the owner's own spec | `SPEC-*` |
 
 ## How to use the principles
 

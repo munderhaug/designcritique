@@ -218,6 +218,7 @@ export function analyzePage({ frameAttr }) {
     scrollWidth,
     scrollHeight: frameAttr ? root.scrollHeight : document.documentElement.scrollHeight,
     hasViewportMeta,
+    lang: document.documentElement.lang || null,
     safeAreaCss,
     viewportFitCover,
     title: document.title || null,

@@ -1,0 +1,22 @@
+# Whole-product review eval (clean). See evals/README.md.
+platform: ios
+product: PRODUCT.md
+design: ../DESIGN.md
+content: content-guide.md
+output: ../.runs
+requires:
+  darkMode: true
+mockups:
+  - id: app
+    title: App
+    file: clean/index.html
+crawl:
+  start: app
+journeys:
+  - id: card-lost
+    title: Card lost
+    critical: true
+    steps: [Help, Card lost, Done]
+  - id: order-card
+    title: Order a card
+    steps: [Cards, Order new card, Confirm]

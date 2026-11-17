@@ -139,16 +139,23 @@
           },
           "category": {
             "enum": [
-              "task-fit",
-              "ux",
-              "content",
-              "visual",
-              "layout",
-              "typography",
-              "color",
               "a11y",
+              "color",
+              "consistency",
+              "content",
+              "ia",
+              "journey",
+              "layout",
+              "logic",
               "platform",
-              "tokens"
+              "scope",
+              "spec",
+              "states",
+              "task-fit",
+              "tokens",
+              "typography",
+              "ux",
+              "visual"
             ]
           },
           "severity": {
@@ -203,6 +210,53 @@
                 ]
               }
             }
+          },
+          "level": {
+            "enum": [
+              "screen",
+              "journey",
+              "system"
+            ],
+            "description": "Where the problem lives: one screen, a journey across screens, or the whole product."
+          },
+          "affected_screens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Screen ids (from the manifest) the problem spans; for journey and system findings."
+          },
+          "journey": {
+            "type": "string",
+            "description": "Journey id, for journey findings."
+          },
+          "move_to": {
+            "description": "For placement findings: where the thing should go.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "to"
+                ],
+                "properties": {
+                  "item": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
           }
         }
       }
@@ -295,6 +349,148 @@
                 "type": "string"
               }
             }
+          }
+        }
+      }
+    },
+    "journeys": {
+      "type": "array",
+      "description": "Journey verdicts (review mode).",
+      "items": {
+        "type": "object",
+        "required": [
+          "journey",
+          "verdict"
+        ],
+        "properties": {
+          "journey": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "supported",
+              "at-risk",
+              "blocked",
+              "not-covered"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "summary": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "step": {
+                  "type": "integer"
+                },
+                "screen": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "enum": [
+                    "ok",
+                    "friction",
+                    "blocked"
+                  ]
+                },
+                "note": {
+                  "type": "string"
+                },
+                "finding_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "moves": {
+      "type": "array",
+      "description": "Proposed structural moves (review mode). Proposals only: never applied automatically.",
+      "items": {
+        "type": "object",
+        "required": [
+          "item",
+          "to",
+          "reason"
+        ],
+        "properties": {
+          "item": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "finding_id": {
+            "type": "string"
+          },
+          "impact": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "array",
+      "description": "Feature against problem (review mode).",
+      "items": {
+        "type": "object",
+        "required": [
+          "feature",
+          "verdict"
+        ],
+        "properties": {
+          "feature": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "keep",
+              "cut",
+              "add",
+              "move",
+              "defer",
+              "rethink"
+            ]
+          },
+          "job": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "finding_id": {
+            "type": "string"
           }
         }
       }

@@ -46,7 +46,7 @@ mockups:
   #       steps:
   #         - click: "text=Settings"
   #         - wait: ".settings-list"
-  #     - id: crisis
+  #     - id: emergency
   #       appearance: dark-only # one appearance on purpose: no "missing dark mode" finding
   #       steps:
   #         - goto: "#/help"

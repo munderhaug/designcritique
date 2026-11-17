@@ -66,3 +66,27 @@ Use the screens as evidence, and say which screen told you what:
 
 Inferred frames are hypotheses. Tag them `[inferred]` and confirm the top one or two with the
 person.
+
+## Whole-product sections (for /designcritique:review)
+
+**Journeys.** End-to-end paths across the stages of use: before (setup, routines), during (the
+situation the product is for) and after (follow-up, renewal). Each is a line of steps the user
+taps or passes, marked "must not fail" where that applies and "leads to" where one journey should
+hand over to the next (Shostack 1984; Patton 2014).
+
+**Concept model.** The user's objects (not the database's): what they are, how they relate, what
+the user does with them and what they have. One home per object (Prater, "Object-Oriented UX",
+A List Apart 2015).
+
+**Scope.** What's in the MVP, v1, later and out of scope, from the roadmap. Out-of-scope items
+are reported if they appear (Patton's release slices).
+
+**Feature map.** Each feature with the part of the problem and the key task it serves, its phase,
+and the labels or headings it shows on screen. A feature with no problem part or task is a scope
+question; a task with no feature is a gap (Christensen et al. 2016; Torres 2021).
+
+**Navigation.** Optional: the top-level destinations in order, when the spec fixes them.
+
+Derive all of these from the project's own documents first (roadmap, spec, content guide,
+DESIGN.md, decisions), citing which document each line came from, and tag them `[confirmed]`,
+`[inferred]` or `[assumption]` like the rest of the frame. Ask only about the gaps.
