@@ -563,3 +563,43 @@ test('merge: the same principle from the rendered screen and the source becomes 
   assert.ok(out.some((f) => f.id === 'd'), 'two findings of the same check never merge');
   assert.equal(out.length, 3);
 });
+
+test('tokens: Markdown formats from real design systems', async () => {
+  const { loadTokens, inlineScale, roleHint } = await import('../scripts/lib/tokens.mjs');
+  const file = tmp('DESIGN.md', [
+    '# Design system inspired by Spaceflight',
+    '## 2. Color Palette & Roles',
+    '- **Deep Navy** (`#181d26`): Primary text',
+    '- **Ocean Blue** (`#1b61c9`): CTA buttons, links',
+    '- **White** (`#ffffff`): Primary surface',
+    '- **Border** (`#e0e2e6`): Card borders',
+    '## 3. Typography Rules',
+    '### Hierarchy',
+    '| Role | Font | Size | Weight | Line Height | Letter Spacing |',
+    '|---|---|---|---|---|---|',
+    '| Display | Sans | 48px (3rem) | 700 | 1.1 | -0.96px |',
+    '| Body | Sans | 16px | 400 | 1.5 | 0.16px |',
+    '| Caption | Sans | 13px | 400 | 1.4 | normal |',
+    '### Principles',
+    '- **Tight display**: -1.5px tracking at 64px',
+    '## 4. Spacing & Grid',
+    '- **Spacing scale:** 4/8/12/16/24/32',
+    '- Max width: 1240px',
+    '## 5. Components',
+    '### Pills (spaces)',
+    '- radius: 9999px',
+    '## 9. Agent Prompt Guide',
+    '- Example: Create a hero with `#ff00ff` and 72px type',
+  ].join('\n'));
+  const t = loadTokens(file);
+  assert.deepEqual(t.fontSizes, [13, 16, 48], 'type table under Typography > Hierarchy; bracketed rem dropped');
+  assert.deepEqual(t.spacing, [4, 8, 12, 16, 24, 32], 'inline scale; no tracking, widths or title words');
+  assert.deepEqual(t.radii, [9999]);
+  assert.equal(t.colorByName.get('primary'), '#1b61c9', 'role from "CTA buttons"');
+  assert.equal(t.colorByName.get('on-surface'), '#181d26');
+  assert.equal(t.colorByName.get('surface'), '#ffffff');
+  assert.ok(![...t.colors.keys()].includes('#ff00ff'), 'prompt examples are not tokens');
+  assert.deepEqual(inlineScale('Base unit: 4px. Scale: 4, 8, 12, 16'), [4, 8, 12, 16]);
+  assert.deepEqual(inlineScale('rgba(0,0,0,0.3) 0px 1px'), []);
+  assert.equal(roleHint('Card borders'), null);
+});

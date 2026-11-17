@@ -4,6 +4,8 @@
 - After changing capture or checks, run `npm run eval` and `npm test`. It must stay at full recall with
   0 false positives on the clean screens. After changing the crawler, journeys, structure or
   consistency checks, also run `npm run eval:review` (seeded flaws all found, none on clean).
+  After changing the token reader, run `npm run eval:tokens`; after changing the detectors,
+  `npm run eval:source`. Never lower a threshold to make a change pass.
 - The plugin is generic: never build in one product's words, domain or language. Language words
   go in `catalog/vocabulary.yaml`; examples in principles and docs stay neutral.
 - Eval screens must not hint at their flaws: neutral ids, titles and file names, no comments

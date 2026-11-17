@@ -20,7 +20,8 @@
     "eval:review": "node scripts/eval/run-review-evals.mjs",
     "crawl": "node scripts/crawl/crawl.mjs",
     "eval:noise": "node scripts/eval/noise.mjs",
-    "eval:source": "node scripts/eval/run-source-evals.mjs"
+    "eval:source": "node scripts/eval/run-source-evals.mjs",
+    "eval:tokens": "node scripts/eval/run-token-evals.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.0",

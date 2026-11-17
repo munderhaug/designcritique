@@ -6,6 +6,7 @@ problems (or none), plus input-type fixtures.
 ```bash
 npm run eval                      # capture + checks + detectors + score (deterministic, no model)
 npm run eval:source               # detectors on app source only (SwiftUI, Compose, XML, React Native)
+npm run eval:tokens               # token reader over open-design's 152 DESIGN.md files (pinned, fetched once)
 ```
 
 To score the critics, run `/designcritique:critique evals/mockups.yaml` in Claude Code, then:
@@ -39,6 +40,21 @@ The detectors run on the same screens. They must find, on **welcome**, the gradi
 numbers; on **feed**, the image without alt in the source (merged with axe's finding on the
 render); on **checkout**, the vague error (its only allowed P0–P2 deterministic finding). On the
 clean screens they must stay quiet.
+
+## Design-system corpus (`npm run eval:tokens`)
+
+Runs the token reader and the design-system checks over every DESIGN.md in open-design
+(nexu-io, Apache-2.0) at a pinned commit (`scripts/lib/corpus.mjs`), fetched once into the
+gitignored `evals/.cache/`; `--dir` points at a local checkout instead. It fails when the share
+of systems where the reader finds colours, an action, surface and text role, a type scale and a
+spacing scale drops below the thresholds in the script, or when the reader produces values no
+design system holds (a font size under 6px, a negative step). Systems that describe spacing only
+in words ("comfortable density mode") are fair misses. The corpus is eval data: nothing from it
+is copied into this repo, and brand-named systems are never offered as starting points.
+
+At 2026-11-17: parsed 152/152, colours 152, action role 135, surface 150, text 148, type scale
+131, spacing scale 123. Checks flagged: essentials 134, spacing not 4-based 72, roles 61,
+token contrast 22.
 
 ## App source (`npm run eval:source`)
 
