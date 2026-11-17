@@ -142,7 +142,7 @@ To score the critics, run `/designcritique:critique evals/mockups.yaml`, then
 
 ## Status
 
-Version 0.2, for mockups and prototypes. Tested: capture, checks (all planted problems found,
+Version 0.3, for mockups and prototypes. Tested: capture, checks (all planted problems found,
 no false alarms on clean screens), design-system checks, input types, report, run comparison,
 validation hook, gate, decisions and build-stack recommendations; the motion import against a
 sample scan. Critic results on the eval set are in [evals/README.md](evals/README.md).
