@@ -61,7 +61,7 @@ export const COMPANIONS = {
   impeccable: {
     skill: 'impeccable',
     use: 'Core: init writes PRODUCT.md (frame skill); critique is one of the two critics.',
-    install: 'npx impeccable install -y --providers=claude --scope=project',
+    install: 'npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks',
     by: 'Paul Bakaus (pbakaus/impeccable), Apache-2.0',
   },
   'material-3': {

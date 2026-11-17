@@ -2,6 +2,8 @@
 // 1. mergeAcrossSources: the same problem raised by several critics, or by a critic and a check,
 //    on the same screen becomes one finding that keeps every source's evidence. Raised by two
 //    independent critics is a sign of higher confidence.
+//    A problem two deterministic sources found from different angles (an axe or detector
+//    finding on the rendered page and a detector finding in the source) also becomes one.
 // 2. groupChecksByCause: a deterministic check that fails on many screens is reported once,
 //    with the list of screens.
 import { similarity } from './compare.mjs';
@@ -11,11 +13,19 @@ const worse = (a, b) => (SEV.indexOf(a) <= SEV.indexOf(b) ? a : b);
 const ids = (f) => [f.rule, ...(f.basis || [])].filter(Boolean);
 const samePlace = (a, b) => ['selector', 'region'].some((k) => a.element?.[k] && a.element[k] === b.element?.[k])
   || (a.element?.region && b.element?.region && similarity(a.element.region, b.element.region) >= 0.5);
-const isCheck = (f) => f.source === 'check' || f.source === 'motion';
+/** Deterministic sources: the plugin's checks, the motion scanner and the third-party detectors. */
+export const isDeterministic = (f) => f.source === 'check' || f.source === 'motion' || String(f.source || '').startsWith('detector:');
+const isCheck = isDeterministic;
+/** Which angle a deterministic finding saw: checks and axe read the rendered page; motion reads files. */
+export const surfacesOf = (f) => (f.surfaces || (f.surface ? String(f.surface).split('+') : [f.source === 'motion' ? 'source' : 'rendered']));
+const mainShared = (a, b) => (b.basis || []).includes(a.basis?.[0]) || (a.basis || []).includes(b.basis?.[0]);
 
 /** Do two findings on the same screen describe the same problem? */
 export function sameProblem(a, b) {
   if (a.screen !== b.screen) return false;
+  // Two deterministic sources (never two findings of the same check) agree when they cite
+  // the same main principle on the same screen: e.g. axe on the render, a detector in the code.
+  if (isCheck(a) && isCheck(b)) return a.source !== b.source && mainShared(a, b);
   const linked = ids(b).includes(a.rule) || ids(a).includes(b.rule);
   if (!linked) return false;
   if (isCheck(a) !== isCheck(b)) {
@@ -23,7 +33,6 @@ export function sameProblem(a, b) {
     const [check, critic] = isCheck(a) ? [a, b] : [b, a];
     return (check.basis || []).includes(critic.rule);
   }
-  if (isCheck(a) && isCheck(b)) return false;
   // Same main principle: a looser wording match is enough; linked only through basis: stricter.
   const threshold = a.rule === b.rule ? 0.15 : 0.25;
   return samePlace(a, b) || similarity(a.title, b.title) >= threshold;
@@ -40,12 +49,15 @@ export function mergeAcrossSources(findings) {
     into.also.push({ source: f.source, id: f.id, severity: f.severity, title: f.title, evidence: f.evidence, recommendation: f.recommendation });
     if (SEV.indexOf(f.severity) < SEV.indexOf(into.severity)) { into.severityFrom = f.source; into.severity = f.severity; }
     into.basis = [...new Set([...(into.basis || []), ...(f.basis || [])])];
-    const critics = into.raisedBy.filter((s) => !['check', 'motion'].includes(s));
-    if (critics.length >= 2 || (critics.length && isCheck(into))) into.confidence = 'high';
+    if (isCheck(into) && isCheck(f)) into.surfaces = [...new Set([...surfacesOf(into), ...surfacesOf(f)])];
+    const critics = into.raisedBy.filter((s) => !isDeterministic({ source: s }));
+    if (critics.length >= 2 || (critics.length && isCheck(into)) || (into.surfaces || []).length > 1) into.confidence = 'high';
   }
   for (const f of out) {
-    const critics = f.raisedBy.filter((s) => !['check', 'motion'].includes(s));
-    f.agreement = critics.length >= 2 ? 'both-critics' : critics.length && isCheck(f) ? 'check-and-critic' : null;
+    const critics = f.raisedBy.filter((s) => !isDeterministic({ source: s }));
+    f.agreement = critics.length >= 2 ? 'both-critics'
+      : critics.length && isCheck(f) ? 'check-and-critic'
+        : (f.surfaces || []).length > 1 && f.raisedBy.length > 1 ? 'rendered-and-source' : null;
   }
   return out;
 }
@@ -70,7 +82,8 @@ export function groupChecksByCause(findings) {
   const groups = new Map();
   const rest = [];
   for (const f of findings) {
-    if (f.source !== 'check' || f.screen === '*') { rest.push(f); continue; }
+    const groupable = f.source === 'check' || String(f.source || '').startsWith('detector:');
+    if (!groupable || f.screen === '*') { rest.push(f); continue; }
     const key = f.rule === 'CHK-SAFE-AREA' ? `${f.rule}|${f.cause || ''}` : f.rule;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(f);
@@ -94,7 +107,7 @@ export function groupChecksByCause(findings) {
       instances: list.map((f) => ({ screen: f.screen, platform: f.platform, severity: f.severity, title: f.title, element: f.element, raisedBy: f.raisedBy })),
       raisedBy: [...new Set(list.flatMap((f) => f.raisedBy || [f.source]))],
       also: list.flatMap((f) => f.also || []),
-      agreement: list.some((f) => f.agreement) ? 'check-and-critic' : null,
+      agreement: list.find((f) => f.agreement)?.agreement || null,
     });
   }
   return rest;

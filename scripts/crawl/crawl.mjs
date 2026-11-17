@@ -12,8 +12,7 @@
 // Usage: node scripts/crawl/crawl.mjs --config mockups.yaml --out <RUN_DIR> [--max-states 60] [--offline]
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { loadConfig, parseArgs, writeJson, timestamp, slug, DEVICE_PRESETS } from '../lib/config.mjs';
+import { loadConfig, parseArgs, writeJson, timestamp, slug, DEVICE_PRESETS, isRemote, pageUrl } from '../lib/config.mjs';
 import { expandMockup } from '../lib/sources.mjs';
 import { launch, preparePage, pageFingerprint, settle, runSetupAndSteps } from '../lib/browser.mjs';
 import { loadVocabulary, languagesOf } from '../lib/vocabulary.mjs';
@@ -28,7 +27,8 @@ if (args['max-states']) opts.max_states = Number(args['max-states']);
 const startMockup = cfg.mockups.find((m) => m.id === opts.start);
 const page0 = expandMockup(startMockup, runDir).screens[0];
 if (!page0 || page0.kind !== 'html') { console.error(`crawl.start ${opts.start} must be an HTML page`); process.exit(2); }
-const url = pathToFileURL(page0.source).href;
+const url = pageUrl(page0.source);
+const offline = args.offline && !isRemote(page0.source);
 const preset = DEVICE_PRESETS[page0.platform === 'android' ? 'android' : 'ios'].standard;
 fs.mkdirSync(path.join(runDir, 'crawl'), { recursive: true });
 
@@ -40,7 +40,7 @@ const avoided = (name) => vocab.avoid.test(name) || opts.avoid.some((a) => name.
 async function open(steps) {
   const ctx = await browser.newContext({ viewport: { width: preset.width, height: preset.height }, deviceScaleFactor: 1, hasTouch: true, colorScheme: 'light' });
   ctx.on('page', (p) => { if (p !== ctx.pages()[0]) p.close().catch(() => {}); });
-  const page = await preparePage(ctx, url, 'light', { ...page0, steps: [...(page0.steps || []), ...steps] }, { top: preset.safeTop, bottom: preset.safeBottom }, { offline: args.offline });
+  const page = await preparePage(ctx, url, 'light', { ...page0, steps: [...(page0.steps || []), ...steps] }, { top: preset.safeTop, bottom: preset.safeBottom }, { offline });
   for (const [selector, value] of Object.entries(opts.fill)) {
     const el = page.locator(selector).first();
     if (await el.isVisible().catch(() => false) && !(await el.inputValue().catch(() => ''))) await el.fill(String(value)).catch(() => {});

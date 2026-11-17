@@ -511,3 +511,55 @@ test('noise: task-score spread, verdict agreement and finding overlap between tw
   assert.deepEqual(r.findings, { a: 2, b: 2, both: 1, overlap: 1 / 3 });
   assert.equal(r.severityAgreement, 0);
 });
+
+test('detectors: every allowlisted rule cites principle IDs from the index', async () => {
+  const { IMPECCABLE_RULES, UNSLOPOVICH_RULES } = await import('../scripts/lib/detectors.mjs');
+  const { principleIds } = await import('../scripts/lib/validate.mjs');
+  const known = principleIds();
+  for (const [name, rule] of Object.entries({ ...IMPECCABLE_RULES, ...UNSLOPOVICH_RULES })) {
+    for (const pl of [['ios'], ['android'], ['ios', 'android']]) {
+      const basis = typeof rule.basis === 'function' ? rule.basis(pl) : rule.basis;
+      assert.ok(basis.length, `${name} has no basis`);
+      for (const id of basis) assert.ok(known.has(id), `${name} cites unknown ${id}`);
+    }
+  }
+});
+
+test('detectors: mapping by surface, platform, language and allowlist', async () => {
+  const { mapDetectorFinding, collapseDetectorFindings, screenForFile, platformsOf } = await import('../scripts/lib/detectors.mjs');
+  const ctx = { screen: 'home', platform: 'adaptive', english: true };
+  assert.equal(mapDetectorFinding({ engine: 'impeccable', surface: 'rendered', rule: 'cream-palette' }, ctx), null, 'taste rules stay out');
+  assert.equal(mapDetectorFinding({ engine: 'impeccable', surface: 'rendered', rule: 'low-contrast', snippet: '3.1:1 text #777 on #fff' }, ctx), null, 'axe covers solid fills');
+  assert.ok(mapDetectorFinding({ engine: 'impeccable', surface: 'rendered', rule: 'low-contrast', snippet: '3.9:1 (gradient on section.hero)' }, ctx));
+  assert.equal(mapDetectorFinding({ engine: 'unslopovich', surface: 'source', rule: 'oops-error' }, { ...ctx, english: false }), null, 'English phrase rules skip other languages');
+  const swift = mapDetectorFinding({ engine: 'unslopovich', surface: 'source', rule: 'fixed-text-size', file: 'ios/A.swift', line: 3 }, ctx);
+  assert.deepEqual(swift.basis, ['IOS-TYPE', 'WCAG-1.4.4']);
+  assert.deepEqual(platformsOf('adaptive', 'res/layout/a.xml'), ['android']);
+  assert.equal(swift.surface, 'source');
+  assert.deepEqual(swift.element, { file: 'ios/A.swift', line: 3 });
+  const one = collapseDetectorFindings([
+    mapDetectorFinding({ engine: 'impeccable', surface: 'rendered', rule: 'skipped-heading', snippet: 'h1 then h3' }, ctx),
+    mapDetectorFinding({ engine: 'impeccable', surface: 'source', rule: 'skipped-heading', file: 'home.html', snippet: 'h1 then h3' }, ctx),
+  ]);
+  assert.equal(one.length, 1);
+  assert.equal(one[0].surface, 'rendered+source');
+  const screens = [{ id: 'home', source: '/p/home.html', sourceFiles: ['/p/src/home'], hasSteps: false }];
+  assert.equal(screenForFile('/p/home.html', screens).id, 'home');
+  assert.equal(screenForFile('/p/src/home/View.swift', screens).id, 'home');
+  assert.equal(screenForFile('/p/src/other.swift', screens), null);
+});
+
+test('merge: the same principle from the rendered screen and the source becomes one finding', async () => {
+  const { mergeAcrossSources } = await import('../scripts/lib/merge.mjs');
+  const axe = { id: 'a', source: 'check', screen: 'feed', rule: 'AXE-image-alt', basis: ['WCAG-1.1.1'], severity: 'P1', title: 'Images need alt text' };
+  const code = { id: 'b', source: 'detector:unslopovich', surface: 'source', screen: 'feed', rule: 'UNSLOPOVICH-img-no-alt', basis: ['WCAG-1.1.1'], severity: 'P2', title: 'Image without alt text' };
+  const other = { id: 'c', source: 'check', screen: 'feed', rule: 'CHK-TARGET', basis: ['IOS-TARGET'], severity: 'P2', title: 'Small target' };
+  const twoChecks = { ...axe, id: 'd', rule: 'AXE-role-img-alt' };
+  const out = mergeAcrossSources([axe, code, other, twoChecks]);
+  const merged = out.find((f) => f.rule === 'AXE-image-alt');
+  assert.deepEqual(merged.raisedBy, ['check', 'detector:unslopovich']);
+  assert.equal(merged.agreement, 'rendered-and-source');
+  assert.equal(merged.severity, 'P1');
+  assert.ok(out.some((f) => f.id === 'd'), 'two findings of the same check never merge');
+  assert.equal(out.length, 3);
+});

@@ -77,6 +77,17 @@ node PLUGIN_ROOT/scripts/checks/motion.mjs scan --run <RUN_DIR>
 Its duration scale is a web scale, so off-scale timing stays P3; missing reduced-motion
 handling and overlays without transitions are P2.
 
+**Detectors (two angles).** Impeccable's detector reads each rendered HTML mockup or served PWA
+(`url:`) at phone size; unslopovich reads the code (`source:` in mockups.yaml: SwiftUI, Compose,
+Android XML, React Native, Flutter, web). Both are pinned, local and deterministic:
+
+```bash
+node PLUGIN_ROOT/scripts/checks/detectors.mjs --run <RUN_DIR>
+```
+
+Only allowlisted rules are kept, each cited to a principle. A problem seen on the screen and in
+its code is merged into one finding. Rules [companions.md](references/companions.md#detectors).
+
 ## 4. References from shipped apps
 
 Unless `mockups.yaml` lists `references:`, gather comparable screens and flows for the key
@@ -94,8 +105,8 @@ file (`.designcritique/decisions.yaml`), the taste references and the gate.
   platform (Material 3 or Expo skills, when installed). With more than 8 screens,
   run one reviewer per batch of 8, and give one of them the whole flow for the walkthrough.
 - **Impeccable critique**, in a fresh general-purpose agent, using the Impeccable brief in
-  critic-brief.md. On `ios`, `android` and `adaptive` platforms Impeccable runs its design review
-  without its web detector, by its own rules. Skip this critic if Impeccable isn't installed.
+  critic-brief.md. The critic doesn't run Impeccable's detector: step 3 already ran it as a
+  plugin check, at phone size and mapped to principles. Skip this critic if Impeccable isn't installed.
 - **External judges**, one per name in `critics.external` (for example `codex`), as described at
   the end of critic-brief.md. Skip any that isn't installed and say so.
 

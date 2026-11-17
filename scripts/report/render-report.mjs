@@ -25,10 +25,12 @@ const checkFindings = [
   ...readJson(path.join(runDir, 'checks', 'motion.json'), []),
   ...readJson(path.join(runDir, 'checks', 'structure.json'), []),
   ...readJson(path.join(runDir, 'checks', 'consistency.json'), []),
+  ...readJson(path.join(runDir, 'checks', 'detectors.json'), []),
 ];
 const notes = [
   ...readJson(path.join(runDir, 'checks', 'notes.json'), []),
   ...readJson(path.join(runDir, 'motion', 'notes.json'), []).map((note) => ({ screen: 'motion', note })),
+  ...readJson(path.join(runDir, 'detectors', 'notes.json'), []).map((note) => ({ screen: 'detectors', note })),
 ];
 const warnings = [...(manifest.warnings || [])];
 
@@ -323,6 +325,7 @@ function whereOf(f) {
 function agreementNote(f) {
   if (f.agreement === 'both-critics') return 'raised by both critics: higher confidence';
   if (f.agreement === 'check-and-critic') return 'measured by a check and raised by a critic';
+  if (f.agreement === 'rendered-and-source') return 'found on the rendered screen and in its source';
   return '';
 }
 function md(s) { return String(s ?? '').replace(/\|/g, '\\|'); }
@@ -363,7 +366,7 @@ function reviewHtml() {
 }
 
 function findingItem(f, anchor) {
-  const badge = f.agreement === 'both-critics' ? ' <span class="agree">both critics</span>' : f.agreement === 'check-and-critic' ? ' <span class="agree">check + critic</span>' : '';
+  const badge = f.agreement === 'both-critics' ? ' <span class="agree">both critics</span>' : f.agreement === 'check-and-critic' ? ' <span class="agree">check + critic</span>' : f.agreement === 'rendered-and-source' ? ' <span class="agree">rendered + source</span>' : '';
   const where = f.screens ? `<div class="meta">On ${f.screens.length} screens: ${f.screens.map((id) => esc(screenTitle(id))).join(', ')}</div>` : '';
   const also = (f.also || []).map((a) => `<p><em>Also raised by ${esc(a.source)} (${esc(a.severity)}):</em> ${esc(a.title)}${a.evidence ? `. ${mdInline(a.evidence)}` : ''}</p>`).join('');
   return `<li${anchor ? ` id="${anchor}"` : ''} value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}${badge}<div class="meta">${esc(f.basis.join(', '))} · ${esc((f.raisedBy || [f.source]).join(' + '))}${f.platform && !f.screens ? ` · ${esc(f.platform)}` : ''}</div>${where}<details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p>${also}</details></li>`;

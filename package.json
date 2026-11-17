@@ -19,14 +19,17 @@
     "decide": "node scripts/report/decide.mjs",
     "eval:review": "node scripts/eval/run-review-evals.mjs",
     "crawl": "node scripts/crawl/crawl.mjs",
-    "eval:noise": "node scripts/eval/noise.mjs"
+    "eval:noise": "node scripts/eval/noise.mjs",
+    "eval:source": "node scripts/eval/run-source-evals.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.0",
     "adm-zip": "^0.5.18",
     "ajv": "^8.20.0",
+    "impeccable": "4.9.2",
     "playwright": "^1.50.0",
     "transitions-agent": "0.11.2",
+    "unslopovich": "3.0.0",
     "yaml": "^2.6.0"
   }
 }

@@ -19,5 +19,6 @@ const step = (script, args) => {
 
 step('scripts/capture/capture.mjs', ['--config', path.join(root, 'evals', 'mockups.yaml'), '--out', runDir, '--offline']);
 step('scripts/checks/run-checks.mjs', ['--run', runDir]);
+step('scripts/checks/detectors.mjs', ['--run', runDir]);
 step('scripts/report/render-report.mjs', ['--run', runDir]);
 process.exit(step('scripts/eval/score.mjs', ['--run', runDir]));

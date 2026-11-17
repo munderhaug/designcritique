@@ -33,6 +33,7 @@ node PLUGIN_ROOT/scripts/checks/run-checks.mjs --run <RUN_DIR>
 node PLUGIN_ROOT/scripts/checks/structure.mjs --run <RUN_DIR>
 node PLUGIN_ROOT/scripts/checks/consistency.mjs --run <RUN_DIR>
 node PLUGIN_ROOT/scripts/checks/motion.mjs scan --run <RUN_DIR>
+node PLUGIN_ROOT/scripts/checks/detectors.mjs --run <RUN_DIR>
 ```
 
 Read the crawl summary: if it hit the state limit, or a journey broke, fix `mockups.yaml` (steps,

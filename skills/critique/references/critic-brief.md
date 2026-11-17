@@ -48,8 +48,8 @@ large text and compact. For image inputs, the one image.
 
 ```
 Run Impeccable's critique on these mobile mockups. Follow the Impeccable skill's critique
-reference exactly, including its rules for native platforms (ios / android / adaptive), where
-the web detector does not apply. Don't edit any files. Skip the closing questions and write
+reference exactly, including its rules for native platforms (ios / android / adaptive). Don't
+run its detector: designcritique already ran it as a check. Don't edit any files. Skip the closing questions and write
 "Questions skipped: run inside designcritique".
 
 Product context (Impeccable reads it): <path to PRODUCT.md>

@@ -104,7 +104,7 @@ export function expandMockup(mockup, workDir) {
   const warnings = [];
   let files;
   let root = null;
-  if (mockup.kind === 'html' || mockup.kind === 'image') {
+  if (mockup.kind === 'html' || mockup.kind === 'image' || mockup.kind === 'url') {
     files = [mockup.file];
   } else {
     root = mockup.kind === 'zip' ? extractZip(mockup.file, path.join(workDir, 'sources', mockup.id)) : mockup.file;
@@ -116,7 +116,7 @@ export function expandMockup(mockup, workDir) {
     files = files.slice(0, MAX_SCREENS_PER_SOURCE);
   }
   const screens = files.map((f, i) => {
-    const kind = HTML_EXT.has(path.extname(f).toLowerCase()) ? 'html' : 'image';
+    const kind = mockup.kind === 'url' || HTML_EXT.has(path.extname(f).toLowerCase()) ? 'html' : 'image';
     const id = files.length === 1 ? mockup.id : `${mockup.id}--${slug(root ? path.relative(root, f) : path.basename(f))}`;
     return {
       id,
@@ -125,6 +125,7 @@ export function expandMockup(mockup, workDir) {
       kind,
       source: f,
       sourceType: mockup.artifact ? 'artifact' : mockup.kind,
+      sourceFiles: mockup.source || [],
       artifact: mockup.artifact,
       phoneFrame: kind === 'html' ? mockup.phoneFrame : null,
       platform: mockup.platform,

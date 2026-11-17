@@ -1,0 +1,17 @@
+{
+  "$comment": "Source eval (npm run eval:source): the detector stage on app source alone, no browser. seeded.must: [rule, file] pairs the detectors must report (the file appears in the finding's instances). clean: no P0-P2 detector findings allowed.",
+  "seeded": {
+    "must": [
+      ["UNSLOPOVICH-fixed-text-size", "ios/AccountView.swift"],
+      ["UNSLOPOVICH-back-gesture", "ios/AccountView.swift"],
+      ["UNSLOPOVICH-safe-area-off", "ios/AccountView.swift"],
+      ["UNSLOPOVICH-back-gesture", "android/AccountActivity.kt"],
+      ["UNSLOPOVICH-drawer-nav", "android/AccountActivity.kt"],
+      ["UNSLOPOVICH-fixed-text-size", "android/res/layout/account.xml"],
+      ["UNSLOPOVICH-fixed-text-size", "rn/AccountScreen.tsx"],
+      ["UNSLOPOVICH-back-gesture", "rn/AccountScreen.tsx"],
+      ["UNSLOPOVICH-keyboard-cover", "rn/AccountScreen.tsx"]
+    ]
+  },
+  "clean": { "clean": true }
+}

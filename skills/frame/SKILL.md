@@ -18,7 +18,7 @@ explains each one.
    it write or update `PRODUCT.md`, including `## Platform` (`ios`, `android` or `adaptive`) and
    `## Stack`. If it isn't installed, write the same sections yourself from
    [the template](../../templates/PRODUCT.md), interviewing the user in the same way, and suggest
-   installing Impeccable (`npx impeccable install -y --providers=claude --scope=project`).
+   installing Impeccable (`npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks`).
 2. **Add the human-centred layer** to the same file. Impeccable keeps extra headings.
    - `## Problem`: what goes wrong for the primary user today, stated without the solution.
    - `## Key Tasks`: two to five job stories, ranked by criticality, one marked "must not fail".

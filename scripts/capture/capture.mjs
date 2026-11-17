@@ -5,10 +5,9 @@
 // Usage: node scripts/capture/capture.mjs [--config mockups.yaml] [--out <runDir>] [--only id,id] [--offline]
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { AxeBuilder } from '@axe-core/playwright';
 import {
-  loadConfig, parseArgs, timestamp, writeJson, platformsFor, DEVICE_PRESETS,
+  loadConfig, parseArgs, timestamp, writeJson, platformsFor, DEVICE_PRESETS, isRemote, pageUrl,
 } from '../lib/config.mjs';
 import { expandMockup, imageSize } from '../lib/sources.mjs';
 import { analyzePage } from '../lib/analyze-page.mjs';
@@ -40,6 +39,8 @@ const manifest = {
   language: cfg.language,
   vocabulary: cfg.vocabulary,
   gate: cfg.gate,
+  platform: cfg.platform,
+  source: cfg.source.map((p) => path.relative(cfg.baseDir, p)),
   iterate: cfg.iterate,
   taste: [],
   devices: cfg.devices,
@@ -48,6 +49,12 @@ const manifest = {
   pageLanguages: [],
   warnings: [],
 };
+
+// Paths in the manifest are relative to the config; URLs stay as they are.
+function relSource(s) {
+  if (!isRemote(s.source)) s.source = path.relative(cfg.baseDir, s.source);
+  s.sourceFiles = (s.sourceFiles || []).map((p) => path.relative(cfg.baseDir, p));
+}
 
 function existing(p) { return p && fs.existsSync(p) ? p : null; }
 const relRun = (p) => path.relative(runDir, p);
@@ -84,7 +91,9 @@ async function runAxe(page, frameIndex) {
 }
 
 async function captureHtml(browser, screen) {
-  const url = pathToFileURL(screen.source).href;
+  const url = pageUrl(screen.source);
+  // --offline keeps local mockups from reaching the network; a served PWA needs it.
+  const offline = args.offline && !isRemote(screen.source);
   const frameMode = !!screen.phoneFrame;
   const out = [];
 
@@ -92,7 +101,7 @@ async function captureHtml(browser, screen) {
   let frameCount = 1;
   if (frameMode) {
     const ctx = await browser.newContext({ viewport: FRAME_CANVAS, deviceScaleFactor: 1 });
-    const page = await preparePage(ctx, url, 'light', screen, null, { offline: args.offline });
+    const page = await preparePage(ctx, url, 'light', screen, null, { offline });
     frameCount = await page.locator(screen.phoneFrame).count();
     await ctx.close();
     if (!frameCount) {
@@ -119,7 +128,7 @@ async function captureHtml(browser, screen) {
           colorScheme: step.variant === 'dark' ? 'dark' : 'light',
           hasTouch: true,
         });
-        const page = await preparePage(ctx, url, step.variant, sub, frameMode ? null : { top: preset.safeTop, bottom: preset.safeBottom }, { offline: args.offline });
+        const page = await preparePage(ctx, url, step.variant, sub, frameMode ? null : { top: preset.safeTop, bottom: preset.safeBottom }, { offline });
         const tag = `${sub.id}__${platform}-${step.device}__${step.variant}`;
         const shotPath = path.join(runDir, 'screenshots', `${tag}.png`);
         fs.mkdirSync(path.dirname(shotPath), { recursive: true });
@@ -190,7 +199,7 @@ try {
       try {
         const done = screen.kind === 'html' ? await captureHtml(browser, screen) : captureImage(screen);
         for (const s of done) {
-          s.source = path.relative(cfg.baseDir, s.source);
+          relSource(s);
           if (s.reference) s.reference = fs.existsSync(s.reference) ? s.reference : null;
           manifest.screens.push(s);
         }
@@ -221,7 +230,7 @@ try {
       };
       process.stderr.write(`capturing ${screen.id}\n`);
       try {
-        for (const s of await captureHtml(browser, screen)) { s.source = path.relative(cfg.baseDir, s.source); manifest.screens.push(s); }
+        for (const s of await captureHtml(browser, screen)) { relSource(s); manifest.screens.push(s); }
         record.screens.push(screen.id);
       } catch (e) {
         record.brokenAt = k;
@@ -242,7 +251,7 @@ try {
     for (const st of inv.states) {
       const screen = { ...page0, id: `crawl--${st.id}`, title: st.title, steps: [...(page0.steps || []), ...st.steps], flow: 'crawl', step: null, state: null, inventoryState: st.id, notes: `Found by the crawler at depth ${st.depth}${st.steps.length ? ` (${st.steps.map(stepLabel).join(' → ')})` : ''}.` };
       process.stderr.write(`capturing ${screen.id}\n`);
-      try { for (const s of await captureHtml(browser, screen)) { s.source = path.relative(cfg.baseDir, s.source); manifest.screens.push(s); } }
+      try { for (const s of await captureHtml(browser, screen)) { relSource(s); manifest.screens.push(s); } }
       catch (e) { manifest.warnings.push(`${screen.id}: capture failed: ${e.message.split('\n')[0]}`); }
     }
   }

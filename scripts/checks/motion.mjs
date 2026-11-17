@@ -38,7 +38,8 @@ const RULES = {
 // Hover doesn't exist on touch screens; recipe-available is advice, not a problem.
 const SKIP = new Set(['hover-without-transition', 'recipe-available']);
 
-const htmlScreens = manifest.screens.filter((s) => s.kind === 'html');
+// Served PWAs (url:) have no local files for the scanner.
+const htmlScreens = manifest.screens.filter((s) => s.kind === 'html' && !/^https?:\/\//i.test(s.source));
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCANNER = path.join(ROOT, 'node_modules', 'transitions-agent', 'bin', 'transitions-agent.mjs');

@@ -7,6 +7,8 @@ taste: []                     # optional: 9-12 images of the direction you chose
 requires:
   darkMode: true              # report a missing dark appearance as a finding
 content: content-guide.md    # optional: content guide with a glossary (Term | … | Avoid) for term checks
+# source: ../app/Sources     # optional: app code the detectors read as a second angle
+                             #   (SwiftUI, Compose, Android XML, React Native, Flutter, web)
 # language: en               # optional: the prototype's language(s) if pages don't set <html lang>
 # vocabulary:                # optional: extra words in catalog/vocabulary.yaml's shape
 #   avoid: [Archive]         #   controls the crawler must not press
@@ -50,6 +52,11 @@ mockups:
   # - id: home
   #   artifact: https://claude.ai/artifact/XXXXXXXX
   #   phone_frame: ".phone"   # if the page shows several phone frames side by side
+
+  # A served PWA or web app, captured from its URL (start the dev server first).
+  # - id: pwa
+  #   url: http://localhost:5173/
+  #   source: ../app/src/screens/Home.tsx   # optional: this screen's code, for the detectors
 
   # A single-page app: one page, several screens reached by steps after it loads.
   # Steps: click, fill + value, press, scroll, wait (ms or selector), goto (#hash or ?query), eval (JS).

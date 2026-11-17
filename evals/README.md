@@ -4,7 +4,8 @@ Calibration set for designcritique. Six single screens from different apps with 
 problems (or none), plus input-type fixtures.
 
 ```bash
-npm run eval                      # capture + checks + score (deterministic, no model)
+npm run eval                      # capture + checks + detectors + score (deterministic, no model)
+npm run eval:source               # detectors on app source only (SwiftUI, Compose, XML, React Native)
 ```
 
 To score the critics, run `/designcritique:critique evals/mockups.yaml` in Claude Code, then:
@@ -27,6 +28,23 @@ mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 - **signup**: Seeded flaws (checks): marketing and data-sharing switches already on, a large filled
   "accept all" button against a small grey decline link, and a decline option worded to shame.
 - **choices**: clean. The same choices, off by default, with equal-weight accept and reject.
+
+The detectors run on the same screens. They must find, on **welcome**, the gradient palette
+(rendered) and gradient (source), contrast on the gradient, the buzzwords and the made-up
+numbers; on **feed**, the image without alt in the source (merged with axe's finding on the
+render); on **checkout**, the vague error (its only allowed P0–P2 deterministic finding). On the
+clean screens they must stay quiet.
+
+## App source (`npm run eval:source`)
+
+`evals/source/` holds one account screen in SwiftUI, Compose plus an Android XML layout, and
+React Native, in two versions. `seeded/`: fixed text sizes (SwiftUI `.system(size:)`, XML `dp`,
+React Native `allowFontScaling={false}`), the back gesture disabled (hidden back button,
+`onBackPressed` override, `gestureEnabled: false`), content that ignores the safe area, a
+navigation drawer, and a text field in a scroll view with no keyboard handling. `clean/`: the
+same screens with text styles, `sp`, a scoped back handler, a background-only safe-area
+extension, a navigation bar and keyboard avoidance. Every seeded flaw must be found in its file;
+the clean version must have no P0–P2 finding.
 
 ## Whole-product review (`npm run eval:review`)
 

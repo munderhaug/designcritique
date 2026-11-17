@@ -14,7 +14,11 @@ const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: score.mjs --run <runDir>'); process.exit(2); }
 const runDir = path.resolve(args.run);
 const expected = readJson(path.resolve(args.expected || path.join(here, '../../evals/expected.json')));
-const checks = readJson(path.join(runDir, 'checks', 'findings.json'), []);
+// Deterministic findings: the plugin's checks and the third-party detectors.
+const checks = [
+  ...readJson(path.join(runDir, 'checks', 'findings.json'), []),
+  ...readJson(path.join(runDir, 'checks', 'detectors.json'), []),
+];
 
 const critiqueDir = path.join(runDir, 'critique');
 const criticFindings = [];
@@ -40,7 +44,8 @@ for (const [screen, exp] of Object.entries(expected)) {
   const ce = exp.checks || {};
   const missing = (ce.must || []).filter((r) => !mine.some((f) => f.rule === r));
   const forbidden = (ce.must_not || []).filter((r) => mine.some((f) => f.rule === r));
-  const dirty = ce.clean ? mine.filter((f) => f.severity !== 'P3') : [];
+  // A screen can be clean apart from the flaws it is seeded with (listed in must).
+  const dirty = ce.clean ? mine.filter((f) => f.severity !== 'P3' && !(ce.must || []).includes(f.rule)) : [];
   tally.checkMust += (ce.must || []).length;
   tally.checkHit += (ce.must || []).length - missing.length;
   tally.checkFP += forbidden.length + dirty.length;

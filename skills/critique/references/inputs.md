@@ -6,6 +6,8 @@
 | Image (PNG, JPG, WebP) | `file: exports/login.png` | Copied as is; critics only, no deterministic checks |
 | `.zip` | `file: export.zip` | Extracted into the run folder, with zip-slip, symlinks and size guarded. Each HTML page becomes a screen; if there are none, each image does. Set `entry: index.html` to use one page |
 | Folder | `file: prototype/` | Same as a zip |
+| Served PWA or web app | `url: https://localhost:5173/` | Rendered from the URL like an HTML page; full checks and the rendered detector. `--offline` doesn't apply to it. Use `states:` and `steps:` to reach screens past the start page |
+| App source | `source: ../app/Sources` (top level, or on a mockup) | Read by the detectors as a second angle: SwiftUI, Compose, Android XML layouts, React Native, Flutter, web. On a mockup it ties those files to that mockup's screens; at the top level, findings apply to the whole app (screen `*`) |
 | Claude artifact | `artifact: https://claude.ai/artifact/...` | Pull it first (below). Capture reads `.designcritique/sources/<id>/` |
 | Figma frame | `file:` the exported PNG | Export with the Figma MCP server (`get_screenshot`), save it next to the config, treat it as an image |
 | Simulator or device screenshot | `file:` the saved PNG | A screen of the running app, taken with whichever tool is connected: MobileBuildMCP or Xcode Previews (iOS), Android CLI preview PNGs or emulator screenshots, Expo MCP `automation_take_screenshot`, mobile-mcp or agent-device. Save one PNG per screen and state (and a dark-mode or large-text one if you can switch the device setting). Critics only: the deterministic checks need HTML |
@@ -71,9 +73,19 @@ find the element that wraps each phone (for example `.phone` or `[data-screen]`)
 `phone_frame: ".phone"`. Every match becomes its own screen, captured at the frame's own size.
 Device sizes don't apply in this mode; light, dark and large text still do.
 
+## Native apps and PWAs: surfaces
+
+Every deterministic finding records the **surface** it came from: `rendered` (a browser render of
+an HTML mockup or served PWA), `source` (the code), and, reserved for when capture drives a
+simulator or device, `native-render`. Give both a screen and its code when you have them: the
+rendered angle sees what the user sees, the source angle sees what the screen ignores (the
+user's text size, the back gesture, the safe area). The report merges a problem found from both
+angles into one finding marked "found on the rendered screen and in its source".
+
 ## Not supported in version 1
 
-- Single-file React (`.jsx` / `.tsx`) artifacts. Export them as HTML, or render a screenshot.
+- Single-file React (`.jsx` / `.tsx`) artifacts as rendered screens. Export them as HTML, or
+  render a screenshot; list the source under `source:` so the detectors still read it.
 - Driving a running app (launching, tapping through flows, reading its accessibility tree).
   Screenshots taken from a simulator or device work today as image inputs; capturing them
   automatically, with checks on the live accessibility tree, is planned.

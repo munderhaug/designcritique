@@ -26,6 +26,7 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Critique 1 | Impeccable `critique`: Nielsen scoring, cognitive load, personas, native iOS/Android references | Runs it in a fresh agent and converts the output |
 | Critique 2 | Anthropic design plugin: `design-critique`, `accessibility-review`, `ux-copy` | The read-only `design-reviewer` agent applies them to the screenshots, adds the cognitive walkthrough (Wharton et al.) of each key task |
 | Platform guidance | Material 3 skill (hamen), Expo skills, when installed | Routing the right guidance to the reviewer |
+| Anti-pattern detectors, two angles | Impeccable's detector (rendered page at phone size, and HTML/CSS) and unslopovich (app source: SwiftUI, Compose, Android XML, React Native, Flutter, web), both pinned in package.json | An allowlist of their rules mapped to principle IDs, `url:` for served PWAs and `source:` for app code, and one finding when the screen and its code show the same problem |
 | Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan, pinned in package.json | Running it and importing its findings for HTML mockups, mobile-aware severities |
 | Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
 | Merged report | | One finding per problem: the same problem from both critics (or a check and a critic) is merged and marked as higher confidence; a check failing on many screens is reported once with the screen list. Severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
@@ -180,7 +181,9 @@ sample scan. Critic results on the eval set are in [evals/README.md](evals/READM
 
 Running apps: simulator and device screenshots work as image inputs today. Next: driving
 MobileBuildMCP, Maestro MCP, Expo MCP and Android CLI from capture.
-Not supported: single-file `.jsx` artifacts (export as HTML or images). Image inputs get critics
+PWAs: point `url:` at the served app. Native apps: list the code under `source:` so the detectors
+read it alongside the screenshots. Not supported: single-file `.jsx` artifacts as rendered
+screens (export as HTML or images). Image inputs get critics
 only; deterministic checks need HTML. Large-text rendering is a proxy for Dynamic Type and font scale.
 
 ## Layout

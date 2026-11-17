@@ -8,7 +8,7 @@ catalog. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to se
 
 | Tool | By | Role | Install |
 |---|---|---|---|
-| Impeccable | Paul Bakaus | `init` writes PRODUCT.md (used by the frame skill); `critique` is one of the two critics | `npx impeccable install -y --providers=claude --scope=project` |
+| Impeccable | Paul Bakaus | `init` writes PRODUCT.md (used by the frame skill); `critique` is one of the two critics | `npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks` |
 | Anthropic design plugin | Anthropic (official) | `design-critique`, `accessibility-review`, `ux-copy` are the design-reviewer's methods; `user-research` for real research | `claude plugin marketplace add anthropics/knowledge-work-plugins` then `claude plugin install design@knowledge-work-plugins` |
 | Playwright | Microsoft | Renders HTML mockups at phone sizes, light, dark and large text | npm dependency |
 | axe-core | Deque | Accessibility rules engine | npm dependency |
@@ -26,6 +26,18 @@ project; `--companions-only` does only that, for cloud environment setup scripts
 | transitions-agent | Jakub Antalik (transitions.dev), MIT | Deterministic motion scan of HTML mockups; imported as findings by `scripts/checks/motion.mjs` |
 | transitions-dev, transitions-polish skills | Jakub Antalik | Motion recipes and token rules when fixing motion in HTML prototypes (web only; native apps follow platform motion) |
 | Smpl design-system guide | Andreas Melvær, Smpl | The "eight essentials" behind the design-system checks, and the CLAUDE.md rule in `templates/CLAUDE-design-system.md` |
+
+## Detectors
+
+Run by `scripts/checks/detectors.mjs`, pinned in package.json, local, telemetry and update checks
+off. Only the rules below are imported, each mapped to a principle ID (`scripts/lib/detectors.mjs`).
+Rules a designcritique check already measures (contrast on solid fills, text size, overlap,
+overflow, tokens, looping motion) and taste-only rules without a cited principle are left out.
+
+| Engine | By, licence | Surface | Rules imported |
+|---|---|---|---|
+| Impeccable detect 4.9.2 | Paul Bakaus, Apache-2.0 | rendered (browser at phone size) and HTML/CSS/JSX source | AI colour palette and gradient text (`TELL-GRADIENT`), nested cards (`TELL-CARDS`), eyebrow labels (`TELL-EYEBROW`), marketing buzzwords (`TELL-BUZZWORDS`, English), skipped heading level (`WCAG-1.3.1`), low contrast on gradients (`WCAG-1.4.3`) |
+| unslopovich 3.0.0 | erkamyaman, MIT | source: SwiftUI, Compose, Android XML, React Native, Flutter, web | fixed text size (`IOS-TYPE`/`AND-TYPE`, `WCAG-1.4.4`), back gesture disabled (`IOS-NAV-STACK`/`AND-APPBAR`), safe area ignored and keyboard covering fields (`IOS-LAYOUT`/`AND-LAYOUT`), drawer navigation and hover-only (`TELL-WEB-IDIOMS`), zoom disabled, image without alt, clickable div, focus removed (`WCAG-1.4.4`, `1.1.1`, `4.1.2`, `2.4.7`), decorative pulse (`WCAG-2.2.2`), vague errors (`NN-H9`), and the tells (gradients, emoji icons, nested cards, eyebrow labels, buzzwords, invented numbers; English copy rules only for English products) |
 
 libraries.dev (Jakub Antalik) is on the catalog's watch list, not used: it's React for the web
 first, and its native ports aren't published yet.
@@ -60,6 +72,11 @@ Reviewed against the primary sources in the principles index. Re-check before ad
 | Crawljax, DroidBot, TESTAR | Java or Python and Android-only or heavyweight; their methods (state-flow crawling, two-level state IDs, replay to backtrack) are reimplemented in scripts/crawl/ with citations |
 | LLM browser agents (Playwright MCP, agent-browser, Stagehand, browser-use) | Explore one action at a time, nondeterministically, at model cost; no exhaustive state graph |
 | IA, OOUX, JTBD, opportunity-tree and state-matrix skills on GitHub | 0–8 stars, no credible author or sources; the lenses cite the primary sources directly |
+| unslopovich as a skill (its fix workflow and research notes) | Only its detector is used, as a pinned library. The skill's fixing workflow overlaps Impeccable and edits the app; its research notes are secondary sources, and the index cites the primary ones |
+| Impeccable `audit`, `polish`, `typeset`, `layout` | Fixing and building commands. Its `critique` is a critic and its detector a check; the rest edits the design, which designcritique leaves to the person or `/designcritique:iterate` |
+| anti-slop (miqdadbadjuber) | A prompt list of AI tells without sources; the tells it names are in `ai-tells.md` or detected by the two engines above |
+| uxed (MK27MK) | A general UX prompt pack; duplicates the Anthropic design plugin's methods without citing primary sources |
+| open-design-agent-kit (feimacode) | Repackages open-design's design systems for agents. designcritique uses open-design itself (below), at a pinned commit |
 
 ## Why the principles index exists
 

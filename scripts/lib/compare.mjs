@@ -3,6 +3,7 @@
 // principle and element, then by title similarity, because critics word things differently.
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeterministic } from './merge.mjs';
 
 /** The newest earlier run folder next to runDir that has a findings.json. */
 export function findPreviousRun(runDir) {
@@ -22,7 +23,7 @@ export function similarity(a, b) {
   for (const w of A) if (B.has(w)) inter++;
   return inter / (A.size + B.size - inter);
 }
-const deterministic = (f) => f.source === 'check' || f.source === 'motion';
+const deterministic = (f) => isDeterministic(f);
 const where = (f) => f.element?.selector || f.element?.region || '';
 
 /**

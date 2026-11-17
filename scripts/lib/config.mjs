@@ -1,6 +1,7 @@
 // Shared config loading for designcritique scripts.
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import YAML from 'yaml';
 
 export const DEVICE_PRESETS = {
@@ -52,6 +53,9 @@ export function loadConfig(configPath) {
     gate: normalizeGate(raw.gate),
     iterate: { max_rounds: Number(raw.iterate?.max_rounds ?? 3) },
     output: rel(raw.output || '.designcritique/runs'),
+    // App source read by the detectors as a second angle on the same screens (SwiftUI, Compose,
+    // XML layouts, React Native, Flutter, web). Mockup-level source: ties files to one mockup.
+    source: sourcePaths(raw.source, rel, 'source:'),
     mockups: [],
   };
 
@@ -62,7 +66,12 @@ export function loadConfig(configPath) {
     if (seen.has(m.id)) throw new Error(`Duplicate mockup id: ${m.id}`);
     seen.add(m.id);
 
-    let file = rel(m.file);
+    // A PWA or web app served over http(s): captured from its URL, like an HTML page.
+    if (m.url) {
+      if (!isRemote(m.url)) throw new Error(`Mockup ${m.id}: url: must start with http:// or https:// (got ${m.url})`);
+      if (m.file) throw new Error(`Mockup ${m.id}: give file: or url:, not both`);
+    }
+    let file = m.url ? String(m.url) : rel(m.file);
     // A Claude artifact is pulled into SOURCES_DIR/<id>/ by the critique skill before capture.
     if (!file && m.artifact) {
       const pulled = path.join(baseDir, SOURCES_DIR, m.id);
@@ -74,14 +83,15 @@ export function loadConfig(configPath) {
       }
       file = pulled;
     }
-    if (!file) throw new Error(`Mockup ${m.id} needs file: (html, image, .zip or folder) or artifact: (a claude.ai link)`);
-    if (!fs.existsSync(file)) throw new Error(`Mockup file missing for ${m.id}: ${file}`);
+    if (!file) throw new Error(`Mockup ${m.id} needs file: (html, image, .zip or folder), url: (a served PWA or web app) or artifact: (a claude.ai link)`);
+    if (!m.url && !fs.existsSync(file)) throw new Error(`Mockup file missing for ${m.id}: ${file}`);
 
     cfg.mockups.push({
       id: m.id,
       title: m.title || m.id,
       file,
-      kind: kindOf(file),
+      kind: m.url ? 'url' : kindOf(file),
+      source: sourcePaths(m.source, rel, `mockup ${m.id}`),
       artifact: m.artifact || null,
       entry: m.entry || null,
       phoneFrame: m.phone_frame || null,
@@ -226,6 +236,25 @@ function normalizeCrawl(c, mockups) {
     avoid: (c.avoid || []).map(String),
     fill: c.fill || {},
   };
+}
+
+/** True for an http(s) URL (a served PWA or web app) rather than a local file. */
+export function isRemote(src) {
+  return /^https?:\/\//i.test(String(src || ''));
+}
+
+/** The address a browser opens for a screen source: the URL itself, or a file:// URL. */
+export function pageUrl(src) {
+  return isRemote(src) ? src : pathToFileURL(src).href;
+}
+
+function sourcePaths(spec, rel, label) {
+  if (!spec) return [];
+  return [].concat(spec).map((p) => {
+    const abs = rel(String(p));
+    if (!fs.existsSync(abs)) throw new Error(`${label} source not found: ${abs}`);
+    return abs;
+  });
 }
 
 export function kindOf(file) {

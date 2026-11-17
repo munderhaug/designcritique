@@ -17,9 +17,12 @@ on HTML mockups. A critic adds what needs judgment, and covers image-only mockup
 | `WCAG-1.4.4` | Resize text (AA) | Text can grow to 200% without loss. On phones, think Dynamic Type / font scale |
 | `WCAG-1.4.10` | Reflow (AA) | No horizontal scrolling at 320 CSS px width |
 | `WCAG-1.4.11` | Non-text contrast (AA) | 3:1 for control boundaries, focus indicators, meaningful icons |
+| `WCAG-2.2.2` | Pause, stop, hide (A) | Anything that moves, blinks or loops for more than 5 seconds alongside other content can be paused or stopped; loading indicators are exempt |
 | `WCAG-2.3.3` | Animation from interactions (AAA) | Motion triggered by interaction can be turned off; respect the OS reduce-motion setting (`prefers-reduced-motion`, iOS Reduce Motion, Android Remove animations) |
 | `WCAG-2.4.4` | Link purpose, in context (A) | Link text says where it goes ("Terms of Service", not "here") |
 | `WCAG-2.4.6` | Headings and labels (AA) | Headings and labels describe topic or purpose |
+| `WCAG-2.4.7` | Focus visible (AA) | A keyboard or switch user can always see which control has focus; never remove the focus outline without a replacement |
+| `WCAG-2.4.11` | Focus not obscured, minimum (AA, new in 2.2) | A focused control is never entirely hidden by author content such as sticky headers, tab bars or bottom sheets |
 | `WCAG-2.5.1` | Pointer gestures (A) | Multi-point or path gestures have a single-tap alternative |
 | `WCAG-2.5.7` | Dragging movements (AA, new in 2.2) | Anything done by dragging can also be done without dragging |
 | `WCAG-2.5.8` | Target size, minimum (AA, new in 2.2) | 24×24 CSS px minimum. Platform guidance is stricter: 44×44 pt iOS, 48×48 dp Android |

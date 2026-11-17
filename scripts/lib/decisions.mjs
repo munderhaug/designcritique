@@ -8,6 +8,7 @@ import YAML from 'yaml';
 import { SEVERITIES } from './config.mjs';
 import { idMatches } from './match.mjs';
 import { similarity } from './compare.mjs';
+import { isDeterministic } from './merge.mjs';
 
 export const DECISIONS_FILE = '.designcritique/decisions.yaml';
 export const decisionsPath = (baseDir) => path.join(baseDir, DECISIONS_FILE);
@@ -30,7 +31,7 @@ export function saveDecisions(baseDir, decisions) {
   fs.writeFileSync(p, head + YAML.stringify({ decisions }));
 }
 
-const deterministic = (f) => f.source === 'check' || f.source === 'motion';
+const deterministic = (f) => isDeterministic(f);
 const where = (f) => f.element?.selector || f.element?.region || '';
 
 /** Does decision d refer to finding f? */

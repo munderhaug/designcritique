@@ -45,11 +45,13 @@ if [[ $INSTALL -eq 1 ]]; then
   if [[ $USER_SCOPE -eq 1 ]]; then SKILLS="$HOME/.claude/skills"; else SKILLS="$PROJECT/.claude/skills"; fi
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
-  # Copy skill folders from a GitHub repository: from_github <owner/repo> <path in repo> <skill>...
+  # Copy skill folders from a GitHub repository: from_github <owner/repo[@tag]> <path in repo> <skill>...
   from_github() {
-    local repo="$1" sub="$2"; shift 2
+    local spec="$1" sub="$2"; shift 2
+    local repo="${spec%@*}" ref=""
+    [[ "$spec" == *@* ]] && ref="${spec#*@}"
     local dir="$TMP/${repo//\//_}"
-    [[ -d "$dir" ]] || git clone -q --depth 1 "https://github.com/$repo.git" "$dir"
+    [[ -d "$dir" ]] || git clone -q --depth 1 ${ref:+--branch "$ref"} "https://github.com/$repo.git" "$dir"
     mkdir -p "$SKILLS"
     for skill in "$@"; do
       if [[ ! -f "$dir/$sub/$skill/SKILL.md" ]]; then echo "  $repo has no $sub/$skill; skipped" >&2; continue; fi
@@ -60,11 +62,11 @@ if [[ $INSTALL -eq 1 ]]; then
   }
 
   echo "Installing Impeccable…"
-  if [[ $ONLY -eq 0 && $USER_SCOPE -eq 0 ]] && (cd "$PROJECT" && npx -y impeccable install -y --providers=claude --scope=project); then
+  if [[ $ONLY -eq 0 && $USER_SCOPE -eq 0 ]] && (cd "$PROJECT" && npx -y impeccable@4.9.2 install -y --providers=claude --scope=project --no-hooks); then
     :
   else
     echo "  Impeccable's installer wasn't used or couldn't download; using its GitHub source."
-    from_github pbakaus/impeccable .claude/skills impeccable
+    from_github pbakaus/impeccable@cli-v4.9.2 .claude/skills impeccable
   fi
 
   echo "Installing Anthropic's design plugin…"

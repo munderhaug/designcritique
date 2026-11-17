@@ -1,57 +1,181 @@
 {
-  "$comment": "Expected findings per eval screen. checks.must: rule IDs the deterministic checks must report. checks.clean: no P0-P2 check findings allowed. critic.must: each item is a principle ID (exact, or an ID family such as IOS-NAV for IOS-NAV-STACK; WCAG-1.4.1 does not match WCAG-1.4.11) or {any:[...]} that some critic finding's rule or basis must contain. critic.max_major: most P0/P1 critic findings allowed (false-positive guard on clean screens).",
+  "$comment": "Expected findings per eval screen. checks.must: rule IDs the deterministic checks must report. checks.clean: no P0-P2 check findings allowed. critic.must: each item is a principle ID (exact, or an ID family such as IOS-NAV for IOS-NAV-STACK; WCAG-1.4.1 does not match WCAG-1.4.11) or {any:[...]} that some critic finding's rule or basis must contain. critic.max_major: most P0/P1 critic findings allowed (false-positive guard on clean screens). Detector rules (IMPECCABLE-*, UNSLOPOVICH-*) count as checks. A clean screen may still list its seeded flaws in checks.must.",
   "login": {
     "checks": {
-      "must": ["CHK-TARGET", "AXE-button-name", "AXE-color-contrast", "CHK-TEXT-SCALE", "CHK-OVERFLOW", "CHK-TEXT-MIN", "CHK-SAFE-AREA", "CHK-DARK", "CHK-TOKEN-COLOR", "CHK-TOKEN-SPACE", "CHK-TOKEN-TYPE"],
-      "must_not": ["CHK-TEXT-CLIP"]
+      "must": [
+        "CHK-TARGET",
+        "AXE-button-name",
+        "AXE-color-contrast",
+        "CHK-TEXT-SCALE",
+        "CHK-OVERFLOW",
+        "CHK-TEXT-MIN",
+        "CHK-SAFE-AREA",
+        "CHK-DARK",
+        "CHK-TOKEN-COLOR",
+        "CHK-TOKEN-SPACE",
+        "CHK-TOKEN-TYPE"
+      ],
+      "must_not": [
+        "CHK-TEXT-CLIP"
+      ]
     },
-    "critic": { "must": [] }
+    "critic": {
+      "must": []
+    }
   },
   "feed": {
     "checks": {
-      "must": ["CHK-TARGET", "CHK-SAFE-AREA", "AXE-image-alt", "AXE-color-contrast", "CHK-TEXT-CLIP", "CHK-TEXT-OVERLAP", "CHK-TOKEN-COLOR"],
-      "must_not": ["CHK-TEXT-SCALE", "CHK-OVERFLOW", "CHK-TEXT-MIN", "CHK-DARK", "CHK-TOKEN-SPACE", "CHK-TOKEN-TYPE"]
+      "must": [
+        "CHK-TARGET",
+        "CHK-SAFE-AREA",
+        "AXE-image-alt",
+        "AXE-color-contrast",
+        "CHK-TEXT-CLIP",
+        "CHK-TEXT-OVERLAP",
+        "CHK-TOKEN-COLOR",
+        "UNSLOPOVICH-img-no-alt"
+      ],
+      "must_not": [
+        "CHK-TEXT-SCALE",
+        "CHK-OVERFLOW",
+        "CHK-TEXT-MIN",
+        "CHK-DARK",
+        "CHK-TOKEN-SPACE",
+        "CHK-TOKEN-TYPE"
+      ]
     },
-    "critic": { "must": [] }
+    "critic": {
+      "must": []
+    }
   },
   "settings": {
-    "checks": { "clean": true },
-    "critic": { "max_major": 0 }
+    "checks": {
+      "clean": true
+    },
+    "critic": {
+      "max_major": 0
+    }
   },
   "trips": {
-    "checks": { "clean": true },
-    "critic": { "max_major": 0 }
+    "checks": {
+      "clean": true
+    },
+    "critic": {
+      "max_major": 0
+    }
   },
   "welcome": {
-    "checks": { "must": [], "must_not": ["CHK-OVERFLOW", "CHK-TEXT-SCALE", "CHK-DARK"] },
+    "checks": {
+      "must": [
+        "IMPECCABLE-ai-color-palette",
+        "IMPECCABLE-low-contrast",
+        "IMPECCABLE-marketing-buzzword",
+        "UNSLOPOVICH-slop-gradient",
+        "UNSLOPOVICH-buzzword-copy",
+        "UNSLOPOVICH-invented-stat"
+      ],
+      "must_not": [
+        "CHK-OVERFLOW",
+        "CHK-TEXT-SCALE",
+        "CHK-DARK"
+      ]
+    },
     "critic": {
       "must": [
         "TELL-GRADIENT",
-        { "any": ["TELL-EMOJI", "IOS-ICONS"] },
-        { "any": ["TELL-FAKE-PROOF", "NN-H2"] },
-        { "any": ["TELL-CTA-STACK", "LAW-HICK", "VIS-ISOLATION", "VIS-HIERARCHY"] },
-        { "any": ["IOS-NAV-TABBAR", "TELL-WEB-IDIOMS", "LAW-JAKOB"] },
-        { "any": ["TASK-FIT", "TELL-BUZZWORDS", "TASK-WALK-Q1"] }
+        {
+          "any": [
+            "TELL-EMOJI",
+            "IOS-ICONS"
+          ]
+        },
+        {
+          "any": [
+            "TELL-FAKE-PROOF",
+            "NN-H2"
+          ]
+        },
+        {
+          "any": [
+            "TELL-CTA-STACK",
+            "LAW-HICK",
+            "VIS-ISOLATION",
+            "VIS-HIERARCHY"
+          ]
+        },
+        {
+          "any": [
+            "IOS-NAV-TABBAR",
+            "TELL-WEB-IDIOMS",
+            "LAW-JAKOB"
+          ]
+        },
+        {
+          "any": [
+            "TASK-FIT",
+            "TELL-BUZZWORDS",
+            "TASK-WALK-Q1"
+          ]
+        }
       ]
     }
   },
   "checkout": {
-    "checks": { "clean": true },
+    "checks": {
+      "clean": true,
+      "must": [
+        "UNSLOPOVICH-oops-error"
+      ]
+    },
     "critic": {
       "must": [
-        { "any": ["NN-H3", "IOS-NAV-STACK"] },
-        { "any": ["NN-H9", "WCAG-3.3.3", "WCAG-3.3.1"] },
-        { "any": ["WCAG-3.3.2", "NN-H6"] },
-        { "any": ["IOS-DESTRUCTIVE", "NN-H5", "GESTALT-SIMILARITY"] }
+        {
+          "any": [
+            "NN-H3",
+            "IOS-NAV-STACK"
+          ]
+        },
+        {
+          "any": [
+            "NN-H9",
+            "WCAG-3.3.3",
+            "WCAG-3.3.1"
+          ]
+        },
+        {
+          "any": [
+            "WCAG-3.3.2",
+            "NN-H6"
+          ]
+        },
+        {
+          "any": [
+            "IOS-DESTRUCTIVE",
+            "NN-H5",
+            "GESTALT-SIMILARITY"
+          ]
+        }
       ]
     }
   },
   "signup": {
-    "checks": { "must": ["CHK-PRESELECTED-CONSENT", "CHK-ASYMMETRIC-CHOICE", "CHK-CONFIRMSHAMING"] },
-    "critic": { "must": [] }
+    "checks": {
+      "must": [
+        "CHK-PRESELECTED-CONSENT",
+        "CHK-ASYMMETRIC-CHOICE",
+        "CHK-CONFIRMSHAMING"
+      ]
+    },
+    "critic": {
+      "must": []
+    }
   },
   "choices": {
-    "checks": { "clean": true },
-    "critic": { "max_major": 0 }
+    "checks": {
+      "clean": true
+    },
+    "critic": {
+      "max_major": 0
+    }
   }
 }
