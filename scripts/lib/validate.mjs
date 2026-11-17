@@ -61,6 +61,12 @@ export function validateCritique(data, { screens } = {}) {
     }
   });
   for (const t of data.tasks || []) {
+    // Scores and verdicts follow the anchors in output-format.md; flag the ones that disagree.
+    if (typeof t.score === 'number') {
+      if (t.verdict === 'blocked' && t.score > 4) warnings.push(`task "${t.task}": verdict blocked but score ${t.score} (blocked scores 0-4)`);
+      if (t.verdict !== 'blocked' && t.verdict !== 'not-covered' && t.score <= 4) warnings.push(`task "${t.task}": score ${t.score} means a step fails (0-4), but verdict is ${t.verdict}; use blocked`);
+      if (t.verdict === 'supported' && t.score < 7) warnings.push(`task "${t.task}": verdict supported but score ${t.score} (supported scores 7-10)`);
+    }
     for (const s of t.steps || []) {
       for (const fid of s.finding_ids || []) if (!seen.has(fid)) warnings.push(`task "${t.task}": step refers to unknown finding ${fid}`);
     }

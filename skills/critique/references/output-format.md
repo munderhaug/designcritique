@@ -88,5 +88,6 @@ gate uses the lowest score any critic gave a task, so score what you can defend,
 | 0–2 | The task can't be done with these screens, or a P0 blocks it |
 
 A score must agree with the findings and verdict: a task with an open P1 on its path can't
-score above 6, and `blocked` can't score above 4. Model judges tend to grade generously; when
+score above 6; `blocked` means 0–4 and 0–4 means `blocked`; `supported` means 7–10. The validator
+warns when they disagree. Model judges tend to grade generously; when
 between two scores, pick the lower and say why in `summary`.

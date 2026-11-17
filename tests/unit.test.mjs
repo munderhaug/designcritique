@@ -151,3 +151,12 @@ test('iterate keeps the best round, not the last', () => {
   const checksOnly = { ...run(false, [], []), coverage: { critics: [] } };
   assert.equal(bestRound([{ round: 1, merged: run(false, ['P1', 'P1'], [5]) }, { round: 2, merged: checksOnly }]).round, 1);
 });
+
+test('validation warns when a task score and verdict disagree', () => {
+  const base = { critic: 'impeccable', findings: [] };
+  const w = (t) => validateCritique({ ...base, tasks: [t] }).warnings;
+  assert.equal(w({ task: 'Pay', verdict: 'blocked', score: 3 }).length, 0);
+  assert.ok(w({ task: 'Pay', verdict: 'at-risk', score: 3 }).some((x) => /use blocked/.test(x)));
+  assert.ok(w({ task: 'Pay', verdict: 'blocked', score: 6 }).length);
+  assert.ok(w({ task: 'Pay', verdict: 'supported', score: 5 }).length);
+});

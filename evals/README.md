@@ -25,6 +25,28 @@ mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
 - **welcome**: Seeded flaws (critic): generic purple-blue gradient hero, emoji used as feature icons, everything centred in identical cards, three competing primary buttons, made-up stats, a hamburger menu as primary navigation on iOS, and a web-style footer link row.
 - **settings**, **trips**: clean. Token-compliant, accessible, dark mode, scalable type.
 
+## Critic results
+
+First end-to-end run of both critics on this set (2026-11-17). Each ran in a fresh agent that
+had never seen the screens, the seeded flaws or the other critic's output, and the two ran on
+different models.
+
+| Critic | Setup | Recall on seeded screens | P0/P1 on clean screens | Findings |
+|---|---|---|---|---|
+| design-reviewer | Anthropic design plugin (knowledge-work-plugins `e91a134`) | 10/10 | 0 | 15 |
+| Impeccable critique | Impeccable 4.9.2 (`pbakaus/impeccable` `d41d986`), native path | 10/10 | 0 | 15 |
+| Both, merged | | 10/10 | 0 | 59 with the checks |
+
+Key-task scores (0–10) from the two critics agreed within one point: checkout 3 / 3, log in
+5 / 5, settings 9 / 9, feed 6 / 7, trips 9 / 9, welcome 4 / 4. Both kept the clean screens
+at 9 and put checkout, the must-not-fail task, lowest. Impeccable labelled two tasks
+`at-risk` while scoring them 3 and 4; the validator now warns when a verdict and score
+disagree.
+
+Not yet measured: whether the critics stay quiet on subtler clean screens, and run-to-run
+variance. Re-run both critics after changing a brief, the agent or the principles index, and
+update this table.
+
 ## Learning from decisions
 
 When the person dismisses or re-rates a finding (`scripts/report/decide.mjs`), the decision is
