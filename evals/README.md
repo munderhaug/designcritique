@@ -68,6 +68,32 @@ Not yet measured: whether the critics stay quiet on subtler clean screens, and r
 variance. Re-run both critics after changing a brief, the agent or the principles index, and
 update this table.
 
+## Noise: the same screens judged twice (2026-11-17)
+
+`npm run eval:noise` measures occasion noise (Kahneman, Sibony & Sunstein, *Noise*, 2021): the
+critics judged the critic run above a second time, cold, with the same models, briefs and plugin
+files (commit `1f7c259`), and the two judgements were compared.
+
+| Critic | Task scores differ by | Same verdict | Findings in both runs | Same severity | P0/P1 reproduced |
+|---|---|---|---|---|---|
+| design-reviewer | 0.2 on average, at most 1 | 6 of 6 | 10 of 15 (67% overlap) | 90% | 3 of 4 (one moved P1 → P2) |
+| Impeccable critique | 0.2 on average, at most 1 | 6 of 6 | 12 of 15 (67% overlap) | 100% | 5 of 5 |
+
+Recall on the seeded screens was 10/10 in both runs, with no P0/P1 on the clean screens.
+
+What this means:
+- Task scores and verdicts are stable, so the gate's "lowest score" rule isn't failing runs at
+  random.
+- Serious findings mostly reproduce. The one that moved (placeholder-only labels at checkout)
+  sits on the P1/P2 boundary that `severity.md` asks critics to settle by task criticality; a
+  finding on a boundary can flip the `fail_on: P1` gate between runs.
+- About a third of P2 and P3 findings come and go between runs. Treat a single run's minor
+  findings as a sample, not a full list: a second run, or the other critic, finds more.
+
+One repetition of two critics on six screens is a small sample. Re-run after changing a brief,
+an agent or the principles index; critics now also record `subscores` before each task score,
+which this measurement predates.
+
 ## Learning from decisions
 
 When the person dismisses or re-rates a finding (`scripts/report/decide.mjs`), the decision is
