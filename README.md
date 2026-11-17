@@ -83,7 +83,19 @@ bash <plugin-dir>/scripts/setup.sh --install-companions
 ```
 
 This installs script dependencies and a browser if needed, Impeccable into the project, and
-Anthropic's design plugin, then lists what it found. Connect a reference source with
+Anthropic's design plugin, then lists what it found. When an installer can't run or can't reach
+its server (common in cloud sessions), it copies the skills from the companions' GitHub
+repositories instead. Add `--user` to install them for every project (`~/.claude/skills`).
+
+For Claude Code on the web, put the companions in your cloud environment's setup script so every
+session starts with them (`--companions-only` skips everything the plugin itself installs later):
+
+```bash
+git clone -q --depth 1 https://github.com/munderhaug/designcritique /tmp/dc-setup \
+  && bash /tmp/dc-setup/scripts/setup.sh --companions-only --user \
+  || echo "designcritique companions not installed"
+rm -rf /tmp/dc-setup
+``` Connect a reference source with
 `claude mcp add --transport http mobbin https://api.mobbin.com/mcp` (paid) or Refero
 (`https://api.refero.design/mcp`, freemium). Node 20+ is required.
 

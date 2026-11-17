@@ -24,9 +24,10 @@ tool details in [companions.md](references/companions.md).
 
 Run `bash PLUGIN_ROOT/scripts/setup.sh`, then
 `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` and keep the output for step 5.
-If Impeccable or the Anthropic design plugin is missing, tell the user once, with the install
-commands from setup's output (`setup.sh --install-companions` installs both), then continue
-with whatever is available.
+If Impeccable or the Anthropic design plugin is missing, offer once to run
+`bash PLUGIN_ROOT/scripts/setup.sh --install-companions` (it falls back to their GitHub sources
+when an installer can't download). If the person declines, continue with what is available and
+say which critic ran in fallback mode.
 
 ## 1. Frame the problem
 

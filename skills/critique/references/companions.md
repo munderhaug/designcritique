@@ -15,7 +15,9 @@ catalog. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to se
 | DESIGN.md format | Google Labs | Token file the token checks read | template in `templates/` |
 
 `bash scripts/setup.sh --install-companions` installs Impeccable into the project and the
-Anthropic design plugin for the user.
+Anthropic design plugin for the user, falling back to copying their skills from GitHub when an
+installer can't run or reach its server. `--user` installs into `~/.claude/skills` for every
+project; `--companions-only` does only that, for cloud environment setup scripts.
 
 ## Motion and design systems
 
