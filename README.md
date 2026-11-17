@@ -28,7 +28,8 @@ init + HCD     shipped apps     mobile checks            Anthropic design     â”
 | Platform guidance | Material 3 skill (hamen), Expo skills, when installed | Routing the right guidance to the reviewer |
 | Anti-pattern detectors, two angles | Impeccable's detector (rendered page at phone size, and HTML/CSS) and unslopovich (app source: SwiftUI, Compose, Android XML, React Native, Flutter, web), both pinned in package.json | An allowlist of their rules mapped to principle IDs, `url:` for served PWAs and `source:` for app code, and one finding when the screen and its code show the same problem |
 | Motion | transitions-agent (Jakub Antalik, transitions.dev): deterministic local scan, pinned in package.json | Running it and importing its findings for HTML mockups, mobile-aware severities |
-| Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials |
+| Design-system checks | The eight essentials of the Smpl design-system guide; DESIGN.md format | Token contrast, colour roles, 4-based spacing, coverage of the essentials. The token reader is measured on open-design's 152 DESIGN.md files (`npm run eval:tokens`) |
+| Style starting points | open-design (nexu-io, Apache-2.0), pinned | `scripts/styles.mjs`: 52 generic style families as a first DESIGN.md, with attribution and the platform's type scale; never a system modelled on a named company |
 | Merged report | | One finding per problem: the same problem from both critics (or a check and a critic) is merged and marked as higher confidence; a check failing on many screens is reported once with the screen list. Severity (Nielsen's factors, weighted by task criticality), annotated HTML, **since last run** (fixed / new / still open) |
 | Deceptive patterns | Gray et al. (CHI 2018), Mathur et al. (CSCW 2019), Brignull (2023), CJEU *Planet49* (2019), EDPB Guidelines 03/2022 | `ETHICS-*` principles; checks for pre-ticked consent, lopsided accept/decline choices and confirmshaming on every HTML screen, in the prototype's language; reviewers look for obstruction, sneaking, false urgency, forced actions and nagging |
 | Critic output validation | ajv (JSON Schema) | A plugin hook that rejects invalid critic JSON when it's saved inside a run (exit 2) |
@@ -190,6 +191,8 @@ only; deterministic checks need HTML. Large-text rendering is a proxy for Dynami
 
 ```
 catalog/stack.yaml     cited build-stack catalog
+catalog/styles.yaml    style families offered as DESIGN.md starting points
+catalog/vocabulary.yaml  words per language (consent, states, controls not to press)
 commands/              /designcritique:critique, :review, :frame, :iterate, :decide
 skills/frame/          problem framing on top of Impeccable init
 skills/critique/       orchestration, inputs, references, severity, output format, companions

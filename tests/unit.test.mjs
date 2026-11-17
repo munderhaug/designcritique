@@ -603,3 +603,16 @@ test('tokens: Markdown formats from real design systems', async () => {
   assert.deepEqual(inlineScale('rgba(0,0,0,0.3) 0px 1px'), []);
   assert.equal(roleHint('Card borders'), null);
 });
+
+test('styles catalog: style families only, no id both offered and excluded, same pinned commit', async () => {
+  const YAML = (await import('yaml')).default;
+  const { OPEN_DESIGN } = await import('../scripts/lib/corpus.mjs');
+  const cat = YAML.parse(fs.readFileSync('catalog/styles.yaml', 'utf8'));
+  const offered = Object.values(cat.families).flat();
+  assert.equal(new Set(offered).size, offered.length, 'each style once');
+  const excluded = cat.excluded.flatMap((e) => e.ids);
+  for (const e of cat.excluded) assert.ok(e.why, 'every exclusion says why');
+  assert.deepEqual(offered.filter((x) => excluded.includes(x)), []);
+  assert.equal(cat.source.commit, OPEN_DESIGN.commit);
+  assert.equal(cat.source.license, 'Apache-2.0');
+});

@@ -39,6 +39,12 @@ overflow, tokens, looping motion) and taste-only rules without a cited principle
 | Impeccable detect 4.9.2 | Paul Bakaus, Apache-2.0 | rendered (browser at phone size) and HTML/CSS/JSX source | AI colour palette and gradient text (`TELL-GRADIENT`), nested cards (`TELL-CARDS`), eyebrow labels (`TELL-EYEBROW`), marketing buzzwords (`TELL-BUZZWORDS`, English), skipped heading level (`WCAG-1.3.1`), low contrast on gradients (`WCAG-1.4.3`) |
 | unslopovich 3.0.0 | erkamyaman, MIT | source: SwiftUI, Compose, Android XML, React Native, Flutter, web | fixed text size (`IOS-TYPE`/`AND-TYPE`, `WCAG-1.4.4`), back gesture disabled (`IOS-NAV-STACK`/`AND-APPBAR`), safe area ignored and keyboard covering fields (`IOS-LAYOUT`/`AND-LAYOUT`), drawer navigation and hover-only (`TELL-WEB-IDIOMS`), zoom disabled, image without alt, clickable div, focus removed (`WCAG-1.4.4`, `1.1.1`, `4.1.2`, `2.4.7`), decorative pulse (`WCAG-2.2.2`), vague errors (`NN-H9`), and the tells (gradients, emoji icons, nested cards, eyebrow labels, buzzwords, invented numbers; English copy rules only for English products) |
 
+## Design-system corpus
+
+| Source | By, licence | Used for |
+|---|---|---|
+| open-design `design-systems/` at a pinned commit | nexu-io, Apache-2.0 | `npm run eval:tokens`: the token reader and design-system checks run over its 152 DESIGN.md files. `scripts/styles.mjs`: 52 generic style families (`catalog/styles.yaml`) as DESIGN.md starting points, written with their attribution. Systems modelled on a named company, product, game or person are eval data only |
+
 libraries.dev (Jakub Antalik) is on the catalog's watch list, not used: it's React for the web
 first, and its native ports aren't published yet.
 
@@ -76,7 +82,7 @@ Reviewed against the primary sources in the principles index. Re-check before ad
 | Impeccable `audit`, `polish`, `typeset`, `layout` | Fixing and building commands. Its `critique` is a critic and its detector a check; the rest edits the design, which designcritique leaves to the person or `/designcritique:iterate` |
 | anti-slop (miqdadbadjuber) | A prompt list of AI tells without sources; the tells it names are in `ai-tells.md` or detected by the two engines above |
 | uxed (MK27MK) | A general UX prompt pack; duplicates the Anthropic design plugin's methods without citing primary sources |
-| open-design-agent-kit (feimacode) | Repackages open-design's design systems for agents. designcritique uses open-design itself (below), at a pinned commit |
+| open-design-agent-kit (feimacode) | Repackages open-design's design systems for agents. designcritique uses open-design itself (above), at a pinned commit |
 
 ## Why the principles index exists
 

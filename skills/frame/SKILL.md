@@ -33,10 +33,15 @@ explains each one.
    project's documents first (roadmap, spec, content guide, DESIGN.md, decisions) and derive them,
    naming the source document for each line; then ask only about what's missing, at most three
    questions at a time. If mockups.yaml has no `journeys:`, offer to write them from `## Journeys`.
-5. **Point at research when it's thin.** If key tasks rest on assumptions, suggest Anthropic's
+5. **No DESIGN.md yet?** Offer, once, a starting point from a generic style family:
+   `node PLUGIN_ROOT/scripts/styles.mjs list`, then `use <id> --platform <ios|android>`. It writes
+   DESIGN.md with its attribution, adds the platform's type scale if the style has none, and
+   prints the design-system checks to fix. Only style families are offered, never a system
+   modelled on a named company. Skip this if the person has a design system or brand already.
+6. **Point at research when it's thin.** If key tasks rest on assumptions, suggest Anthropic's
    `user-research` skill (design plugin) or the `hcd-interviewer` skill to plan real interviews.
    If Mobbin or Refero is connected, looking at how shipped apps handle the key tasks helps make
    them concrete; record what you learn as `[inferred]`.
-6. **Check before finishing.** The file names a specific primary user, a problem without a
+7. **Check before finishing.** The file names a specific primary user, a problem without a
    solution in it, ranked key tasks with one must-not-fail, and judgeable success criteria.
    Then report in two or three lines what changed and which assumptions are open.

@@ -130,6 +130,16 @@ export function markdownTokens(md) {
       continue;
     }
     header = null;
+    // Several labelled values on one line: "- **Success:** `#17A34A`, **Warn:** `#EAB308`"
+    const labelled = [...line.matchAll(/\*\*([^*]+?):?\*\*:?\s*([^*]*)/g)];
+    if (/^\s*[-*]\s+\*\*/.test(line) && labelled.length > 1 && labelled.every((m) => /:/.test(m[0]))) {
+      for (const [, label, rest] of labelled) {
+        const name = slug(label);
+        const values = clean(rest).match(VALUE_RE) || [];
+        values.forEach((value, k) => push(k ? `${name}-${k + 1}` : name, value, [], k ? null : roleHint(rest.replace(VALUE_RE, ''))));
+      }
+      continue;
+    }
     // "- **Name** (`#hex`): what it is for"
     const named = line.match(/^\s*[-*]\s+\*\*([^*]+)\*\*\s*\(([^)]*(?:\([^)]*\)[^)]*)*)\)\s*:?\s*(.*)$/);
     if (named) {

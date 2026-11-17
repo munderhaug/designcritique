@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from '../lib/config.mjs';
 import { loadTokens } from '../lib/tokens.mjs';
 import { designSystemFindings } from '../checks/design-system.mjs';
+import fs from 'node:fs';
+import YAML from 'yaml';
 import { OPEN_DESIGN, openDesignSystems, designFiles } from '../lib/corpus.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -63,6 +65,14 @@ for (const [k, min] of Object.entries(THRESHOLDS)) {
 }
 console.log('\nDesign-system checks across the corpus (systems flagged):');
 for (const [rule, count] of [...rules].sort((a, b) => b[1] - a[1])) console.log(`  ${rule.padEnd(18)} ${count}`);
+// Style starting points (catalog/styles.yaml): each must exist at the pinned commit.
+const styles = YAML.parse(fs.readFileSync(path.join(root, 'catalog', 'styles.yaml'), 'utf8'));
+const styleIds = Object.values(styles.families).flat();
+const known = new Set(systems.map((x) => x.id));
+const missingStyles = styleIds.filter((x) => !known.has(x));
+if (styles.source.commit !== OPEN_DESIGN.commit) { failed = true; console.log('\ncatalog/styles.yaml pins a different commit than scripts/lib/corpus.mjs'); }
+console.log(`\nStyle starting points: ${styleIds.length - missingStyles.length}/${styleIds.length} present${missingStyles.length ? `; missing ${missingStyles.join(', ')}` : ''}`);
+if (missingStyles.length) failed = true;
 if (insane.length) { failed = true; console.log(`\nReader errors:\n  ${insane.slice(0, 10).join('\n  ')}`); }
 if (args.list && misses[args.list]) console.log(`\nMissing ${args.list}: ${misses[args.list].join(', ')}`);
 process.exit(failed ? 1 : 0);

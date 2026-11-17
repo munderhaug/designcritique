@@ -1,0 +1,37 @@
+# Style families offered as DESIGN.md starting points (scripts/styles.mjs).
+#
+# From open-design's design-systems (nexu-io, Apache-2.0) at a pinned commit. Only generic style
+# families are listed: a look anyone may use, not a company's identity. Systems "inspired by" a
+# named company, product, game or person are eval data only (npm run eval:tokens) and never
+# offered. A starting point is not a recommendation: it is checked like any DESIGN.md, and its
+# results are shown before you use it. Re-check entries when the pinned commit changes.
+source:
+  name: open-design
+  by: nexu-io
+  repo: https://github.com/nexu-io/open-design
+  commit: f2ecaa3f88e1eba001379ea845e7b7754310ea6d   # same as scripts/lib/corpus.mjs
+  path: design-systems/<id>/DESIGN.md
+  license: Apache-2.0
+verified: 2026-11-17
+
+families:
+  Starter: [default, warm-editorial]
+  Modern and minimal: [clean, contemporary, flat, minimal, modern, mono, refined, simple, sleek]
+  Professional: [application, corporate, elegant, enterprise, luxury, professional]
+  Layout and structure: [bento, levels, perspective, spacious]
+  Bold and expressive: [bold, brutalism, colorful, dramatic, energetic, expressive, neobrutalism, vibrant]
+  Creative: [artistic, cafe, cosmic, creative, doodle, editorial, fantasy, friendly, publication, storytelling]
+  Material effects: [claymorphism, glassmorphism, gradient, neon, neumorphism, skeumorphism]
+  Retro: [dithered, paper, retro, vintage]
+  Themed: [agentic, futuristic, hud]
+
+# Left out of the style categories on purpose. Everything outside `families` is excluded too.
+excluded:
+  - ids: [material, ant, shadcn]
+    why: Named design systems and libraries. Use them from their own sources through catalog/stack.yaml.
+  - ids: [premium, dashboard, trading-terminal, lingo, loom]
+    why: Described as inspired by, or modelled on, named companies or apps.
+  - ids: [pacman, tetris]
+    why: Modelled on named games.
+  - ids: [totality-festival, tom-modern]
+    why: A named event's and a person's own design.
