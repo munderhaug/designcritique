@@ -95,6 +95,8 @@ export function loadConfig(configPath) {
     });
   }
   if (!cfg.mockups.length) throw new Error('No mockups listed in config');
+  cfg.journeys = normalizeJourneys(raw.journeys, cfg.mockups);
+  cfg.crawl = raw.crawl ? normalizeCrawl(raw.crawl, cfg.mockups) : null;
   return cfg;
 }
 
@@ -140,15 +142,16 @@ function normalizeAppearance(v, id) {
 }
 
 // Steps that bring a single-page app to a screen after it loads. Each step is one of:
-//   click: <selector>   fill: <selector> + value: <text>   press: <key>   scroll: <selector>
+//   tap: <accessible name>   click: <selector>   fill: <selector> + value: <text>   press: <key>   scroll: <selector>
 //   wait: <ms or selector>   goto: <#hash or ?query, relative to the page>   eval: <JS>
 // Selectors are Playwright selectors: CSS, text=Settings, role=button[name="Save"].
-const STEP_KINDS = ['click', 'fill', 'press', 'scroll', 'wait', 'goto', 'eval'];
+const STEP_KINDS = ['tap', 'click', 'fill', 'press', 'scroll', 'wait', 'goto', 'eval'];
 export function normalizeSteps(steps, id) {
   if (steps == null) return [];
   if (!Array.isArray(steps)) throw new Error(`Mockup ${id}: steps must be a list`);
   return steps.map((st, i) => {
-    const step = typeof st === 'string' ? { click: st } : st;
+    // A bare string taps the control with that accessible name (button, link, tab...).
+    const step = typeof st === 'string' ? { tap: st } : st;
     const kinds = STEP_KINDS.filter((k) => step && step[k] != null);
     if (kinds.length !== 1) throw new Error(`Mockup ${id}: step ${i + 1} needs exactly one of ${STEP_KINDS.join(', ')}: ${JSON.stringify(st)}`);
     if (kinds[0] === 'fill' && step.value == null) throw new Error(`Mockup ${id}: step ${i + 1} fill needs value:`);
@@ -178,6 +181,45 @@ function normalizeStates(m, rel) {
       appearance: st.appearance ? normalizeAppearance(st.appearance, `${m.id}/${st.id}`) : null,
     };
   });
+}
+
+// journeys: named end-to-end paths, replayed tap by tap from a start mockup and captured at
+// every step. `steps` items are accessible names to tap ("Krise") or step objects.
+function normalizeJourneys(list, mockups) {
+  if (list == null) return [];
+  if (!Array.isArray(list)) throw new Error('journeys must be a list');
+  const seen = new Set();
+  return list.map((j, i) => {
+    if (!j?.id || !/^[A-Za-z0-9_-]+$/.test(j.id)) throw new Error(`journey ${i + 1} needs an id (letters, digits, - and _)`);
+    if (seen.has(j.id)) throw new Error(`Duplicate journey id: ${j.id}`);
+    seen.add(j.id);
+    const start = j.start || mockups[0].id;
+    if (!mockups.some((m) => m.id === start)) throw new Error(`journey ${j.id}: start "${start}" is not a mockup id`);
+    const steps = normalizeSteps(j.steps, `journey ${j.id}`);
+    if (!steps.length) throw new Error(`journey ${j.id} needs steps`);
+    return {
+      id: j.id, title: j.title || j.id, start, steps,
+      state: j.state || null,
+      critical: !!(j.critical || j.must_not_fail),
+      stage: j.stage || null,
+      ends_at: j.ends_at || null,
+      notes: j.notes || null,
+    };
+  });
+}
+
+// crawl: explore a single-page app by tapping every control (scripts/crawl/crawl.mjs).
+function normalizeCrawl(c, mockups) {
+  const start = c.start || mockups[0].id;
+  if (!mockups.some((m) => m.id === start)) throw new Error(`crawl.start "${start}" is not a mockup id`);
+  return {
+    start,
+    max_states: Number(c.max_states ?? 60),
+    max_actions: Number(c.max_actions ?? 40),
+    max_depth: Number(c.max_depth ?? 8),
+    avoid: (c.avoid || []).map(String),
+    fill: c.fill || {},
+  };
 }
 
 export function kindOf(file) {

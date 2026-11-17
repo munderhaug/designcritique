@@ -6,18 +6,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { chromium } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 import {
   loadConfig, parseArgs, timestamp, writeJson, platformsFor, DEVICE_PRESETS,
 } from '../lib/config.mjs';
 import { expandMockup, imageSize } from '../lib/sources.mjs';
 import { analyzePage } from '../lib/analyze-page.mjs';
+import { launch, preparePage, pageFingerprint } from '../lib/browser.mjs';
 
 const FRAME_ATTR = 'data-dc-frame';
 const FRAME_CANVAS = { width: 1600, height: 1200 };
-const LARGE_TEXT_CSS = 'html { font-size: 135% !important; }';
-const FREEZE_CSS = '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition: none !important; caret-color: transparent !important; }';
 // Rules that only make sense for whole websites, or that our mobile checks replace.
 const AXE_DISABLED = ['region', 'landmark-one-main', 'landmark-unique', 'landmark-complementary-is-top-level', 'page-has-heading-one', 'document-title', 'html-has-lang', 'bypass', 'meta-viewport', 'target-size'];
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
@@ -65,111 +63,6 @@ function renderPlan(frameMode) {
   return plan;
 }
 
-async function launch() {
-  const attempts = [{}, { channel: 'chrome' }, { channel: 'msedge' }];
-  let last;
-  for (const opts of attempts) {
-    try { return await chromium.launch(opts); } catch (e) { last = e; }
-  }
-  throw new Error(`Could not start a browser. Run: npx playwright install chromium\n${last?.message?.split('\n')[0]}`);
-}
-
-async function preparePage(context, url, variant, screen = {}, insets = null) {
-  const page = await context.newPage();
-  if (args.offline) {
-    await page.route('**/*', (route) => (route.request().url().startsWith('file:') || route.request().url().startsWith('data:') ? route.continue() : route.abort()));
-  }
-  await page.goto(url, { waitUntil: 'load', timeout: 30000 });
-  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-  if (insets) page.dcInsets = await emulateSafeArea(page, insets);
-  await runSetupAndSteps(page, screen, variant);
-  await injectStyles(page, variant);
-  await page.evaluate(() => document.fonts && document.fonts.ready);
-  await page.waitForTimeout(150);
-  return page;
-}
-
-// The device's system-bar insets for env(safe-area-inset-*). As on iOS and Android, a page gets
-// them only with viewport-fit=cover; without it env() stays 0. Chromium's DevTools protocol
-// sets them (Emulation.setSafeAreaInsetsOverride); older browsers fall back to 0 with a note.
-async function emulateSafeArea(page, { top, bottom }) {
-  const cover = await page.evaluate(() => /viewport-fit\s*=\s*cover/i.test(document.querySelector('meta[name=viewport]')?.content || ''));
-  if (!cover) return { applied: false, reason: 'no viewport-fit=cover' };
-  try {
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top, bottom, left: 0, right: 0 } });
-    return { applied: true, top, bottom };
-  } catch (e) {
-    return { applied: false, reason: `browser can't emulate insets (${e.message.split('\n')[0]})` };
-  }
-}
-
-// Capture's own CSS (frozen animation, enlarged text). Added once per document, so it is
-// re-added after a setup script or step reloads or navigates the page.
-async function injectStyles(page, variant) {
-  await settle(page);
-  await page.evaluate(({ freeze, large }) => {
-    if (document.getElementById('dc-capture-styles')) return;
-    const el = document.createElement('style');
-    el.id = 'dc-capture-styles';
-    el.textContent = freeze + (large || '');
-    (document.head || document.documentElement).appendChild(el);
-  }, { freeze: FREEZE_CSS, large: variant === 'large-text' ? LARGE_TEXT_CSS : '' });
-}
-
-const navigated = (e) => /context was destroyed|navigat/i.test(e?.message || '');
-
-// Run code in the page; a reload or navigation it causes (seed storage, then reload) is fine.
-async function evaluateAllowingNavigation(page, code) {
-  try { await page.evaluate(`(async () => { ${code}\n })()`); }
-  catch (e) { if (!navigated(e)) throw e; }
-  await settle(page);
-}
-
-// Wait until the page has a loaded document that answers, riding out a reload in progress.
-async function settle(page) {
-  for (let i = 0; i < 50; i++) {
-    try {
-      await page.waitForLoadState('load', { timeout: 15000 });
-      if (await page.evaluate(() => document.readyState === 'complete')) break;
-    } catch (e) { if (!navigated(e)) throw e; }
-    await page.waitForTimeout(100);
-  }
-  await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
-}
-
-// Bring a single-page app to the screen: the mockup's setup script, then its steps (mockups.yaml).
-async function runSetupAndSteps(page, screen, variant) {
-  if (screen.setup) {
-    try { await evaluateAllowingNavigation(page, fs.readFileSync(screen.setup, 'utf8')); }
-    catch (e) { throw new Error(`setup ${path.basename(screen.setup)} failed: ${e.message.split('\n')[0]}`); }
-  }
-  if (screen.steps?.length) await injectStyles(page, variant);
-  for (const [i, st] of (screen.steps || []).entries()) {
-    const what = Object.entries(st).map(([k, v]) => `${k} ${JSON.stringify(v)}`).join(', ');
-    try {
-      if (st.click != null) await page.locator(st.click).first().click({ timeout: 5000 });
-      else if (st.fill != null) await page.locator(st.fill).first().fill(String(st.value), { timeout: 5000 });
-      else if (st.press != null) await page.keyboard.press(String(st.press));
-      else if (st.scroll != null) await page.locator(st.scroll).first().scrollIntoViewIfNeeded({ timeout: 5000 });
-      else if (st.goto != null) {
-        const target = new URL(String(st.goto), page.url()).href;
-        await page.evaluate((u) => { if (u.split('#')[0] === location.href.split('#')[0]) location.hash = new URL(u).hash; else location.href = u; }, target);
-        await page.waitForLoadState('load', { timeout: 10000 }).catch(() => {});
-      } else if (st.eval != null) await evaluateAllowingNavigation(page, st.eval);
-      else if (st.wait != null) {
-        if (typeof st.wait === 'number') await page.waitForTimeout(st.wait);
-        else await page.locator(String(st.wait)).first().waitFor({ state: 'visible', timeout: 10000 });
-      }
-    } catch (e) {
-      throw new Error(`step ${i + 1} (${what}) failed: ${e.message.split('\n')[0]}`);
-    }
-    await page.waitForTimeout(50);
-    await injectStyles(page, variant);
-  }
-  if (screen.steps?.length || screen.setup) await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
-}
-
 async function runAxe(page, frameIndex) {
   try {
     let builder = new AxeBuilder({ page }).withTags(AXE_TAGS).disableRules(AXE_DISABLED);
@@ -195,7 +88,7 @@ async function captureHtml(browser, screen) {
   let frameCount = 1;
   if (frameMode) {
     const ctx = await browser.newContext({ viewport: FRAME_CANVAS, deviceScaleFactor: 1 });
-    const page = await preparePage(ctx, url, 'light', screen);
+    const page = await preparePage(ctx, url, 'light', screen, null, { offline: args.offline });
     frameCount = await page.locator(screen.phoneFrame).count();
     await ctx.close();
     if (!frameCount) {
@@ -222,7 +115,7 @@ async function captureHtml(browser, screen) {
           colorScheme: step.variant === 'dark' ? 'dark' : 'light',
           hasTouch: true,
         });
-        const page = await preparePage(ctx, url, step.variant, sub, frameMode ? null : { top: preset.safeTop, bottom: preset.safeBottom });
+        const page = await preparePage(ctx, url, step.variant, sub, frameMode ? null : { top: preset.safeTop, bottom: preset.safeBottom }, { offline: args.offline });
         const tag = `${sub.id}__${platform}-${step.device}__${step.variant}`;
         const shotPath = path.join(runDir, 'screenshots', `${tag}.png`);
         fs.mkdirSync(path.dirname(shotPath), { recursive: true });
@@ -242,6 +135,7 @@ async function captureHtml(browser, screen) {
 
         const data = await page.evaluate(analyzePage, { frameAttr });
         data.insets = page.dcInsets || null;
+        if (!frameMode) data.fingerprint = await pageFingerprint(page);
         let fullPath = null;
         if (!frameMode && data.scrollHeight > preset.height * 1.1) {
           fullPath = path.join(runDir, 'screenshots', `${tag}__full.png`);
@@ -300,8 +194,61 @@ try {
       }
     }
   }
+
+  // Journeys (mockups.yaml journeys:): replay the taps from the start mockup and capture every step.
+  // A tap that can't be found ends the journey there; the report treats it as a broken journey.
+  manifest.journeys = [];
+  for (const j of cfg.journeys) {
+    if (only && !only.has(j.id)) continue;
+    const startMockup = cfg.mockups.find((m) => m.id === j.start);
+    const page0 = expandMockup(startMockup, runDir).screens.find((sc) => (j.state ? sc.state === j.state : true));
+    if (!page0 || page0.kind !== 'html') { manifest.warnings.push(`journey ${j.id}: start ${j.start}${j.state ? `/${j.state}` : ''} is not an HTML page; skipped`); continue; }
+    const record = { id: j.id, title: j.title, critical: j.critical, stage: j.stage, ends_at: j.ends_at, notes: j.notes, start: j.start, steps: j.steps.map(stepLabel), screens: [], brokenAt: null, error: null };
+    for (let k = 0; k <= j.steps.length; k++) {
+      const screen = {
+        ...page0,
+        id: `journey--${j.id}--${k}`,
+        title: `${j.title} ${k}/${j.steps.length}: ${k ? stepLabel(j.steps[k - 1]) : 'start'}`,
+        steps: [...(page0.steps || []), ...j.steps.slice(0, k)],
+        flow: `journey:${j.id}`, step: k + 1, state: null,
+        journey: j.id, journeyStep: k, journeyAction: k ? stepLabel(j.steps[k - 1]) : null,
+        notes: `Journey "${j.title}"${j.critical ? ' (must not fail)' : ''}, step ${k} of ${j.steps.length}${k ? `, after tapping "${stepLabel(j.steps[k - 1])}"` : ''}.`,
+      };
+      process.stderr.write(`capturing ${screen.id}\n`);
+      try {
+        for (const s of await captureHtml(browser, screen)) { s.source = path.relative(cfg.baseDir, s.source); manifest.screens.push(s); }
+        record.screens.push(screen.id);
+      } catch (e) {
+        record.brokenAt = k;
+        record.error = e.message.split('\n')[0];
+        manifest.warnings.push(`journey ${j.id} broke at step ${k} ("${stepLabel(j.steps[k - 1])}"): ${record.error}`);
+        break;
+      }
+    }
+    manifest.journeys.push(record);
+  }
+
+  // States found by the crawler (scripts/crawl/crawl.mjs): each becomes a screen reached by its path.
+  if (args.inventory) {
+    const inv = JSON.parse(fs.readFileSync(path.resolve(args.inventory), 'utf8'));
+    const startMockup = cfg.mockups.find((m) => m.id === inv.start) || cfg.mockups[0];
+    const page0 = expandMockup(startMockup, runDir).screens[0];
+    manifest.inventory = path.relative(runDir, path.resolve(args.inventory));
+    for (const st of inv.states) {
+      const screen = { ...page0, id: `crawl--${st.id}`, title: st.title, steps: [...(page0.steps || []), ...st.steps], flow: 'crawl', step: null, state: null, inventoryState: st.id, notes: `Found by the crawler at depth ${st.depth}${st.steps.length ? ` (${st.steps.map(stepLabel).join(' → ')})` : ''}.` };
+      process.stderr.write(`capturing ${screen.id}\n`);
+      try { for (const s of await captureHtml(browser, screen)) { s.source = path.relative(cfg.baseDir, s.source); manifest.screens.push(s); } }
+      catch (e) { manifest.warnings.push(`${screen.id}: capture failed: ${e.message.split('\n')[0]}`); }
+    }
+  }
 } finally {
   await browser.close();
+}
+
+function stepLabel(st) {
+  if (typeof st === 'string') return st;
+  const [k, v] = Object.entries(st).find(([key]) => key !== 'value') || ['', ''];
+  return k === 'tap' ? String(v) : `${k} ${v}`;
 }
 
 // Snapshot the frame and tokens the run was judged against, so old reports stay interpretable.

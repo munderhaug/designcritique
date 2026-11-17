@@ -33,3 +33,13 @@ mockups:
     title: App, returning user
     file: spa/index.html
     setup: spa/seed.js
+journeys:
+  - id: settings-save
+    title: Save a name
+    start: app
+    critical: true
+    steps: [Settings, { fill: "#name", value: "Ana" }, Save]
+  - id: broken
+    title: Tap something missing
+    start: app
+    steps: [Start, Nonexistent button]
