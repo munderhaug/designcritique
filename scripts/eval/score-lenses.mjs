@@ -15,7 +15,7 @@ const args = parseArgs(process.argv.slice(2));
 if (!args.run) { console.error('Usage: score-lenses.mjs --run <runDir> [--variant seeded|clean]'); process.exit(2); }
 const runDir = path.resolve(args.run);
 const manifest = readJson(path.join(runDir, 'manifest.json'));
-const variant = args.variant || (/clean/.test(manifest.config || '') ? 'clean' : 'seeded');
+const variant = args.variant || (/v[23]\.yaml/.test(manifest.config || '') ? 'clean' : 'seeded');
 const exp = readJson(path.join(here, '../../evals/review/expected.json')).lenses[variant];
 const read = (name) => {
   const p = path.join(runDir, 'critique', `${name}.json`);

@@ -132,15 +132,21 @@ async function listActions(page) {
       const parts = [];
       for (let e = el; e && e.nodeType === 1 && e !== document.body; e = e.parentElement) {
         if (e !== el && e.id && document.querySelectorAll(`#${CSS.escape(e.id)}`).length === 1) { parts.unshift(`#${CSS.escape(e.id)}`); return parts.join(' > '); }
-        const sibs = [...(e.parentElement?.children || [])].filter((x) => x.tagName === e.tagName);
+        const sibs = [...(e.parentNode?.children || [])].filter((x) => x.tagName === e.tagName);
         parts.unshift(`${e.tagName.toLowerCase()}${sibs.length > 1 ? `:nth-of-type(${sibs.indexOf(e) + 1})` : ''}`);
+        // Inside a shadow root: the path to its host, then a descendant step into the root
+        // (Playwright's CSS engine crosses open shadow roots on a descendant, not on a child, step).
+        if (!e.parentElement && e.parentNode instanceof ShadowRoot) return `${cssPath(e.parentNode.host)} ${parts.join(' > ')}`;
       }
       return `body > ${parts.join(' > ')}`;
     };
     const out = [];
     const seen = new Set();
     for (const el of all) {
-      const target = hostOf(el);
+      // One host can hold several controls (a tab bar component with its tabs in one shadow
+      // root): each is its own action; only a host with a single control stands in for it.
+      const host = hostOf(el);
+      const target = host !== el && all.filter((x) => hostOf(x) === host).length > 1 ? el : host;
       if (seen.has(target)) continue;
       if (!shown(el) || !shown(target) || el.disabled || el.getAttribute('aria-disabled') === 'true' || blocked(el)) continue;
       if (modal && !within(el, modal)) continue;

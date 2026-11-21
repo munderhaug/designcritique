@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>App</title>
+<style>
+  :root { --surface: #FFFFFF; --on-surface: #16181D; --muted: #5B6170; --container: #F3F5F9; --primary: #2457D6; --on-primary: #FFFFFF; }
+  @media (prefers-color-scheme: dark) { :root { --surface: #121418; --on-surface: #ECEEF3; --muted: #A8AEBB; --container: #1E2128; --primary: #8FB0FF; --on-primary: #0B1F55; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 1rem/1.5 system-ui, sans-serif; background: var(--surface); color: var(--on-surface); padding-bottom: calc(env(safe-area-inset-bottom) + 1rem); }
+  header { padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+  header h1 { flex: 1; font-size: 1.75rem; }
+  main { padding: 0 1rem 1rem; display: grid; gap: 0.75rem; }
+  h2 { font-size: 1.0625rem; margin-top: 0.5rem; }
+  .card { background: var(--container); border-radius: 0.75rem; padding: 1rem; display: grid; gap: 0.5rem; }
+  .muted { color: var(--muted); font-size: 0.875rem; }
+  button, select, input { font: inherit; color: inherit; min-height: 2.75rem; border-radius: 0.75rem; padding: 0 1rem; }
+  button { border: 0; background: var(--container); text-align: left; }
+  button.primary { background: var(--primary); color: var(--on-primary); text-align: center; font-weight: 600; }
+  input, select { width: 100%; min-width: 0; border: 1px solid var(--muted); background: var(--surface); border-radius: 0.5rem; }
+  label { font-weight: 600; }
+</style>
+</head>
+<body>
+<header><h1>Monstera</h1><button>Back</button></header>
+<main>
+  <div class="card"><strong>Needs water today</strong><p class="muted">Every 7 days · last watered 7 days ago</p><button class="primary">Mark as watered</button><button>Remind me tomorrow</button></div>
+  <h2>Schedule</h2>
+  <button>Water every 7 days</button>
+  <button>Reminder at 08:00</button>
+  <h2>History</h2>
+  <p class="muted">Watered 14 Nov, 7 Nov, 31 Oct</p>
+</main>
+</body>
+</html>

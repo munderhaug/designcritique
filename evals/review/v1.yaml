@@ -1,0 +1,25 @@
+# A whole-product review config.
+platform: ios
+product: PRODUCT.md
+design: ../DESIGN.md
+content: content-guide.md
+output: ../.runs
+requires:
+  darkMode: true
+mockups:
+  - id: app
+    title: App
+    file: v1/index.html
+  - id: monthly
+    title: Monthly
+    file: v1/monthly.html
+crawl:
+  start: app
+journeys:
+  - id: card-lost
+    title: Card lost
+    critical: true
+    steps: [Help, Card lost, Done]
+  - id: order-card
+    title: Order a card
+    steps: [Cards, Order new card, Confirm]

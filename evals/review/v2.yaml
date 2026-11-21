@@ -1,4 +1,4 @@
-# Whole-product review eval (seeded). See evals/README.md.
+# A whole-product review config.
 platform: ios
 product: PRODUCT.md
 design: ../DESIGN.md
@@ -9,10 +9,7 @@ requires:
 mockups:
   - id: app
     title: App
-    file: seeded/index.html
-  - id: monthly
-    title: Monthly
-    file: seeded/monthly.html
+    file: v2/index.html
 crawl:
   start: app
 journeys:

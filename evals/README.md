@@ -12,12 +12,19 @@ npm run eval:tokens               # token reader over open-design's 152 DESIGN.m
 To score the critics, run `/designcritique:critique evals/mockups.yaml` in Claude Code, then:
 
 ```bash
-npm run eval:score -- --run evals/.runs/<run-folder>
+npm run eval:score -- --run <run-folder>
 ```
 
-The critics (Impeccable and the design-reviewer) together must find the seeded problems on `welcome` and `checkout` and raise no P0/P1 on
-`settings` and `trips`. Expectations are in `expected.json`. Screen names are neutral and the
-mockup HTML carries no hints, so the critics judge them cold. Don't add hints.
+The critics (Impeccable and the design-reviewer) must find the seeded problems on `welcome` and
+`checkout`, raise no P0/P1 on `settings`, `trips` and `choices`, and score the key tasks within
+the bounds in `expected.json` → `$tasks` (low where a seeded flaw is on the task's path, high
+where the screen is clean; every task scored). They are scored one by one and pooled.
+
+**Nothing a reviewer reads may give the answer away.** Screen ids, titles, file and folder
+names, the frame (`PRODUCT.md`), the tokens (`DESIGN.md`) and the configs are neutral; the HTML
+carries no comments. What is seeded is written only here and in the `expected.json` files, which
+no reviewer is given. For a recorded run, copy the eval projects to a folder whose path doesn't
+say what they are, since reviewers are given paths.
 
 ## What is seeded
 
@@ -72,11 +79,21 @@ the clean version must have no P0–P2 finding.
 
 ## Whole-product review (`npm run eval:review`)
 
-`evals/review/` holds one small single-page banking prototype in two versions, with the same
-PRODUCT.md (journeys, concept model, scope, feature map, navigation) and content guide.
-`seeded/` has twelve structural and system flaws; `clean/` has none. The script crawls, captures,
-runs the checks, structure and consistency audits and scores against `review/expected.json`:
-every seeded rule must fire, and none of the watched rules may fire on the clean version.
+`evals/review/` holds one small single-page banking prototype in three versions, with the same
+PRODUCT.md (journeys, concept model, scope, feature map, navigation) and content guide. The
+folders are named neutrally because reviewers are given their paths:
+
+- `v1/` has twelve structural and system flaws (below).
+- `v2/` has none.
+- `v3/` is `v2` built the way app frameworks build: the tab bar is a web component with its
+  buttons in a shadow root, "Open an account" is a modal sheet over the page, page changes and
+  the sheet are animated with the Web Animations API, and the app renders a moment after load.
+  It must be as clean as `v2`, with every named screen reached and no tap or replay failing.
+  This is the regression test for what broke on a real Ionic prototype (0.7.2).
+
+The script crawls, captures, runs the checks, structure and consistency audits and scores
+against `review/expected.json`: every seeded rule must fire on `v1`, and on `v2` and `v3` none of
+the watched rules and no P0–P2 from any check.
 
 Seeded: the must-not-fail "card lost" journey ends on a screen with no controls (dead end) and
 no screen in it leads back home; it doesn't lead into ordering a new card; "Export statements"
@@ -86,12 +103,12 @@ present; the balance differs between two screens; a term the glossary says to av
 with two meanings; three styles of primary button.
 
 The checks already find every seeded flaw, so the reviewers are scored on what judgement adds
-(`expected.json` → `lenses`): on `seeded`, the IA reviewer cites a depth, orphan or navigation
+(`expected.json` → `lenses`): on `v1`, the IA reviewer cites a depth, orphan or navigation
 principle and proposes a move; the scope reviewer cites `SCOPE-OUT` and proposes a cut, deferral
 or move; the system reviewer cites a `CONS-*` principle; the design-reviewer and Impeccable judge
-the must-not-fail "card lost" journey blocked or at risk. On `clean`, no reviewer raises a P0/P1
-or proposes a cut or move. Run `/designcritique:review evals/review/seeded.yaml` (and
-`clean.yaml`), then `npm run eval:lenses -- --run <run>`. **Not yet run:** the reviewers have
+the must-not-fail "card lost" journey blocked or at risk. On `v2`, no reviewer raises a P0/P1
+or proposes a cut or move. Run `/designcritique:review evals/review/v1.yaml` (and
+`v2.yaml`), then `npm run eval:lenses -- --run <run>`. **Not yet run:** the reviewers have
 no recorded score.
 
 ## Critic results

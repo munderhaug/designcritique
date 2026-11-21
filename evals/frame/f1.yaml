@@ -1,0 +1,17 @@
+# Three screens and their frame.
+platform: ios
+product: PRODUCT.md
+design: ../DESIGN.md
+output: ../.runs
+requires:
+  darkMode: true
+mockups:
+  - id: one
+    title: Screen one
+    file: s/1.html
+  - id: two
+    title: Screen two
+    file: s/2.html
+  - id: three
+    title: Screen three
+    file: s/3.html

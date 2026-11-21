@@ -1,6 +1,6 @@
 ---
-name: Eval Kit
-description: Small token set shared by the eval mockups. Light and dark roles.
+name: Everyday
+description: Small token set shared by the Everyday screens. Light and dark roles.
 colors:
   primary: "#2457D6"
   on-primary: "#FFFFFF"
@@ -25,10 +25,9 @@ spacing: [4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96, 128]
 rounded: [8, 12, 16, 999]
 ---
 
-# Eval Kit
+# Everyday
 
-Tokens for the designcritique eval set. Every eval mockup that is meant to be
-clean uses only these values; flawed mockups break them on purpose.
+Tokens for the Everyday screens. Screens use only these values.
 
 - One filled primary button per screen; secondary actions are text buttons.
 - Body text is 17 (iOS) or 16 (Android). Secondary text uses on-surface-variant.

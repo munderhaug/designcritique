@@ -1,0 +1,44 @@
+{
+  "$comment": "Sparring eval, scored by npm run eval:frame after the cold read and the frame challenge ran (stages 1 and 2 of briefs/plan.json) on evals/frame/f1.yaml. The frame is wrong on purpose (see evals/README.md); the screens are sound. cold.mentions_any: words the cold reading's product, problem or tasks must contain (it read the screens, not the frame); cold.not_first_task: words its first task must not contain (they exist only in the frame). challenges.must: each a FRAME-* ID or {any:[...]} some challenge must cite; challenges.max: the cap. control: the same two stages on evals/review/v2.yaml, whose frame matches its screens: no first-read challenge at high confidence.",
+  "flawed": {
+    "cold": {
+      "mentions_any": [
+        "plant",
+        "water"
+      ],
+      "not_first_task": [
+        "streak",
+        "leaderboard",
+        "share",
+        "badge",
+        "friend"
+      ]
+    },
+    "challenges": {
+      "must": [
+        {
+          "any": [
+            "FRAME-FIRST-READ",
+            "FRAME-PROBLEM"
+          ]
+        },
+        "FRAME-ASSUMPTION"
+      ],
+      "max": 8
+    }
+  },
+  "control": {
+    "cold": {
+      "mentions_any": [
+        "bank",
+        "money",
+        "account",
+        "card"
+      ]
+    },
+    "challenges": {
+      "max": 8,
+      "no_confident_kind": "first-read"
+    }
+  }
+}

@@ -19,14 +19,18 @@ const checks = ['findings.json', 'detectors.json'].flatMap((f) => readJson(path.
 
 const critiqueDir = path.join(runDir, 'critique');
 const criticFindings = [];
+const criticTasks = [];
 if (fs.existsSync(critiqueDir)) {
   for (const f of fs.readdirSync(critiqueDir).filter((x) => x.endsWith('.json'))) {
     try {
       const d = JSON.parse(fs.readFileSync(path.join(critiqueDir, f), 'utf8'));
-      for (const x of d.findings || []) criticFindings.push(x);
+      if (d.critic === 'frame') continue; // the frame challenger returns questions, scored by score-frame.mjs
+      for (const x of d.findings || []) criticFindings.push({ ...x, critic: d.critic || f });
+      for (const t of d.tasks || []) criticTasks.push({ ...t, critic: d.critic || f });
     } catch { console.error(`warning: critique/${f} is not valid JSON`); }
   }
 }
+const criticNames = [...new Set(criticFindings.map((f) => f.critic))];
 const haveCritics = fs.existsSync(critiqueDir) && criticFindings.length + fs.readdirSync(critiqueDir).length > 0;
 
 const MAJOR = new Set(['P0', 'P1']);
@@ -34,6 +38,7 @@ const MAJOR = new Set(['P0', 'P1']);
 let failures = 0;
 const rows = [];
 const tally = { checkMust: 0, checkHit: 0, checkFP: 0, criticMust: 0, criticHit: 0, criticFP: 0 };
+const perCritic = Object.fromEntries(criticNames.map((n) => [n, { hit: 0, major: 0 }]));
 
 for (const [screen, exp] of Object.entries(expected)) {
   if (screen.startsWith('$')) continue;
@@ -60,7 +65,9 @@ for (const [screen, exp] of Object.entries(expected)) {
     tally.criticMust++;
     if (theirs.some((f) => options.some((o) => findingCites(f, o)))) tally.criticHit++;
     else missed.push(options.join('|'));
+    for (const n of criticNames) if (theirs.some((f) => f.critic === n && options.some((o) => findingCites(f, o)))) perCritic[n].hit++;
   }
+  if (cr.max_major != null) for (const n of criticNames) perCritic[n].major += theirs.filter((f) => f.critic === n && f.screen === screen && MAJOR.has(f.severity)).length;
   const major = theirs.filter((f) => f.screen === screen && MAJOR.has(f.severity));
   const tooMany = cr.max_major != null && major.length > cr.max_major;
   if (tooMany) tally.criticFP += major.length - cr.max_major;
@@ -74,6 +81,21 @@ const w = [12, 8, 5];
 console.log(rows.map((r) => r.map((c, i) => (i < 3 ? String(c).padEnd(w[i]) : c)).join('  ')).join('\n'));
 console.log('');
 console.log(`Checks: recall ${tally.checkHit}/${tally.checkMust}, false positives ${tally.checkFP}`);
-if (haveCritics) console.log(`Critics: recall ${tally.criticHit}/${tally.criticMust}, false positives on clean screens ${tally.criticFP}`);
+if (haveCritics) {
+  console.log(`Critics (pooled): recall ${tally.criticHit}/${tally.criticMust}, false positives on clean screens ${tally.criticFP}`);
+  for (const n of criticNames) console.log(`  ${n}: recall ${perCritic[n].hit}/${tally.criticMust}, P0/P1 on clean screens ${perCritic[n].major}, ${criticFindings.filter((f) => f.critic === n).length} findings`);
+  // Key-task scores: the lowest score from a critic that saw the whole task, against the bounds.
+  const bounds = expected.$tasks || {};
+  const lines = [];
+  for (const [id, b] of Object.entries(bounds)) {
+    const scores = criticTasks.filter((t) => t.id === id && typeof t.score === 'number' && t.coverage !== 'partial');
+    if (!scores.length) { failures++; lines.push(`${id} not scored by a whole-view critic`); continue; }
+    const low = Math.min(...scores.map((t) => t.score));
+    const bad = (b.max != null && low > b.max) || (b.min != null && low < b.min);
+    if (bad) failures++;
+    lines.push(`${id} ${scores.map((t) => `${t.score} (${t.critic})`).join(', ')}${bad ? ` FAIL: expected ${b.max != null ? `at most ${b.max}` : `at least ${b.min}`}` : ''}`);
+  }
+  if (lines.length) console.log(`Task scores: ${lines.join('; ')}`);
+}
 else console.log('Critics: not scored (no critique/ folder in this run). Run /designcritique:critique on evals/mockups.yaml first.');
 process.exit(failures ? 1 : 0);

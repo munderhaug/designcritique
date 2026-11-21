@@ -1,5 +1,5 @@
 {
-  "$comment": "Whole-product review eval. seeded must raise every rule in must; clean must raise none of the rules in watch. Rules come from checks/structure.json and checks/consistency.json. The clean version must also have no P0-P2 finding from any check (checks/all.json), so a gate run on it passes the finding rule.",
+  "$comment": "Whole-product review eval. seeded must raise every rule in must; clean must raise none of the rules in watch. Rules come from checks/structure.json and checks/consistency.json. The clean version must also have no P0-P2 finding from any check (checks/all.json), so a gate run on it passes the finding rule. Folders are named v1 (seeded), v2 (clean) and v3 (framework: v2 built with a shadow-root tab bar, a modal sheet and animated page changes) so their paths tell a reviewer nothing. states: screens the crawl must reach, by title; no_failed_taps: no tap or replay may fail.",
   "watch": [
     "CHK-NO-WAY-BACK",
     "CHK-DEAD-END",
@@ -34,7 +34,14 @@
     ]
   },
   "clean": {
-    "must": []
+    "must": [],
+    "states": [
+      "Home",
+      "Accounts",
+      "Cards",
+      "Open an account"
+    ],
+    "no_failed_taps": true
   },
   "lenses": {
     "$comment": "Scored by npm run eval:lenses after /designcritique:review on seeded.yaml or clean.yaml. The checks already find every seeded flaw, so the lenses are scored on what only judgement adds: proposals, verdicts and cited principles. clean: no P0/P1 from any reviewer and no cut or move proposals.",
@@ -73,5 +80,23 @@
       "max_major": 0,
       "no_proposals": true
     }
+  },
+  "framework": {
+    "must": [],
+    "no_failed_taps": true,
+    "states": [
+      "Home",
+      "Accounts",
+      "Cards",
+      "Help",
+      "Card lost",
+      "Card frozen",
+      "Menu",
+      "Export statements",
+      {
+        "title": "Open an account",
+        "kind": "sheet"
+      }
+    ]
   }
 }

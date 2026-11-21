@@ -1,12 +1,13 @@
 # Product
 
-Eval Kit: a set of single screens from different apps, used to calibrate designcritique. Each screen's
-intended task is in its `notes:` in mockups.yaml. [confirmed]
+Everyday: a set of single screens from different consumer apps. Each screen's intended task is
+in its `notes:` in mockups.yaml. [confirmed]
 
 ## Problem
 
-Each screen supports one task for a general consumer audience on a phone. The critique should
-judge whether the screen lets that user complete that task easily, safely and accessibly. [confirmed]
+People do small, everyday things on their phone between other things: pay, sign in, change a
+setting, catch up, check a plan. Each should be easy, safe and accessible to complete on the one
+screen it has. [confirmed]
 
 ## Users
 
@@ -31,6 +32,8 @@ findings would matter less.
    need to do. (Android home)
 6. **Understand what the product does**: When I first open the app, I want to know what it does
    for me and how to start. (welcome)
+7. **Create an account**: When I'm new, I want to sign up and choose what I share, so I can start
+   without giving away more than I mean to. (sign up, choices)
 
 ## Success Criteria
 
@@ -44,15 +47,15 @@ adaptive (per screen, see mockups.yaml)
 
 ## Stack
 
-undecided (calibration mockups in HTML)
+undecided (HTML mockups)
 
 ## Constraints
 
-Uses the Eval Kit tokens in DESIGN.md.
+Uses the tokens in DESIGN.md.
 
 ## Evidence and assumptions
 
-- No research; these are calibration fixtures.
+- No research yet; assumptions are marked.
 
 ## Out of scope
 

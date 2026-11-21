@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>App</title>
+<style>
+  :root { --surface: #FFFFFF; --on-surface: #16181D; --muted: #5B6170; --container: #F3F5F9; --primary: #2457D6; --on-primary: #FFFFFF; --error: #C62828; }
+  @media (prefers-color-scheme: dark) { :root { --surface: #121418; --on-surface: #ECEEF3; --muted: #A8AEBB; --container: #1E2128; --primary: #8FB0FF; --on-primary: #0B1F55; --error: #FF8A80; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 1rem/1.5 system-ui, sans-serif; background: var(--surface); color: var(--on-surface); padding-bottom: 5rem; }
+  header { padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+  header h1 { flex: 1; font-size: 1.75rem; }
+  main, .body { padding: 0 1rem 1rem; display: grid; gap: 0.75rem; }
+  .card { background: var(--container); border-radius: 0.75rem; padding: 1rem; display: grid; gap: 0.5rem; }
+  .muted { color: var(--muted); font-size: 0.875rem; }
+  button { font: inherit; min-height: 2.75rem; border: 0; border-radius: 0.75rem; padding: 0 1rem; background: var(--container); color: var(--on-surface); text-align: left; }
+  button.primary { background: var(--primary); color: var(--on-primary); text-align: center; font-weight: 600; }
+  input { width: 100%; min-width: 0; font: inherit; color: inherit; min-height: 2.75rem; padding: 0 0.75rem; border: 1px solid var(--muted); border-radius: 0.5rem; background: var(--surface); }
+  button.icon { display: flex; align-items: center; gap: 0.5rem; }
+  button.icon svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
+  tab-bar { position: fixed; left: 0; right: 0; bottom: 0; display: block; background: var(--container); padding-bottom: env(safe-area-inset-bottom); }
+  section[data-view] { background: var(--surface); min-height: 100vh; }
+  .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 1; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; background: var(--surface); border-radius: 1rem 1rem 0 0; padding: 0 0 calc(env(safe-area-inset-bottom) + 1rem); }
+  .sheet header { padding-top: 0.75rem; }
+  .sheet header h1 { font-size: 1.375rem; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="currentColor"/></symbol></svg>
+
+<section data-view="home">
+  <header><h1>Home</h1><button data-go="menu">Menu</button></header>
+  <main>
+    <div class="card"><strong>Your money</strong><p>Balance 1,240.00</p><p class="muted">3 accounts</p></div>
+    <button class="primary" data-go="help">Help</button>
+    <button class="icon" data-go="security"><svg><use href="#shield"/></svg>Security</button>
+    <button data-go="accounts">Overview</button>
+    <button data-go="monthly">Monthly summary</button>
+  </main>
+</section>
+<section data-view="accounts" hidden>
+  <header><h1>Accounts</h1></header>
+  <main>
+    <p>Balance 1,240.00</p>
+    <div class="card"><strong>Everyday account</strong><p class="muted">Main account</p></div>
+    <div class="card"><strong>Savings</strong><p class="muted">Rainy day</p></div>
+    <button class="primary" data-go="open">Open an account</button>
+  </main>
+</section>
+<div class="scrim" data-sheet-scrim hidden></div>
+<div class="sheet" data-sheet="open" role="dialog" aria-modal="true" aria-labelledby="open-title" hidden>
+  <header><h1 id="open-title">Open an account</h1><button data-go="accounts">Cancel</button></header>
+  <div class="body">
+    <label for="name">Account name</label><input id="name"><button class="primary" data-go="accounts">Save</button>
+  </div>
+</div>
+<section data-view="cards" hidden>
+  <header><h1>Cards</h1></header>
+  <main>
+    <div class="card"><strong>Debit card</strong><p class="muted">Ends in 4821</p></div>
+    <button data-go="order">Order new card</button>
+  </main>
+</section>
+<section data-view="order" hidden>
+  <header><h1>Order new card</h1><button data-go="cards">Cancel</button></header>
+  <main>
+    <p>A new card arrives in 5 working days.</p><button class="primary" data-go="cards">Confirm</button>
+  </main>
+</section>
+<section data-view="security" hidden>
+  <header><h1>Security</h1><button data-go="home">Back</button></header>
+  <main>
+    <p>Two-step sign-in is on.</p>
+  </main>
+</section>
+<section data-view="monthly" hidden>
+  <header><h1>Monthly summary</h1><button data-go="home">Back</button></header>
+  <main>
+    <div class="card">See where your money went this month</div><button class="primary">Open summary</button>
+  </main>
+</section>
+<section data-view="help" hidden>
+  <header><h1>Help</h1><button data-go="home">Back</button></header>
+  <main>
+    <button data-go="lost">Card lost</button>
+    <button data-go="stolen">Card stolen</button>
+  </main>
+</section>
+<section data-view="lost" hidden>
+  <header><h1>Card lost</h1><button data-go="help">Back</button></header>
+  <main>
+    <ol><li>Freeze the card</li><li>Check recent payments</li><li>Call us if you see fraud</li></ol>
+    <button class="primary" data-go="done">Done</button>
+  </main>
+</section>
+<section data-view="stolen" hidden>
+  <header><h1>Card stolen</h1><button data-go="help">Back</button></header>
+  <main>
+    <p>Freeze the card and report it to the police.</p><button class="primary" data-go="done">Done</button>
+  </main>
+</section>
+<section data-view="done" hidden>
+  <header><h1>Card frozen</h1></header>
+  <main>
+    <p>Nobody can use the card now.</p><button class="primary" data-go="order">Order new card</button><button data-go="home">Home</button>
+  </main>
+</section>
+<section data-view="menu" hidden>
+  <header><h1>Menu</h1><button data-go="home">Close</button></header>
+  <main>
+    <button data-go="export">Export statements</button><button data-go="more">More</button>
+  </main>
+</section>
+<section data-view="more" hidden>
+  <header><h1>More</h1><button data-go="menu">Back</button></header>
+  <main>
+    <p>Nothing else here yet.</p>
+  </main>
+</section>
+<section data-view="export" hidden>
+  <header><h1>Export statements</h1><button data-go="menu">Back</button></header>
+  <main>
+    <p>Download your statements as a file.</p>
+  </main>
+</section>
+
+<tab-bar data-tabs></tab-bar>
+
+<script>
+  const tabs = ['home', 'accounts', 'cards'];
+  const sheets = { open: 'accounts' };
+  customElements.define('tab-bar', class extends HTMLElement {
+    connectedCallback() {
+      const root = this.attachShadow({ mode: 'open' });
+      root.innerHTML = '<style>nav{display:flex}button{flex:1;font:inherit;color:inherit;background:none;border:0;min-height:3.5rem;text-align:center}button[aria-current=page]{color:var(--primary);font-weight:700}</style>'
+        + '<nav aria-label="Main">' + [['home', 'Home'], ['accounts', 'Accounts'], ['cards', 'Cards']].map(([v, l]) => '<button data-go="' + v + '">' + l + '</button>').join('') + '</nav>';
+      root.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) location.hash = b.dataset.go; });
+    }
+    mark(view) { for (const b of this.shadowRoot.querySelectorAll('button')) { b.removeAttribute('aria-current'); if (b.dataset.go === view) b.setAttribute('aria-current', 'page'); } }
+  });
+  let current = null;
+  const show = (view) => {
+    const page = sheets[view] || view;
+    for (const s of document.querySelectorAll('[data-view]')) {
+      const on = s.dataset.view === page;
+      if (on && s.hidden && current !== null && !sheets[view] && page !== current) s.animate([{ opacity: 0, transform: 'translateX(24px)' }, { opacity: 1, transform: 'none' }], { duration: 380, easing: 'ease-out' });
+      s.hidden = !on;
+    }
+    for (const sh of document.querySelectorAll('[data-sheet]')) {
+      const on = sh.dataset.sheet === view;
+      if (on && sh.hidden) { sh.hidden = false; sh.animate([{ transform: 'translateY(100%)' }, { transform: 'none' }], { duration: 420, easing: 'ease-out' }); }
+      sh.hidden = !on;
+    }
+    document.querySelector('[data-sheet-scrim]').hidden = !sheets[view];
+    const bar = document.querySelector('tab-bar');
+    bar.hidden = !tabs.includes(page);
+    bar.mark(page);
+    current = page;
+  };
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) { location.hash = b.dataset.go; } });
+  window.addEventListener('hashchange', () => show(location.hash.slice(1) || 'home'));
+  // The app renders a moment after load, as a client-side app does.
+  document.body.style.visibility = 'hidden';
+  setTimeout(() => { document.body.style.visibility = ''; show(location.hash.slice(1) || 'home'); }, 350);
+</script>
+</body>
+</html>

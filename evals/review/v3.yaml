@@ -1,4 +1,4 @@
-# Whole-product review eval (clean). See evals/README.md.
+# A whole-product review config.
 platform: ios
 product: PRODUCT.md
 design: ../DESIGN.md
@@ -9,7 +9,7 @@ requires:
 mockups:
   - id: app
     title: App
-    file: clean/index.html
+    file: v3/index.html
 crawl:
   start: app
 journeys:

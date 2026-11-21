@@ -1,4 +1,4 @@
-# Eval set: seeded-flaw and clean mockups with known expected findings (see expected.json).
+# Single screens, each with the task it serves in its notes.
 platform: ios
 product: PRODUCT.md
 design: DESIGN.md
