@@ -3,6 +3,7 @@
 // counts, because model judges tend to grade generously). A critic that saw only some of a task's
 // screens (a batch reviewer) doesn't score it, and a key task no critic scored fails the gate.
 import { SEVERITIES, DEFAULT_GATE } from './config.mjs';
+import { isDeterministic } from './merge.mjs';
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
@@ -35,7 +36,7 @@ const DEAD = new Set(['CHK-DEAD-END', 'CHK-NO-WAY-BACK', 'CHK-JOURNEY-BROKEN']);
 
 // Where a finding comes from, so a gate reason says whether a measurement, a reviewer's judgement
 // or both are behind it: "check" (deterministic checks, motion and detectors) or "critic".
-const isCheck = (src) => src === 'check' || src === 'motion' || String(src).startsWith('detector');
+const isCheck = (src) => isDeterministic({ source: src });
 export function findingOrigin(f) {
   const by = f.raisedBy?.length ? f.raisedBy : [f.source || 'check'];
   const checks = by.some(isCheck); const critics = by.some((s) => !isCheck(s));

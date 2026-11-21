@@ -476,7 +476,7 @@ entries:
     trust: community
     platforms: [ios, android]
     stacks: [swiftui, compose, expo, react-native, flutter, capacitor]
-    why: "One API for iOS simulators, Android emulators and real devices through accessibility snapshots."
+    why: "One API for iOS simulators, Android emulators and real devices through accessibility snapshots. Note: sends usage telemetry by default (set MOBILEMCP_DISABLE_TELEMETRY=1 to opt out)."
     install: "claude mcp add mobile-mcp -- npx -y @mobilenext/mobile-mcp@latest"
     helps_with: [a11y]
     sources:

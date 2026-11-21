@@ -1,4 +1,5 @@
-// Runs inside the browser via page.evaluate. Must stay self-contained (no imports, no closures).
+// Runs inside the browser via page.evaluate. No imports, no closures; it uses only window.__dc
+// (scripts/lib/page-helpers.mjs), which preparePage installs.
 // Collects what the deterministic checks need: interactive targets, text, colours, spacing, overflow.
 export function analyzePage({ frameAttr }) {
   const MAX_TEXT = 800;
@@ -17,21 +18,8 @@ export function analyzePage({ frameAttr }) {
     return { x: Math.round(r.left - origin.x), y: Math.round(r.top - origin.y), w: Math.round(r.width), h: Math.round(r.height) };
   };
 
-  // Web components keep their native controls and text in shadow roots: walk the composed tree.
-  const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
-  const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
-  const deepAll = (node, sel, out = []) => {
-    for (const el of node.querySelectorAll('*')) {
-      if (!sel || el.matches(sel)) out.push(el);
-      if (el.shadowRoot) deepAll(el.shadowRoot, sel, out);
-    }
-    return out;
-  };
-  const deepHit = (x, y) => {
-    let e = document.elementFromPoint(x, y);
-    while (e && e.shadowRoot) { const inner = e.shadowRoot.elementFromPoint(x, y); if (!inner || inner === e) break; e = inner; }
-    return e;
-  };
+  // Shared helpers (scripts/lib/page-helpers.mjs, installed by preparePage): the composed tree, hit tests, the top modal, names.
+  const { up, within, deepAll, deepHit, topModal: topModalOf, nameOf } = window.__dc;
 
   const visible = (el) => {
     const r = el.getBoundingClientRect();
@@ -127,9 +115,7 @@ export function analyzePage({ frameAttr }) {
     for (let e = hit; e && !within(el, e); e = up(e)) if (e.nodeType === 1 && opaque(e)) return true;
     return false;
   };
-  const modals = [...document.querySelectorAll('[aria-modal=true],dialog[open]')]
-    .filter((d) => visible(d) && (d.getAttribute('aria-modal') === 'true' || d.matches(':modal')));
-  const topModal = modals[modals.length - 1] || null;
+  const topModal = topModalOf();
   const inert = (el) => { for (let e = el; e; e = up(e)) if (e.nodeType === 1 && e.hasAttribute('inert')) return true; return false; };
   const scrollerOf = (el) => {
     for (let e = up(el); e && e !== document.body && e !== document.documentElement; e = up(e)) {
@@ -191,23 +177,15 @@ export function analyzePage({ frameAttr }) {
   const interactive = [];
   for (const el of deepAll(root, INTERACTIVE)) {
     if (!visible(el)) continue;
-    // A component's native control is named by what is slotted into its host.
-    const host = el.getRootNode() instanceof ShadowRoot ? el.getRootNode().host : null;
     const s = getComputedStyle(el);
-    let name = el.getAttribute('aria-label') || '';
-    if (!name && el.getAttribute('aria-labelledby')) {
-      name = el.getAttribute('aria-labelledby').split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ');
-    }
-    if (!name && el.labels && el.labels.length) name = el.labels[0].textContent;
-    if (!name) name = el.innerText || el.getAttribute('alt') || el.querySelector('img[alt]')?.getAttribute('alt') || el.getAttribute('title') || el.getAttribute('placeholder') || el.value || '';
-    if (!name.trim() && host) name = host.getAttribute('aria-label') || host.innerText || host.getAttribute('title') || '';
+    const name = nameOf(el);
     const parentText = el.parentElement ? [...el.parentElement.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 0) : false;
     interactive.push({
       selector: cssPath(el),
       tag: el.tagName.toLowerCase(),
       role: el.getAttribute('role') || null,
       type: el.getAttribute('type') || null,
-      name: name.trim().replace(/\s+/g, ' ').slice(0, 80),
+      name: name.slice(0, 80),
       // What can be tapped: a checkbox or radio is tapped through its label too.
       box: tapBox(el),
       // Fixed and sticky bars stay put when the page scrolls: where they sit on the screen.

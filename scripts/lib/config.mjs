@@ -107,9 +107,10 @@ export function loadConfig(configPath) {
       reference: rel(m.reference),
     });
   }
-  if (!cfg.mockups.length) throw new Error('No mockups listed in config');
-  cfg.journeys = normalizeJourneys(raw.journeys, cfg.mockups);
-  cfg.crawl = raw.crawl ? normalizeCrawl(raw.crawl, cfg.mockups) : null;
+  cfg.native = normalizeNative(raw.native, platform);
+  if (!cfg.mockups.length && !cfg.native.length) throw new Error('No mockups listed in config');
+  cfg.journeys = cfg.mockups.length ? normalizeJourneys(raw.journeys, cfg.mockups) : [];
+  cfg.crawl = raw.crawl && cfg.mockups.length ? normalizeCrawl(raw.crawl, cfg.mockups) : null;
   return cfg;
 }
 
@@ -235,6 +236,23 @@ function normalizeJourneys(list, mockups) {
       ends_at: j.ends_at || null,
       notes: j.notes || null,
     };
+  });
+}
+
+// native: apps on a simulator or emulator, driven by scripts/capture/native.mjs (experimental).
+// Each entry: { id, app (bundle or package id), platform, screens: [{ id, title, steps: [labels to tap] }] }.
+function normalizeNative(list, platform) {
+  if (list == null) return [];
+  if (!Array.isArray(list)) list = [list];
+  return list.map((n, i) => {
+    if (!n?.app) throw new Error(`native entry ${i + 1} needs app: (the bundle id or package name)`);
+    const id = n.id || String(n.app).split('.').pop();
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) throw new Error(`native id may use letters, digits, - and _ only: ${id}`);
+    const screens = (n.screens || [{ id: 'start', title: 'Start', steps: [] }]).map((sc, k) => {
+      if (!sc?.id || !/^[A-Za-z0-9_-]+$/.test(sc.id)) throw new Error(`native ${id}: screen ${k + 1} needs an id (letters, digits, - and _)`);
+      return { id: sc.id, title: sc.title || sc.id, notes: sc.notes || null, steps: (sc.steps || []).map(String) };
+    });
+    return { id, title: n.title || id, app: String(n.app), platform: normalizePlatform(n.platform || platform), screens, clear_state: n.clear_state !== false };
   });
 }
 

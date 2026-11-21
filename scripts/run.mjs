@@ -39,10 +39,15 @@ const inventory = path.join(runDir, 'inventory.json');
 const steps = {
   crawl: () => (status.review && cfg.crawl ? node('crawl/crawl.mjs', ['--config', configPath, '--out', runDir, ...offline]) : 'skipped'),
   // A capture that was interrupted continues; otherwise it starts clean.
-  capture: () => node('capture/capture.mjs', ['--config', configPath, '--out', runDir, ...offline, ...(fs.existsSync(inventory) ? ['--inventory', inventory] : []), ...(status.stages.capture?.resumed && fs.existsSync(path.join(runDir, 'manifest.json')) ? ['--resume'] : [])]),
+  capture: () => {
+    const code = cfg.mockups.length ? htmlCapture() : 0;
+    // Native apps under native: are captured from a simulator or emulator (experimental).
+    return code === 0 && cfg.native.length ? node('capture/native.mjs', ['--config', configPath, '--out', runDir]) : code;
+  },
   checks: () => node('checks/run-all.mjs', ['--run', runDir, ...(status.review ? ['--review'] : [])]),
   briefs: () => node('report/briefs.mjs', ['--run', runDir]),
 };
+const htmlCapture = () => node('capture/capture.mjs', ['--config', configPath, '--out', runDir, ...offline, ...(fs.existsSync(inventory) ? ['--inventory', inventory] : []), ...(status.stages.capture?.resumed && fs.existsSync(path.join(runDir, 'manifest.json')) ? ['--resume'] : [])]);
 
 if (args.finish) {
   const code = node('report/render-report.mjs', ['--run', runDir, ...(args['inline-thumbs'] ? ['--inline-thumbs'] : [])]);

@@ -21,7 +21,11 @@ const model = productModel(framing);
 const invPath = manifest.inventory ? path.join(runDir, manifest.inventory) : path.join(runDir, 'inventory.json');
 const inventory = fs.existsSync(invPath) ? readJson(invPath) : null;
 
+// A Figma import: each image mockup is a frame whose text and identity are in the inventory.
+const figmaState = new Map((inventory?.source === 'figma' ? inventory.states : []).map((st) => [st.mockup, st]));
 const textOf = (screen) => {
+  const fs2 = figmaState.get(screen.id);
+  if (fs2) return { text: fs2.snapshot || fs2.title, screenKey: fs2.screenKey, title: fs2.title };
   const cap = screen.captures.find((c) => c.variant === 'light' && (c.device === 'standard' || c.device === 'frame')) || screen.captures[0];
   if (!cap?.data) return { text: '', screenKey: `image:${screen.id}` };
   const d = readJson(path.join(runDir, cap.data));

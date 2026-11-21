@@ -24,7 +24,7 @@ const texts = [];
 const titleOf = new Map();
 for (const s of manifest.screens) {
   const cap = s.captures.find((c) => c.variant === 'light' && c.device === 'standard') || s.captures.find((c) => c.variant === 'light');
-  if (!cap?.data) continue;
+  if (!cap?.data || s.kind === 'native') continue; // a native hierarchy carries no styles or icons
   const raw = readJson(path.join(runDir, cap.data));
   // Only what a person can see: not content under an open sheet, covered or parked off-screen.
   const d = { ...raw, texts: raw.texts.filter((t) => !t.hidden), interactive: raw.interactive.filter((i) => !i.hidden) };

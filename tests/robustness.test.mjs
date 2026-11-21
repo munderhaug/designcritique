@@ -167,6 +167,7 @@ import { applyDecisions, decisionFromFinding } from '../scripts/lib/decisions.mj
 import { groupChecksByCause } from '../scripts/lib/merge.mjs';
 import { analyzePage } from '../scripts/lib/analyze-page.mjs';
 import { launch } from '../scripts/lib/browser.mjs';
+import { installPageHelpers } from '../scripts/lib/page-helpers.mjs';
 
 test('key tasks are read from a bold or a plain numbered list', () => {
   const bold = parseKeyTasks('## Key Tasks\n\n1. **Pay for the order** (must not fail): When …\n2. **Track it**: When …\n');
@@ -230,6 +231,7 @@ test('page analysis sees into web components and leaves out what a person cannot
       <div role="dialog" aria-modal="true" style="position:fixed;left:0;right:0;bottom:0;height:60%;background:#fff;padding:16px">
         <p>Sheet text</p><x-btn>Shadow label</x-btn></div>
       <script>customElements.define('x-btn', class extends HTMLElement { connectedCallback() { this.attachShadow({ mode: 'open' }).innerHTML = '<button style="width:18px;height:18px;padding:0"><slot></slot></button><span style="font-size:6px">tiny shadow text</span>'; } });</script>`);
+    await installPageHelpers(page);
     const d = await page.evaluate(analyzePage, { frameAttr: null });
     const control = (name) => d.interactive.find((i) => i.name === name);
     assert.equal(control('Shadow label').hidden, null, 'a native control inside a shadow root is found, named by its host');
@@ -245,4 +247,103 @@ test('page analysis sees into web components and leaves out what a person cannot
     assert.equal(e.interactive.find((i) => i.name === 'Parked').hidden, 'off-screen');
     assert.equal(e.texts.find((x) => x.text === 'Parked page text').hidden, 'off-screen');
   } finally { await browser.close(); }
+});
+
+// ---------- sparring, generated briefs, Figma flows, native hierarchies ----------
+import { planReviewers, judgedScreens, batches } from '../scripts/lib/briefs.mjs';
+import { blindScreens, writeBlindSet, validateReading } from '../scripts/lib/blind.mjs';
+import { figmaToInventory } from '../scripts/lib/figma.mjs';
+import { hierarchyToData, flowFor, parseBounds } from '../scripts/lib/native.mjs';
+import { normalizeGate } from '../scripts/lib/config.mjs';
+
+const shot = (id) => ({ id, title: id, platform: 'ios', kind: 'html', source: `${id}.html`, captures: [{ platform: 'ios', device: 'standard', variant: 'light', screenshot: `screenshots/${id}.png` }, { platform: 'ios', device: 'standard', variant: 'dark', screenshot: `screenshots/${id}-dark.png` }] });
+
+test('reviewer plan: stages, batches and coverage are decided by the script', () => {
+  const ctx = (n, extra = {}) => ({
+    manifest: { baseDir: '/p', framingSnapshot: 'framing.md', gate: { fail_on: 'P1', target_score: 8 }, screens: Array.from({ length: n }, (_, i) => shot(`s${i + 1}`)), ...extra },
+    runDir: '/run', pluginRoot: '/plugin', keyTasks: [{ id: 'T1', name: 'Pay', critical: true }],
+    companions: { impeccable: '/skills/impeccable/SKILL.md', 'design-critique': '/skills/dc/SKILL.md' }, blindKey: [{ n: 1, file: 'blind/01.png' }],
+  });
+  const small = planReviewers(ctx(5));
+  assert.deepEqual(small.stages.map((st) => st.map((r) => r.name)), [['cold-read'], ['frame'], ['anthropic-design', 'impeccable']]);
+  assert.equal(small.reviewers.find((r) => r.name === 'anthropic-design').coverage, 'whole');
+  // The cold reader is told nothing: no frame, no screen ids, no titles.
+  const cold = small.reviewers[0].brief;
+  assert.ok(!/framing|s1\b|PRODUCT/.test(cold) && /blind\/01\.png/.test(cold));
+  // Both critics get the same frame snapshot and the same evidence lines.
+  for (const name of ['anthropic-design', 'impeccable']) {
+    const b = small.reviewers.find((r) => r.name === name).brief;
+    assert.match(b, /\/run\/framing\.md/); assert.match(b, /Reference screens/); assert.match(b, /T1 Pay \(must not fail\)/);
+  }
+  const big = planReviewers(ctx(20));
+  const dr = big.reviewers.filter((r) => r.critic === 'anthropic-design');
+  assert.deepEqual(dr.map((r) => [r.name, r.coverage]), [['anthropic-design', 'whole'], ['anthropic-design-2', 'partial'], ['anthropic-design-3', 'partial'], ['anthropic-design-4', 'partial']]);
+  assert.ok(dr.slice(1).every((r) => / --coverage partial /.test(r.save)), 'the save command stamps a batch as partial');
+  assert.equal(batches(Array.from({ length: 20 }), 8).map((b) => b.length).join(','), '8,8,4');
+  // A review: one screen per family, journeys listed for the whole-view critics, lens reviewers added.
+  const review = planReviewers({ ...ctx(0), familyOf: (s) => s.family, manifest: { baseDir: '/p', framingSnapshot: 'framing.md', inventory: 'inventory.json', journeys: [{ id: 'pay', title: 'Pay', critical: true, steps: ['Cart'], screens: ['journey--pay--0', 'journey--pay--1'] }], screens: [shot('app'), { ...shot('crawl--a'), inventoryState: 'a', family: 'f1' }, { ...shot('crawl--b'), inventoryState: 'b', family: 'f1' }, { ...shot('journey--pay--0'), journey: 'pay' }, { ...shot('journey--pay--1'), journey: 'pay' }] } });
+  assert.equal(judgedScreens(review.reviewers.length ? { inventory: 'x', screens: [shot('app'), { ...shot('crawl--a'), inventoryState: 'a' }] } : {}, () => null).screens.length, 2);
+  assert.deepEqual(review.stages[2].map((r) => r.name), ['anthropic-design', 'impeccable', 'ia', 'scope', 'system']);
+  assert.equal(review.screens, 2, 'two crawl states of one family are judged once');
+  assert.match(review.reviewers.find((r) => r.name === 'anthropic-design').brief, /Journeys lens[\s\S]*pay "Pay" \(must not fail\)/);
+});
+
+test('cold reading: numbered copies without names, and a usable shape', () => {
+  const run = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-blind-'));
+  fs.mkdirSync(path.join(run, 'screenshots'));
+  for (const id of ['checkout', 'login']) fs.writeFileSync(path.join(run, 'screenshots', `${id}.png`), 'x');
+  const key = writeBlindSet(run, blindScreens({ screens: [shot('checkout'), shot('login')] }));
+  assert.deepEqual(key.map((k) => k.file), ['blind/01.png', 'blind/02.png']);
+  assert.deepEqual(fs.readdirSync(path.join(run, 'blind')).sort(), ['01.png', '02.png', 'key.json']);
+  assert.deepEqual(validateReading({ product: 'A bank app', audience: 'Customers', problem: 'Seeing money', tasks: ['Check balance'], confidence: 'medium' }), []);
+  assert.equal(validateReading({ product: '', tasks: 'x' }).length, 4);
+});
+
+test('gate can be turned off; challenges never count', () => {
+  const off = normalizeGate('off');
+  assert.equal(off.enabled, false);
+  const r = evaluateGate({ findings: [{ severity: 'P0', source: 'ia' }] }, off);
+  assert.equal(r.pass, true); assert.equal(r.off, true); assert.equal(r.reasons.length, 2, 'what would have counted is kept');
+  const v = validateCritique({ critic: 'frame', findings: [], challenges: [{ id: 'c1', kind: 'assumption', claim: 'x', question: 'y?', basis: ['FRAME-ASSUMPTION'], confidence: 'low' }] });
+  assert.deepEqual(v.errors, []);
+  assert.ok(validateCritique({ critic: 'frame', findings: [], challenges: [{ id: 'c1', kind: 'assumption', claim: 'x', question: 'y?', severity: 'P1' }] }).warnings.some((w) => /no severity/.test(w)));
+});
+
+test('Figma prototype → navigation graph in the crawler\'s shape', () => {
+  const text = (id, characters, extra = {}) => ({ id, type: 'TEXT', name: characters, characters, ...extra });
+  const go = (destinationId, navigation = 'NAVIGATE') => [{ trigger: { type: 'ON_CLICK' }, actions: [{ type: 'NODE', destinationId, navigation }] }];
+  const file = { name: 'Bank', document: { children: [{
+    id: '0:1', type: 'CANVAS', name: 'App', flowStartingPoints: [{ nodeId: '1:1', name: 'Main flow' }],
+    children: [
+      { id: '1:1', type: 'FRAME', name: 'Home', children: [text('1:2', 'Balance 1,240'), { id: '1:3', type: 'INSTANCE', name: 'Button', interactions: go('2:1'), children: [text('1:4', 'Help')] }, { id: '1:5', type: 'INSTANCE', name: 'Row', interactions: go('3:1', 'OVERLAY'), children: [text('1:6', 'Menu')] }] },
+      { id: '2:1', type: 'FRAME', name: 'Help', children: [text('2:2', 'Card lost', { interactions: go('4:1') }), { id: '2:3', type: 'FRAME', name: 'Back', interactions: [{ trigger: { type: 'ON_CLICK' }, actions: [{ type: 'BACK' }] }] }] },
+      { id: '3:1', type: 'FRAME', name: 'Menu', children: [text('3:2', 'Terms', { interactions: [{ trigger: { type: 'ON_CLICK' }, actions: [{ type: 'URL', url: 'https://example.com' }] }] })] },
+      { id: '4:1', type: 'FRAME', name: 'Card frozen', children: [text('4:2', 'Your card is frozen')] },
+      { type: 'SECTION', id: '9:0', name: 'Old', children: [{ id: '9:1', type: 'FRAME', name: 'Monthly', transitionNodeID: '1:1', children: [text('9:2', 'Monthly summary')] }] },
+    ],
+  }] } };
+  const r = figmaToInventory(file);
+  assert.deepEqual(r.inventory.states.map((s) => [s.title, s.depth, s.kind]), [['Home', 0, 'screen'], ['Help', 1, 'screen'], ['Menu', 1, 'sheet'], ['Card frozen', 2, 'screen']]);
+  assert.deepEqual(r.unreachable, ['Monthly'], 'a frame no flow leads to');
+  assert.deepEqual(r.mockups.find((m) => m.id === 'card-frozen'), { id: 'card-frozen', title: 'Card frozen', file: 'figma/card-frozen.png', flow: 'main-flow', step: 3, figma_node: '4:1' });
+  // The structure checks read it like a crawl: Help has a way back, Card frozen is a dead end
+  // with none, and Menu's only control leaves the app.
+  const graph = screenGraph(r.inventory);
+  const f = structureFindings({ model, cov: coverage({ screens: [], model, inventory: r.inventory }), inventory: r.inventory, graph });
+  assert.deepEqual(f.find((x) => x.rule === 'CHK-DEAD-END').affected, ['Card frozen']);
+  assert.deepEqual(f.find((x) => x.rule === 'CHK-NO-WAY-BACK').affected.sort(), ['Card frozen', 'Menu']);
+});
+
+test('native hierarchy → the data the checks read; a Maestro flow from taps', () => {
+  assert.deepEqual(parseBounds('[0,66][1080,210]'), { x: 0, y: 66, w: 1080, h: 144 });
+  const tree = { attributes: { bounds: '[0,0][1080,2400]' }, children: [
+    { attributes: { bounds: '[40,200][520,340]', text: 'Pay now', class: 'android.widget.Button', clickable: 'true', enabled: 'true' }, children: [] },
+    { attributes: { bounds: '[900,200][990,290]', class: 'android.widget.ImageButton', clickable: 'true', 'resource-id': 'com.x:id/close' }, children: [] },
+    { attributes: { bounds: '[40,400][1040,560]', class: 'android.view.ViewGroup' }, clickable: true, children: [{ attributes: { bounds: '[60,420][600,480]', text: 'Order summary', class: 'android.widget.TextView' }, children: [] }] },
+  ] };
+  const d = hierarchyToData(tree, { scale: 3 });
+  assert.deepEqual(d.viewport, { width: 360, height: 800 });
+  assert.deepEqual(d.interactive.map((i) => [i.name, i.box.w, i.box.h]), [['Pay now', 160, 47], ['', 30, 30], ['Order summary', 333, 53]]);
+  assert.equal(d.interactive[1].selector, 'com.x:id/close');
+  assert.equal(flowFor('com.x', ['Cart', 'Pay "now"']), 'appId: com.x\n---\n- launchApp:\n    clearState: true\n- waitForAnimationToEnd\n- tapOn: "Cart"\n- waitForAnimationToEnd\n- tapOn: "Pay \\"now\\""\n- waitForAnimationToEnd\n');
 });

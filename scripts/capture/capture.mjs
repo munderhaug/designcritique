@@ -337,7 +337,9 @@ try {
       return page0Of.get(id);
     };
     manifest.inventory = path.relative(runDir, invFile);
-    for (const st of inv.states) {
+    // A Figma prototype's graph (scripts/import/figma-flows.mjs): its frames are the image
+    // mockups already captured, so there is nothing to replay.
+    for (const st of inv.source === 'figma' ? [] : inv.states) {
       const id = `crawl--${st.id}`;
       if (!wanted(st.id, id) || done(id)) continue;
       const page0 = startPage(st.start || inv.start);
@@ -389,7 +391,7 @@ for (const w of manifest.warnings) process.stderr.write(`warning: ${w}\n`);
 const captures = manifest.screens.reduce((n, s) => n + s.captures.length, 0);
 console.log(`Captured ${manifest.screens.length} screens (${captures} renders)`);
 console.log(`RUN_DIR=${runDir}`);
-if (!manifest.screens.length) process.exit(1);
+if (!manifest.screens.length && !cfg.native.length) process.exit(1);
 
 // Runs in the page: the document as it is now, without scripts (so it doesn't start over when
 // opened) and with a <base> so its styles and images still load. Open shadow roots are kept as

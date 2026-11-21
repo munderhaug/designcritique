@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { chromium } from 'playwright';
+import { installPageHelpers } from './page-helpers.mjs';
 
 export const LARGE_TEXT_CSS = 'html { font-size: 135% !important; }';
 export const FREEZE_CSS = '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition: none !important; caret-color: transparent !important; }';
@@ -23,6 +24,7 @@ export async function launch() {
 
 export async function preparePage(context, url, variant, screen = {}, insets = null, { offline = false } = {}) {
   const page = await context.newPage();
+  await installPageHelpers(page);
   if (offline) {
     await page.route('**/*', (route) => (route.request().url().startsWith('file:') || route.request().url().startsWith('data:') ? route.continue() : route.abort()));
   }
@@ -215,17 +217,8 @@ export async function pageFingerprint(page) {
 // the viewport, else the page under the upper middle of the viewport. Walks open shadow roots.
 export function topLayerTitle() {
   const W = innerWidth; const H = innerHeight;
-  const deepHit = (x, y) => {
-    let el = document.elementFromPoint(x, y);
-    while (el?.shadowRoot) { const inner = el.shadowRoot.elementFromPoint(x, y); if (!inner || inner === el) break; el = inner; }
-    return el;
-  };
-  const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
-  const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
-  const shown = (el) => {
-    const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
-    return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0;
-  };
+  const { up, within, deepHit } = window.__dc;
+  const shown = (el) => window.__dc.shown(el) && parseFloat(getComputedStyle(el).opacity) > 0;
   const clean = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   const uncovered = (el) => {
     const r = el.getBoundingClientRect();

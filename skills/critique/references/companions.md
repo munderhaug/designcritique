@@ -10,7 +10,7 @@ catalog. Run `node PLUGIN_ROOT/scripts/companions.mjs --project <project>` to se
 |---|---|---|---|
 | Impeccable | Paul Bakaus | `init` writes PRODUCT.md (frame skill); `critique` is one of the two critics; its detector runs as a check; `harden` is the system lens's method for states (empty, loading, error, offline, extreme data) | `setup.sh --install-companions` (the version pinned in package.json, `--no-hooks`) |
 | Anthropic design plugin | Anthropic (official) | `design-critique`, `accessibility-review`, `ux-copy` are the design-reviewer's methods; `design-system` is the system lens's method; `user-research` for real research | `claude plugin marketplace add anthropics/knowledge-work-plugins` then `claude plugin install design@knowledge-work-plugins` |
-| Anthropic product-management plugin | Anthropic (official) | `product-brainstorming` and `write-spec` are the scope lens's methods (review mode) | `claude plugin install product-management@knowledge-work-plugins` |
+| Anthropic product-management plugin | Anthropic (official) | `product-brainstorming`'s assumption testing is the frame challenger's method (every critique); `product-brainstorming` and `write-spec` are the scope lens's methods (review mode) | `claude plugin install product-management@knowledge-work-plugins` |
 | Playwright | Microsoft | Renders HTML mockups at phone sizes, light, dark and large text | npm dependency |
 | axe-core | Deque | Accessibility rules engine | npm dependency |
 | DESIGN.md format | Google Labs | Token file the token checks read | template in `templates/` |
@@ -64,6 +64,14 @@ first, and its native ports aren't published yet.
 When companion guidance and a primary source disagree, the critic follows the primary source
 (Apple HIG, Material 3, WCAG) and says so.
 
+## Design files and native apps
+
+| Tool | By | Role |
+|---|---|---|
+| Figma REST API | Figma (official; personal access token) | `scripts/import/figma-flows.mjs` reads a prototype's flow starting points and interactions (fields per Figma's published OpenAPI spec, github.com/figma/rest-api-spec) and writes the navigation graph the structure checks read. Tested on a recorded file shape; not yet run against the live API from this repository |
+| Maestro CLI | mobile.dev, Apache-2.0 | `scripts/capture/native.mjs` (experimental) replays taps on a simulator or emulator and reads the accessibility hierarchy (`maestro hierarchy`). Scripted, so repeatable; analytics on by default, turned off by the script. No physical iOS devices |
+| `adb`, `xcrun simctl` | Google; Apple | Appearance, text size and screenshots for native capture |
+
 ## Considered and not used (checked 2026-11-17)
 
 Reviewed against the primary sources in the principles index. Re-check before adding any of them.
@@ -96,7 +104,12 @@ HIG and Material 3. It's a citation index, not a separate method.
 
 ## Running apps
 
-Today: screenshots taken with MobileBuildMCP or Xcode Previews, Android CLI, Expo MCP,
-mobile-mcp or Callstack's agent-device are image inputs (critics only, see inputs.md).
-Next: driving those tools from capture, so live screens and their accessibility trees go through
-the same checks, critics and report. Apple's Xcode 27 skills then apply to the SwiftUI source.
+Native capture (above) covers screens reached by taps on a simulator or emulator, with two
+checks from the accessibility hierarchy. Screenshots taken with MobileBuildMCP or Xcode
+Previews, Android CLI, Expo MCP, mobile-mcp or agent-device still work as image inputs (critics
+only, see inputs.md). Next: crawling and journeys on native apps; the platform's own
+accessibility audits (XCUITest `performAccessibilityAudit`, Android's Accessibility Test
+Framework), which need test code in the app project; and for Capacitor apps, Playwright's
+experimental Android WebView support, which would run the full HTML checks inside the real shell.
+MCP servers that drive a device one model call at a time (Maestro MCP, mobile-mcp, Appium MCP)
+stay fallbacks: a scripted run is repeatable and costs no judgement.

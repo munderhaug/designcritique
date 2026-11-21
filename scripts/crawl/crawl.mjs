@@ -83,16 +83,9 @@ async function listActions(page) {
   return page.evaluate(() => {
     const SEL = 'a[href],button,summary,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=switch],[role=checkbox],[role=radio],input[type=checkbox],input[type=radio],select';
     const W = innerWidth; const H = innerHeight;
-    const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
-    const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
-    const deepHit = (x, y) => {
-      let el = document.elementFromPoint(x, y);
-      while (el?.shadowRoot) { const inner = el.shadowRoot.elementFromPoint(x, y); if (!inner || inner === el) break; el = inner; }
-      return el;
-    };
+    const { up, within, deepHit, deepAll, shown, topModal, nameOf: ownName, text } = window.__dc; // scripts/lib/page-helpers.mjs
     // The light-DOM element a tap or a CSS path can address: the outermost shadow host.
     const hostOf = (el) => { let e = el; while (e.getRootNode() instanceof ShadowRoot) e = e.getRootNode().host; return e; };
-    const shown = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
     const blocked = (el) => { for (let e = el; e; e = up(e)) if (e.nodeType === 1 && (e.hasAttribute('hidden') || e.getAttribute('aria-hidden') === 'true' || e.hasAttribute('inert'))) return true; return false; };
     const scroller = (el) => {
       for (let e = up(el); e && e !== document.body && e !== document.documentElement; e = up(e)) {
@@ -118,21 +111,9 @@ async function listActions(page) {
       const hit = deepHit(x, y);
       return !!hit && (within(hit, el) || within(hit, target));
     };
-    const all = [];
-    const walk = (root) => {
-      for (const el of root.querySelectorAll('*')) {
-        if (el.matches(SEL)) all.push(el);
-        if (el.shadowRoot) walk(el.shadowRoot);
-      }
-    };
-    walk(document);
+    const all = deepAll(document, SEL);
     // An open modal dialog or sheet: only its controls can be tapped.
-    const modals = [...document.querySelectorAll('[aria-modal=true],dialog[open]')].filter((d) => shown(d) && (d.getAttribute('aria-modal') === 'true' || d.matches(':modal')));
-    const modal = modals[modals.length - 1] || null;
-    const text = (t) => String(t || '').replace(/\s+/g, ' ').trim();
-    const ownName = (el) => text(el.getAttribute('aria-label')
-      || (el.getAttribute('aria-labelledby') || '').split(/\s+/).map((id) => (el.getRootNode().getElementById?.(id) || document.getElementById(id))?.textContent || '').join(' ')
-      || el.labels?.[0]?.textContent || el.innerText || el.getAttribute('title') || el.querySelector('img[alt]')?.getAttribute('alt') || el.value || '');
+    const modal = topModal();
     // Unnamed icon controls: a label, title or icon name somewhere inside, light or shadow DOM.
     const innerHint = (el) => {
       const stack = [el];

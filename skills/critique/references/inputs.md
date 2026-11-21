@@ -82,10 +82,48 @@ rendered angle sees what the user sees, the source angle sees what the screen ig
 user's text size, the back gesture, the safe area). The report merges a problem found from both
 angles into one finding marked "found on the rendered screen and in its source".
 
+## Figma prototypes: flows and structure from the design itself
+
+```bash
+FIGMA_TOKEN=… node PLUGIN_ROOT/scripts/import/figma-flows.mjs --file <file key> --out figma --images
+```
+
+Reads the prototype's flow starting points and every node's interactions through Figma's REST
+API and writes one image mockup per frame, ordered by flow and step (`figma/mockups.figma.yaml`,
+to paste into `mockups.yaml`), the frames as PNG, and the prototype's navigation graph
+(`figma/inventory.json`, in the crawler's shape). Capture with
+`--inventory figma/inventory.json` and the structure checks (ways back, dead ends, depth, frames
+no flow reaches, labels that lead to two places) run on the design before any code exists.
+Frames are images, so the screen checks don't run on them; the reviewers do. The token is a
+Figma personal access token with file read access, read from the environment only. Without
+network access, save `GET /v1/files/<key>` and pass it with `--json`.
+
+## Native apps on a simulator or emulator (experimental)
+
+```yaml
+native:
+  - id: shop
+    app: com.example.shop        # bundle id or package name
+    platform: android            # or ios
+    screens:
+      - { id: cart, title: Cart, steps: [Cart] }             # taps by visible label
+      - { id: pay, title: Pay, steps: [Cart, Checkout] }
+```
+
+`run.mjs` (or `scripts/capture/native.mjs`) launches the app with Maestro's CLI, taps to each
+screen, and saves a screenshot and the accessibility hierarchy in light, dark and large text
+(`adb` or `xcrun simctl` switch them). The hierarchy feeds two checks: tap-target size in pt or
+dp and controls without a name for a screen reader (surface `native-render`). Everything else on
+a native screen is the reviewers' job. Needs Maestro on PATH and a booted emulator (Android,
+any OS) or simulator (iOS, macOS with Xcode); physical iOS devices aren't supported by Maestro.
+Maestro sends usage analytics by default; the script turns that off. Journeys and the crawler
+don't drive native apps yet.
+
 ## Not supported yet
 
 - Single-file React (`.jsx` / `.tsx`) artifacts as rendered screens. Export them as HTML, or
   render a screenshot; list the source under `source:` so the detectors still read it.
-- Driving a running app (launching, tapping through flows, reading its accessibility tree).
-  Screenshots taken from a simulator or device work today as image inputs; capturing them
-  automatically, with checks on the live accessibility tree, is planned.
+- Crawling a native app, or replaying `journeys:` on one: native capture reaches the screens
+  listed under `native:` only.
+- Platform accessibility audits (XCUITest `performAccessibilityAudit`, Android's Accessibility
+  Test Framework): they need test code inside the app project.

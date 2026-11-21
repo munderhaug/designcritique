@@ -14,7 +14,7 @@ import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
 import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.mjs';
 import { evaluateGate } from '../lib/gate.mjs';
 import { section, assumptionsOf, productName, unfilledSections, unfilledMessage } from '../lib/framing.mjs';
-import { mergeAcrossSources, groupChecksByCause } from '../lib/merge.mjs';
+import { mergeAcrossSources, groupChecksByCause, isDeterministic } from '../lib/merge.mjs';
 import { productModel, parseKeyTasks } from '../lib/product.mjs';
 import { iaMapSvg, iaMapMermaid, rankProposals } from '../lib/review-report.mjs';
 import { DEFAULT_GATE, normalizeGate, CHECK_FILES } from '../lib/config.mjs';
@@ -386,7 +386,7 @@ function whereOf(f) {
   if (f.screens) return `${f.screens.length} screens: ${capList(f.screens.map(screenTitle))}`;
   return `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''}`;
 }
-function criticsOf(f) { return [...new Set((f.raisedBy || []).filter((s) => s !== 'check' && s !== 'motion' && !String(s).startsWith('detector:')))]; }
+function criticsOf(f) { return [...new Set((f.raisedBy || []).filter((s) => !isDeterministic({ source: s })))]; }
 function subscoresOf(t) {
   const x = t.subscores;
   return x && [x.effectiveness, x.efficiency, x.satisfaction].some((v) => typeof v === 'number') ? [x.effectiveness, x.efficiency, x.satisfaction].map((v) => (typeof v === 'number' ? v : '–')).join(' / ') : '';
