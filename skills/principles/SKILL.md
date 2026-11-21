@@ -1,6 +1,6 @@
 ---
 name: principles
-description: Citation index of established design principles with stable IDs - Nielsen's heuristics, Norman, the cognitive walkthrough, Gestalt, Fitts and Hick, WCAG 2.2, Apple HIG, Material 3, common AI-generated UI tells, information architecture, journeys, scope, states, consistency and spec conformance - each summarised from its primary source. Use to cite the principle behind a design finding or decision on a mobile screen.
+description: Citation index of established design principles with stable IDs - Nielsen's heuristics, Norman, the cognitive walkthrough, Gestalt, Fitts and Hick, WCAG 2.2, Apple HIG, Material 3, common AI-generated UI tells, information architecture, journeys, scope, states, consistency, interface copy and spec conformance - each summarised from its primary source. Use to cite the principle behind a design finding or decision on a mobile screen.
 ---
 
 # Design principles: citation index
@@ -26,6 +26,7 @@ summarises its primary sources and names them. Read only the files the task need
 | [journeys.md](references/journeys.md) | Whole journeys: entry, hand-offs, dead ends, ways back, closing loops, peak–end | `JOURNEY-*` |
 | [scope.md](references/scope.md) | Feature against problem: jobs, gaps, alternatives, phase | `SCOPE-*` |
 | [states.md](references/states.md) | The UI stack: empty, error, loading, partial, offline, first run; numbers that agree | `STATE-*` |
+| [copy.md](references/copy.md) | Interface copy: clear, concise, purposeful, tone, action labels, error messages (Podmajersky, Yifrah, Nielsen, Redish) | `COPY-*` |
 | [consistency.md](references/consistency.md) | One component, icon, term and format per meaning | `CONS-*` |
 | [spec.md](references/spec.md) | The prototype against the owner's own spec | `SPEC-*` |
 | [ethics.md](references/ethics.md) | Deceptive patterns: pre-ticked consent, asymmetric choices, confirmshaming, obstruction, sneaking, false pressure, forced action, nagging | `ETHICS-*` |

@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Merge check, critic and Impeccable findings for a run; write findings.json, report.md, report.html.
 //
-// Usage: node scripts/report/render-report.mjs --run <runDir>
+// Usage: node scripts/report/render-report.mjs --run <runDir> [--inline-thumbs [--thumb-width 240]]
+//
+// --inline-thumbs puts every screenshot into report.html as a small WebP, so the one file can be
+// sent and opened on a phone without the run folder.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
@@ -10,7 +13,7 @@ import { validateCritique } from '../lib/validate.mjs';
 import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
 import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.mjs';
 import { evaluateGate } from '../lib/gate.mjs';
-import { section, assumptionsOf, titleOf, unfilledSections, unfilledMessage } from '../lib/framing.mjs';
+import { section, assumptionsOf, productName, unfilledSections, unfilledMessage } from '../lib/framing.mjs';
 import { mergeAcrossSources, groupChecksByCause } from '../lib/merge.mjs';
 import { productModel, parseKeyTasks } from '../lib/product.mjs';
 import { iaMapSvg, iaMapMermaid, rankProposals } from '../lib/review-report.mjs';
@@ -29,6 +32,11 @@ const notes = [
 const warnings = [...(manifest.warnings || [])];
 
 const SEV = ['P0', 'P1', 'P2', 'P3'];
+// Long evidence (every overlap on every variant, hundreds of screen names) is cut in the report;
+// findings.json keeps it whole.
+const MAX_LINES = 8;
+const MAX_LINE = 400;
+const MAX_NAMES = 12;
 const DECISIONS_REL = '.designcritique/decisions.yaml';
 const CATEGORIES = new Set(['task-fit', 'ux', 'content', 'visual', 'layout', 'typography', 'color', 'a11y', 'platform', 'tokens', 'journey', 'ia', 'scope', 'consistency', 'logic', 'spec', 'states', 'ethics']);
 const screenIds = new Set(manifest.screens.map((s) => s.id));
@@ -118,10 +126,9 @@ const counts = Object.fromEntries(SEV.map((s) => [s, findings.filter((f) => f.se
 
 // ---------- framing ----------
 const framingText = manifest.framingSnapshot ? fs.readFileSync(path.join(runDir, manifest.framingSnapshot), 'utf8') : '';
-const productTitle = titleOf(framingText) || 'Untitled product';
 const firstSection = (...names) => names.map((n) => section(framingText, n)).find(Boolean) || '';
 const framing = {
-  title: productTitle === 'Product' ? (manifest.screens[0]?.mockupId ? path.basename(manifest.baseDir) : 'Untitled product') : productTitle,
+  title: productName(framingText) || 'Untitled product',
   problem: firstSection('Problem', 'Product Purpose'),
   users: firstSection('Users'),
   context: firstSection('Context of use', 'Operating Context'),
@@ -226,10 +233,10 @@ for (const sev of SEV) {
   L.push(`### ${sev}`, '');
   for (const f of list) {
     L.push(`**${f.n}. ${md(f.title)}**${f.status === 'new' ? ' _(new)_' : ''}${agreementNote(f) ? ` _(${agreementNote(f)})_` : ''}  `, `${whereOf(f)} · ${f.basis.join(', ')} · ${(f.raisedBy || [f.source]).join(' + ')}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
-    L.push(`- Evidence: ${md(f.evidence).replace(/\n/g, '; ')}`);
+    L.push(`- Evidence: ${md(capLines(f.evidence)).replace(/\n/g, '; ')}`);
     if (f.impact) L.push(`- Impact: ${md(f.impact)}`);
     L.push(`- Fix: ${md(f.recommendation)}`);
-    for (const a of f.also || []) L.push(`- Also raised by ${a.source} (${a.severity}): ${md(a.title)}${a.evidence ? `. ${md(a.evidence).replace(/\n/g, '; ')}` : ''}`);
+    for (const a of f.also || []) L.push(`- Also raised by ${a.source} (${a.severity}): ${md(a.title)}${a.evidence ? `. ${md(capLines(a.evidence)).replace(/\n/g, '; ')}` : ''}`);
     L.push('');
   }
 }
@@ -251,6 +258,7 @@ if (review) {
     }
     if (coverageData.journeys.length) L.push(`Journeys: ${coverageData.journeys.map((j) => `${j.id} ${!j.scripted ? '(not scripted in mockups.yaml)' : j.completed ? '(completed)' : `(broke at step ${j.brokenAt})`}`).join(', ')}.`, '');
     if (coverageData.neverSeenStates.length) L.push(`States never captured on any screen: ${coverageData.neverSeenStates.join(', ')}.`, '');
+    if (coverageData.notCovered?.length) L.push(`Not covered by the crawl (tooling, not the prototype; left out of the dead-end and way-back checks and the gate): ${coverageData.notCovered.length} state(s). ${md(capList(coverageData.notCovered.map((u) => `${u.title} (${u.state}): ${u.reason}`), 8))}.`, '');
     const kinds = ['ideal', 'empty', 'error', 'loading', 'partial', 'offline', 'first-run'];
     L.push('| Screen | ' + kinds.join(' | ') + ' |', '|---|' + kinds.map(() => '---').join('|') + '|');
     for (const st of coverageData.states.slice(0, 40)) L.push(`| ${md(st.title)} | ${kinds.map((k) => (st.seen.includes(k) ? '✓' : '·')).join(' | ')} |`);
@@ -285,7 +293,7 @@ if (review) {
   }
   if (proposals.length) {
     L.push('## Cut, add or move', '', 'Proposals, ranked by impact. None is applied automatically: record your decision with `/designcritique:decide <id> accept|reject|defer`.', '');
-    for (const p of proposals) L.push(`- **${p.id}** ${p.type === 'move' ? `Move **${md(p.item)}**${p.from ? ` from ${md(p.from)}` : ''} to **${md(p.to)}**` : `${p.verdict[0].toUpperCase()}${p.verdict.slice(1)} **${md(p.item)}**`}: ${md(p.reason)} _(${p.impact} impact; ${p.sources.join(' + ')})_${p.decision ? ` · **${PAST[p.decision.decision] || p.decision.decision} by you**${p.decision.reason ? `: ${md(p.decision.reason)}` : ''}` : ''}`);
+    for (const p of proposals) L.push(`- **${p.id}** ${p.type === 'move' ? `Move **${md(p.item)}**${p.from ? ` from ${md(p.from)}` : ''} to **${md(p.to)}**` : `${p.verdict[0].toUpperCase()}${p.verdict.slice(1)} **${md(p.item)}**`}: ${md(p.reason)} _(${p.impact} impact; ${p.sources.join(' + ')})_${p.decision ? ` · **${pastTense(p.decision.decision)} by you**${p.decision.reason ? `: ${md(p.decision.reason)}` : ''}` : ''}`);
     L.push('');
   }
   if (consistencyInv) {
@@ -309,12 +317,21 @@ if (notes.length || warnings.length) L.push('## Notes', '', ...notes.map((n) => 
 L.push('---', 'Principle IDs refer to the designcritique principles library (skills/principles). Severity follows Nielsen\'s frequency, impact and persistence, weighted by task criticality.');
 fs.writeFileSync(path.join(runDir, 'report.md'), L.join('\n') + '\n');
 
-const PAST = { accept: 'accepted', reject: 'rejected', defer: 'deferred' };
+// Helpers used while building report.md above are function declarations, so they exist before
+// this line runs (a const here would be in its temporal dead zone when report.md calls it).
+function pastTense(d) { return { accept: 'accepted', reject: 'rejected', defer: 'deferred' }[d] || d; }
 function whereOf(f) {
-  if (f.screens) return `${f.screens.length} screens: ${f.screens.map(screenTitle).join(', ')}`;
+  if (f.screens) return `${f.screens.length} screens: ${capList(f.screens.map(screenTitle))}`;
   return `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''}`;
 }
-const criticsOf = (f) => [...new Set((f.raisedBy || []).filter((s) => s !== 'check' && s !== 'motion' && !String(s).startsWith('detector:')))];
+function criticsOf(f) { return [...new Set((f.raisedBy || []).filter((s) => s !== 'check' && s !== 'motion' && !String(s).startsWith('detector:')))]; }
+function capLines(s) {
+  const lines = String(s ?? '').split('\n').map((l) => (l.length > MAX_LINE ? `${l.slice(0, MAX_LINE)}…` : l));
+  return lines.length > MAX_LINES ? [...lines.slice(0, MAX_LINES), `…and ${lines.length - MAX_LINES} more (findings.json has them all)`].join('\n') : lines.join('\n');
+}
+function capList(items, max = MAX_NAMES) {
+  return items.length > max ? `${items.slice(0, max).join(', ')} and ${items.length - max} more` : items.join(', ');
+}
 function agreementNote(f) {
   if (f.agreement === 'critics-agree') return `raised by ${criticsOf(f).length} critics: higher confidence`;
   if (f.agreement === 'check-and-critic') return 'measured by a check and raised by a critic';
@@ -332,7 +349,7 @@ function reviewHtml() {
   if (coverageData) {
     const kinds = ['ideal', 'empty', 'error', 'loading', 'partial', 'offline', 'first-run'];
     const unseen = coverageData.features.filter((f) => !f.seen);
-    out.push(`<h2>Coverage</h2><div class="frame-box">${coverageData.features.length ? `<p>Features captured: <strong>${coverageData.features.length - unseen.length} of ${coverageData.features.length}</strong>${unseen.length ? `. Not seen in the capture (not covered, not necessarily missing): ${unseen.map((f) => esc(f.feature)).join(', ')}` : ''}.</p>` : ''}${coverageData.journeys.length ? `<p>Journeys: ${coverageData.journeys.map((j) => `${esc(j.id)} ${!j.scripted ? '(not scripted)' : j.completed ? '(completed)' : `<span class="broken">(broke at step ${j.brokenAt})</span>`}`).join(', ')}.</p>` : ''}${coverageData.neverSeenStates.length ? `<p>States never captured: ${coverageData.neverSeenStates.map(esc).join(', ')}.</p>` : ''}
+    out.push(`<h2>Coverage</h2><div class="frame-box">${coverageData.features.length ? `<p>Features captured: <strong>${coverageData.features.length - unseen.length} of ${coverageData.features.length}</strong>${unseen.length ? `. Not seen in the capture (not covered, not necessarily missing): ${unseen.map((f) => esc(f.feature)).join(', ')}` : ''}.</p>` : ''}${coverageData.journeys.length ? `<p>Journeys: ${coverageData.journeys.map((j) => `${esc(j.id)} ${!j.scripted ? '(not scripted)' : j.completed ? '(completed)' : `<span class="broken">(broke at step ${j.brokenAt})</span>`}`).join(', ')}.</p>` : ''}${coverageData.neverSeenStates.length ? `<p>States never captured: ${coverageData.neverSeenStates.map(esc).join(', ')}.</p>` : ''}${coverageData.notCovered?.length ? `<p>Not covered by the crawl (tooling, not the prototype; left out of the dead-end and way-back checks and the gate): ${coverageData.notCovered.length} state(s). <span class="meta">${esc(capList(coverageData.notCovered.map((u) => `${u.title} (${u.state}): ${u.reason}`), 8))}</span></p>` : ''}
 <table class="matrix"><tr><th>Screen</th>${kinds.map((k) => `<th>${k}</th>`).join('')}</tr>${coverageData.states.slice(0, 40).map((st) => `<tr><td>${esc(st.title)}</td>${kinds.map((k) => `<td>${st.seen.includes(k) ? '✓' : '·'}</td>`).join('')}</tr>`).join('')}</table></div>`);
   }
   if (graph) out.push(`<h2>Information architecture</h2><p class="sub">${graph.nodes.length} screens and ${graph.edges.length} links found by tapping every control from the start screen; columns are taps from the start. Outlined: ${flagged.size ? [...flagged].map(([t, w]) => `${esc(t)} (${esc(w)})`).join(', ') : 'none'}. Dashed arrows lead back.</p><div class="iamap-wrap">${iaMapSvg(graph, flagged)}</div>`);
@@ -343,14 +360,14 @@ function reviewHtml() {
       const sid = j.screens[k];
       const cap = sid && captureOf(sid);
       const verdicts = judged.map((x) => { const st = (x.steps || []).find((y) => y.step === k || y.screen === sid); return st ? `<div class="v v-${esc(st.verdict)}">${esc(x.source)}: ${esc(st.verdict)}${st.note ? ` – ${esc(st.note)}` : ''}</div>` : ''; }).join('');
-      steps.push(`<div class="jstep"><div class="tap">${k ? `${k}. tap “${esc(j.steps[k - 1])}”` : 'start'}</div>${cap ? `<img src="${esc(cap.screenshot)}" alt="${esc(pageTitle(sid))}">` : j.brokenAt === k ? `<div class="broken">Broken: ${esc(j.error || '')}</div>` : ''}${verdicts}</div>`);
+      steps.push(`<div class="jstep"><div class="tap">${k ? `${k}. tap “${esc(j.steps[k - 1])}”` : 'start'}</div>${cap ? `<img src="${img(cap.screenshot)}" alt="${esc(pageTitle(sid))}">` : j.brokenAt === k ? `<div class="broken">Broken: ${esc(j.error || '')}</div>` : ''}${verdicts}</div>`);
       if (!sid) break;
     }
     out.push(`<h3>${esc(j.title)}${criticalIds.has(j.id) ? ' <small>must not fail</small>' : ''}</h3><p class="sub">${judged.map((x) => `${esc(x.source)}: <strong>${esc(x.verdict)}</strong>${typeof x.score === 'number' ? ` ${x.score}/10` : ''}${x.summary ? ` – ${esc(x.summary)}` : ''}`).join('<br>') || 'Not judged by a critic yet.'}</p><div class="jstrip">${steps.join('')}</div>`);
   }
   if (journeysRun.length) out.splice(out.length - journeysRun.length, 0, '<h2>Journeys</h2>');
   if (productM.features.length) out.push(`<h2>Features and the problem</h2><table><tr><th>Feature</th><th>Problem part</th><th>Key task</th><th>Phase</th><th>Captured</th><th>Taps</th><th>Scope</th></tr>${productM.features.map((f) => { const c = coverageData?.features.find((x) => x.feature === f.feature); return `<tr><td>${esc(f.feature)}</td><td>${esc(f.problem)}</td><td>${esc(f.task)}</td><td>${esc(f.phase || '')}</td><td>${c ? (c.seen ? 'yes' : 'no') : ''}</td><td>${c?.depth ?? ''}</td><td>${scopeVerdicts.filter((x) => (x.feature || '').toLowerCase() === f.feature.toLowerCase()).map((x) => `${esc(x.verdict)} <span class="meta">${esc(x.source)}</span>`).join(', ')}</td></tr>`; }).join('')}</table>`);
-  if (proposals.length) out.push(`<h2>Cut, add or move</h2><p class="sub">Proposals, ranked by impact. None is applied automatically: decide with <code>/designcritique:decide &lt;id&gt; accept|reject|defer</code>.</p><ol class="plain">${proposals.map((p) => `<li><strong>${esc(p.id)}</strong> ${p.type === 'move' ? `Move <strong>${esc(p.item)}</strong>${p.from ? ` from ${esc(p.from)}` : ''} to <strong>${esc(p.to)}</strong>` : `${esc(p.verdict[0].toUpperCase() + p.verdict.slice(1))} <strong>${esc(p.item)}</strong>`}: ${esc(p.reason)} <span class="meta">${esc(p.impact)} impact · ${esc(p.sources.join(' + '))}</span>${p.decision ? ` <span class="agree">${esc(PAST[p.decision.decision] || p.decision.decision)} by you</span>` : ''}</li>`).join('')}</ol>`);
+  if (proposals.length) out.push(`<h2>Cut, add or move</h2><p class="sub">Proposals, ranked by impact. None is applied automatically: decide with <code>/designcritique:decide &lt;id&gt; accept|reject|defer</code>.</p><ol class="plain">${proposals.map((p) => `<li><strong>${esc(p.id)}</strong> ${p.type === 'move' ? `Move <strong>${esc(p.item)}</strong>${p.from ? ` from ${esc(p.from)}` : ''} to <strong>${esc(p.to)}</strong>` : `${esc(p.verdict[0].toUpperCase() + p.verdict.slice(1))} <strong>${esc(p.item)}</strong>`}: ${esc(p.reason)} <span class="meta">${esc(p.impact)} impact · ${esc(p.sources.join(' + '))}</span>${p.decision ? ` <span class="agree">${esc(pastTense(p.decision.decision))} by you</span>` : ''}</li>`).join('')}</ol>`);
   if (consistencyInv) {
     const multi = consistencyInv.icons.filter((i) => i.meanings.length > 1);
     out.push(`<h2>Consistency inventory</h2><div class="frame-box">${consistencyInv.components.length ? `<p><strong>Emphasised buttons</strong><br>${consistencyInv.components.map((c) => `${esc(c.signature)} ×${c.count} <span class="meta">${esc(c.examples.join(', '))}</span>`).join('<br>')}</p>` : ''}<p><strong>Icons</strong>: ${consistencyInv.icons.length} in use${multi.length ? `; more than one meaning: ${multi.map((i) => esc(i.meanings.join(' / '))).join('; ')}` : ''}.</p>${consistencyInv.terms.length ? `<p><strong>Terms</strong>: ${consistencyInv.terms.map((t) => `“${esc(t.avoid)}” → “${esc(t.use)}”`).join(', ')}</p>` : ''}${consistencyInv.formats.length ? `<p><strong>Amount formats</strong>: ${consistencyInv.formats.map((f) => `${esc(f.format)} (${esc(f.examples.join(', '))})`).join('; ')}</p>` : ''}${consistencyInv.figures.length ? `<p><strong>Figures that disagree</strong>: ${consistencyInv.figures.map((f) => `${esc(f.label)}: ${esc(f.values.map((v) => v.value).join(' vs '))}`).join('; ')}</p>` : ''}</div>`);
@@ -360,9 +377,14 @@ function reviewHtml() {
 
 function findingItem(f, anchor) {
   const badge = f.agreement === 'critics-agree' ? ` <span class="agree">${criticsOf(f).length} critics</span>` : f.agreement === 'check-and-critic' ? ' <span class="agree">check + critic</span>' : f.agreement === 'rendered-and-source' ? ' <span class="agree">rendered + source</span>' : '';
-  const where = f.screens ? `<div class="meta">On ${f.screens.length} screens: ${f.screens.map((id) => esc(screenTitle(id))).join(', ')}</div>` : '';
-  const also = (f.also || []).map((a) => `<p><em>Also raised by ${esc(a.source)} (${esc(a.severity)}):</em> ${esc(a.title)}${a.evidence ? `. ${mdInline(a.evidence)}` : ''}</p>`).join('');
-  return `<li${anchor ? ` id="${anchor}"` : ''} value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}${badge}<div class="meta">${esc(f.basis.join(', '))} · ${esc((f.raisedBy || [f.source]).join(' + '))}${f.platform && !f.screens ? ` · ${esc(f.platform)}` : ''}</div>${where}<details><summary>Evidence and fix</summary><p>${mdInline(f.evidence)}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p>${also}</details></li>`;
+  const where = f.screens ? `<div class="meta">On ${f.screens.length} screens: ${esc(capList(f.screens.map(screenTitle)))}</div>` : '';
+  const also = (f.also || []).map((a) => `<p><em>Also raised by ${esc(a.source)} (${esc(a.severity)}):</em> ${esc(a.title)}${a.evidence ? `. ${mdInline(capLines(a.evidence))}` : ''}</p>`).join('');
+  return `<li${anchor ? ` id="${anchor}"` : ''} value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}${badge}<div class="meta">${esc(f.basis.join(', '))} · ${esc((f.raisedBy || [f.source]).join(' + '))}${f.platform && !f.screens ? ` · ${esc(f.platform)}` : ''}</div>${where}<details><summary>Evidence and fix</summary><p>${mdInline(capLines(f.evidence))}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p>${also}</details></li>`;
+}
+
+// A finding on many screens is written out once (Across screens); each screen links to it.
+function findingLink(f) {
+  return `<li value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <a href="#f${f.n}">${esc(f.title)}</a> <span class="meta">on ${f.screens.length} screens</span></li>`;
 }
 
 function screenCard(screen) {
@@ -380,14 +402,48 @@ function screenCard(screen) {
   return `<section class="screen" id="s-${esc(screen.id)}">
   <h3>${esc(screen.title)} <small>${esc(screen.id)} · ${esc(screen.platform)}${screen.flow ? ` · ${esc(screen.flow)} ${screen.step ?? ''}` : ''}</small></h3>
   <div class="screen-body">
-    <figure class="shot"><div class="frame"><img src="${esc(main.screenshot)}" alt="${esc(screen.title)}, ${esc(main.variant)}">${markers}</div><figcaption>${esc(main.deviceName)} · ${esc(main.variant)}</figcaption></figure>
+    <figure class="shot"><div class="frame"><img src="${img(main.screenshot)}" alt="${esc(screen.title)}, ${esc(main.variant)}">${markers}</div><figcaption>${esc(main.deviceName)} · ${esc(main.variant)}</figcaption></figure>
     <div class="side">
-      <ol class="flist">${own.map((f) => `${findingItem(f, f.screens ? '' : `f${f.n}`)}`).join('') || '<li class="none">No findings for this screen.</li>'}</ol>
-      ${others.length ? `<div class="thumbs">${others.map((c) => `<figure><a href="${esc(c.screenshot)}"><img src="${esc(c.screenshot)}" alt="${esc(c.variant)}"></a><figcaption>${esc(c.platform)} ${esc(c.device)} · ${esc(c.variant)}</figcaption></figure>`).join('')}</div>` : ''}
+      <ol class="flist">${own.map((f) => (f.screens ? findingLink(f) : findingItem(f, `f${f.n}`))).join('') || '<li class="none">No findings for this screen.</li>'}</ol>
+      ${others.length ? `<div class="thumbs">${others.map((c) => `<figure>${link(c.screenshot, `<img src="${img(c.screenshot)}" alt`)}="${esc(c.variant)}"></a><figcaption>${esc(c.platform)} ${esc(c.device)} · ${esc(c.variant)}</figcaption></figure>`).join('')}</div>` : ''}
     </div>
   </div>
 </section>`;
 }
+
+// ---------- screenshots: linked from the run folder, or inlined as small WebP ----------
+const inline = new Map();
+if (args['inline-thumbs']) {
+  const width = Number(args['thumb-width'] || 240);
+  const files = new Set();
+  for (const sc of manifest.screens) for (const c of sc.captures) files.add(c.screenshot);
+  for (const t of manifest.taste || []) files.add(t);
+  const { launch } = await import('../lib/browser.mjs');
+  const browser = await launch();
+  try {
+    const page = await browser.newPage();
+    for (const rel of files) {
+      const file = path.join(runDir, rel);
+      if (!fs.existsSync(file)) continue;
+      const type = { '.jpg': 'jpeg', '.jpeg': 'jpeg', '.webp': 'webp', '.gif': 'gif' }[path.extname(file).toLowerCase()] || 'png';
+      const src = `data:image/${type};base64,${fs.readFileSync(file).toString('base64')}`;
+      const small = await page.evaluate(async ({ src, width }) => {
+        const im = new Image();
+        im.src = src;
+        await im.decode();
+        const scale = Math.min(1, width / im.naturalWidth);
+        const c = document.createElement('canvas');
+        c.width = Math.round(im.naturalWidth * scale); c.height = Math.round(im.naturalHeight * scale);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        return c.toDataURL('image/webp', 0.8);
+      }, { src, width }).catch(() => null);
+      if (small) inline.set(rel, small);
+    }
+  } finally { await browser.close(); }
+}
+function img(rel) { return inline.get(rel) || esc(rel); }
+// Inlined images have no file next to the report to open in full.
+function link(rel, inner) { return inline.has(rel) ? inner : `<a href="${esc(rel)}">${inner}</a>`; }
 
 const global = findings.filter((f) => f.screen === '*');
 const html = `<!doctype html>
@@ -440,7 +496,7 @@ ${comparison ? `<h2>Since last run</h2><div class="frame-box"><p>Compared with $
 ${global.length ? `<div class="screen"><h3>Across screens</h3><ol class="flist">${global.map((f) => `${findingItem(f, `f${f.n}`)}`).join('')}</ol></div>` : ''}
 ${manifest.screens.map(screenCard).join('\n')}
 ${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)}${s.basis?.length ? ` <span class="meta">${esc(s.basis.join(', '))}</span>` : ''}</li>`).join('')}</ul>` : ''}
-${manifest.taste?.length ? `<h2>The direction you chose</h2><div class="frame-box"><div class="thumbs">${manifest.taste.map((t) => `<figure><a href="${esc(t)}"><img src="${esc(t)}" alt="reference"></a></figure>`).join('')}</div><p class="sub">The critics saw these as the intended direction. Closeness isn't scored, and it never excuses a usability problem.</p></div>` : ''}
+${manifest.taste?.length ? `<h2>The direction you chose</h2><div class="frame-box"><div class="thumbs">${manifest.taste.map((t) => `<figure>${link(t, `<img src="${img(t)}" alt="reference">`)}</figure>`).join('')}</div><p class="sub">The critics saw these as the intended direction. Closeness isn't scored, and it never excuses a usability problem.</p></div>` : ''}
 ${review ? reviewHtml() : ''}
 ${decided.length ? `<h2>Decided by you</h2><ul class="plain">${decided.map((f) => `<li>${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${esc(f.severity)} → ${esc(f.decision.severity)}`}: ${esc(f.title)} <span class="meta">${esc(screenTitle(f.screen))} · ${esc(f.rule)} · ${esc(f.source)}</span>${f.decision.reason ? `<br><span class="sub">${esc(f.decision.reason)}</span>` : ''}</li>`).join('')}</ul>` : ''}
 ${comparisons.length ? `<h2>Variant comparison</h2><ul class="plain">${comparisons.map((c) => `<li><strong>${esc(c.group)}</strong>: recommend ${esc(c.recommended)}. ${esc(c.reasons || '')}</li>`).join('')}</ul>` : ''}
@@ -453,9 +509,10 @@ ${notes.length || warnings.length ? `<h2>Notes</h2><ul class="plain">${notes.map
 <p class="sub">Principle IDs refer to the designcritique principles library. Severity follows Nielsen's frequency, impact and persistence, weighted by task criticality.</p>
 </main></body></html>`;
 fs.writeFileSync(path.join(runDir, 'report.html'), html);
+const htmlMb = Buffer.byteLength(html) / 1e6;
 
 console.log(`Gate: ${gate.pass ? 'passed' : `not passed (${gate.reasons.join('; ')})`}`);
 console.log(`Report: ${findings.length} findings ${JSON.stringify(counts)} from ${['checks', ...merged.coverage.critics].join(', ')}`);
 console.log(`Wrote ${path.join(runDir, 'report.md')}`);
-console.log(`Wrote ${path.join(runDir, 'report.html')}`);
+console.log(`Wrote ${path.join(runDir, 'report.html')} (${htmlMb.toFixed(1)} MB${inline.size ? `, ${inline.size} screenshots inlined` : manifest.screens.length ? '; screenshots are linked from the run folder: add --inline-thumbs for one file to send' : ''})`);
 for (const w of warnings) console.error(`warning: ${w}`);

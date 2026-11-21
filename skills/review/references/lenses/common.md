@@ -23,3 +23,12 @@ and `basis` from the principles index, `evidence` naming what you saw and where,
 `recommendation`. Structural changes go in `move_to` and `moves`: they are proposals for the
 person, never edits. Calibrate as `severity.md` says; a finding without an affected user and
 task is taste, leave it out.
+
+**Allowed values** (the validator rejects anything else):
+- `rule` and `basis`: only IDs in output-format.md's list of valid principle IDs. Never make one up.
+- `severity`: `P0`, `P1`, `P2` or `P3`. `level`: `screen`, `journey` or `system`. `confidence`:
+  `high`, `medium` or `low`.
+- `moves[].impact`: one word, `high`, `medium` or `low`; the why goes in `reason`.
+- `scope[].verdict`: `keep`, `cut`, `add`, `move`, `defer` or `rethink`.
+- Optional fields you have nothing for (`from`, `finding_id`, `job`, `task`, `phase`): leave them out.
+- Keep the reply under about 40 KB.

@@ -26,14 +26,19 @@ const require = createRequire(import.meta.url);
 const abs = (p) => (isRemote(p) ? p : path.resolve(manifest.baseDir, p));
 const rel = (p) => (isRemote(p) ? p : path.relative(manifest.baseDir, p) || p);
 
-// Screens a detector can open by itself: no setup script, steps, journey or crawl path to reach them.
+// Screens a detector can open by itself: no setup script or steps to reach them.
 const screens = manifest.screens.map((s) => ({
   ...s,
   source: abs(s.source),
   sourceFiles: (s.sourceFiles || []).map(abs),
-  hasSteps: !!(s.setup || (s.steps || []).length || s.journey || s.inventoryState || s.frameIndex),
+  // A journey's or the crawl's first screen without steps is the page as it loads.
+  hasSteps: !!(s.setup || (s.steps || []).length || s.frameIndex),
 }));
 const reachable = screens.filter((s) => s.kind === 'html' && !s.hasSteps);
+// Screens reached by steps: capture saved their DOM as reached (dom/*.html, scripts removed),
+// which the rendered detector can open like any page.
+const domOf = (s) => s.captures?.find((c) => c.dom && c.variant === 'light')?.dom;
+const snapshots = screens.filter((s) => s.kind === 'html' && s.hasSteps && domOf(s)).map((s) => ({ ...s, rendered: path.join(runDir, domOf(s)) }));
 const english = isEnglish([...(manifest.language || []), ...(manifest.pageLanguages || [])]);
 const notes = [];
 const raw = [];
@@ -59,12 +64,12 @@ function impeccable(targets, extra = []) {
 // ---------- rendered: Impeccable in a browser at each platform's phone viewport ----------
 if (engines.has('impeccable')) {
   const byViewport = new Map();
-  for (const s of reachable.filter((x) => !x.phoneFrame)) {
+  for (const s of [...reachable.filter((x) => !x.phoneFrame), ...snapshots]) {
     const p = DEVICE_PRESETS[s.platform === 'android' ? 'android' : 'ios'].standard;
     const vp = `${p.width}x${p.height}`;
     if (!byViewport.has(vp)) byViewport.set(vp, new Map());
     const urls = byViewport.get(vp);
-    const url = pageUrl(s.source);
+    const url = pageUrl(s.rendered || s.source);
     if (!urls.has(url)) urls.set(url, s);
   }
   for (const [vp, urls] of byViewport) {
@@ -111,8 +116,9 @@ if (engines.has('unslopovich') && sourceTargets.length) {
   }
 }
 if (!sourceTargets.length && !reachable.length) notes.push('No HTML mockups, served pages or source: paths: nothing for the detectors.');
-const skipped = screens.filter((s) => s.kind === 'html' && s.hasSteps).length;
-if (skipped) notes.push(`${skipped} screen(s) reached by steps, journeys or the crawler were not opened by the detectors (they load the page as it starts).`);
+if (snapshots.length) notes.push(`${snapshots.length} screen(s) reached by steps, journeys or the crawler were checked from the DOM capture saved (without scripts; styles inside web components' shadow roots may be missing).`);
+const skipped = screens.filter((s) => s.kind === 'html' && s.hasSteps && !domOf(s)).length;
+if (skipped) notes.push(`${skipped} screen(s) reached by steps, journeys or the crawler were not opened by the detectors (no DOM capture: capture them again to add one).`);
 
 const mapped = raw
   .map(({ ctx, f }) => mapDetectorFinding(f, { screen: ctx?.id || '*', mockup: ctx?.mockupId || null, platform: ctx?.platform || manifest.platform || manifest.screens[0]?.platform || null, english }))

@@ -5,6 +5,10 @@
      (github.com/pbakaus/impeccable). Problem, Key Tasks and Success Criteria are the
      human-centred layer designcritique adds. Tag statements [confirmed], [inferred] or [assumption]. -->
 
+## Name
+
+<The product's name, as reports should title it>
+
 ## Platform
 
 ios

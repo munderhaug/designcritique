@@ -25,6 +25,48 @@ export function principleIds() {
   return ids;
 }
 
+// ---------- nearest principle ID, for a critic that cited one that doesn't exist ----------
+const lev = (a, b) => {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+};
+const tokenSim = (a, b) => {
+  if (a === b) return 1;
+  if (a.length >= 3 && b.length >= 3 && (a.includes(b) || b.includes(a))) return 0.8;
+  if (/\d/.test(a) && a.replace(/\D/g, '') === b.replace(/\D/g, '')) return 0.7; // 4 and H4
+  const sim = 1 - lev(a, b) / Math.max(a.length, b.length);
+  return sim >= 0.75 ? sim * 0.8 : 0;
+};
+
+/**
+ * Real principle IDs closest to an invented one (FITTS → LAW-FITTS), best first: one when it is
+ * clearly closest, up to three when several are as close, none when nothing is.
+ */
+export function suggestIds(bad, ids = principleIds()) {
+  const bare = (x) => String(x).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const exact = [...ids].find((id) => bare(id) === bare(bad));
+  if (exact) return [exact];
+  const want = String(bad || '').toUpperCase().split(/[-_. ]+/).filter(Boolean);
+  if (!want.length) return [];
+  const scored = [];
+  for (const id of ids) {
+    const have = id.split(/[-.]+/);
+    // Each word of the invented ID against its best match in the real one; words of the real ID
+    // that match nothing count against it a little, so GESTALT-FIGURE beats GESTALT-REGION.
+    const matched = want.map((w) => Math.max(...have.map((h) => tokenSim(w, h))));
+    const unused = have.filter((h) => !want.some((w) => tokenSim(w, h) > 0)).length;
+    const score = matched.reduce((a, b) => a + b, 0) / want.length - unused * 0.1;
+    if (score >= 0.3) scored.push({ id, score });
+  }
+  scored.sort((a, b) => b.score - a.score || lev(bad, a.id) - lev(bad, b.id));
+  if (!scored.length) return [];
+  if (scored.length === 1 || scored[0].score - scored[1].score >= 0.15) return [scored[0].id];
+  return scored.filter((x) => scored[0].score - x.score < 0.15).slice(0, 3).map((x) => x.id);
+}
+export const suggestId = (bad, ids) => suggestIds(bad, ids)[0] || null;
+
 /**
  * @param data parsed critic JSON
  * @param opts.screens optional Set of screen ids in the run
@@ -55,7 +97,8 @@ export function validateCritique(data, { screens, keyTasks } = {}) {
     }
     for (const id of [f.rule, ...(f.basis || [])].filter(Boolean)) {
       if (!ids.has(id)) {
-        errors.push(`${label}: "${id}" is not a principle ID in skills/principles/references`);
+        const near = suggestIds(id, ids);
+        errors.push(`${label}: "${id}" is not a principle ID in skills/principles/references${near.length ? `; did you mean ${near.join(' or ')}?` : ''} (valid IDs are listed in skills/critique/references/output-format.md)`);
         badFindings.add(f.id ?? `#${i}`);
       }
     }
@@ -64,6 +107,7 @@ export function validateCritique(data, { screens, keyTasks } = {}) {
   for (const t of data.tasks || []) {
     if (known.size && !t.id) warnings.push(`task "${t.task}": no id; use the key task's ID from PRODUCT.md (${[...known.keys()].join(', ')})`);
     else if (known.size && !known.has(t.id)) warnings.push(`task "${t.task}": id ${t.id} is not a key task in PRODUCT.md (${[...known.keys()].join(', ')})`);
+    if (t.score == null && t.verdict !== 'not-covered') warnings.push(`task "${t.task}": no score, but verdict ${t.verdict}; score it 0-10, or use not-covered when you didn't see its screens`);
     // Scores and verdicts follow the anchors in output-format.md; flag the ones that disagree.
     if (typeof t.score === 'number') {
       if (t.verdict === 'blocked' && t.score > 4) warnings.push(`task "${t.task}": verdict blocked but score ${t.score} (blocked scores 0-4)`);

@@ -2,7 +2,15 @@
 // Capture: renders every screen at phone sizes in light, dark and large-text variants,
 // takes screenshots, collects layout data and runs axe-core. Writes <run>/manifest.json.
 //
-// Usage: node scripts/capture/capture.mjs [--config mockups.yaml] [--out <runDir>] [--only id,id] [--offline]
+// Usage: node scripts/capture/capture.mjs [--config mockups.yaml] [--out <runDir>] [--offline]
+//          [--inventory <run>/inventory.json] [--only id,id] [--journeys id,id] [--resume]
+//
+// --only     capture just these: mockup, screen, journey or crawl state ids (s17-x or crawl--s17-x)
+// --journeys capture just these journeys
+// --resume   keep the screens already in <runDir>/manifest.json and capture the rest
+// With --only or --journeys into a run that has a manifest, the new captures replace the old
+// ones with the same id and everything else is kept. The manifest is written after every
+// screen, so a run stopped by a time limit or a crash keeps what it captured.
 import fs from 'node:fs';
 import path from 'node:path';
 import { unfilledSections, unfilledMessage } from '../lib/framing.mjs';
@@ -12,7 +20,7 @@ import {
 } from '../lib/config.mjs';
 import { expandMockup, imageSize } from '../lib/sources.mjs';
 import { analyzePage } from '../lib/analyze-page.mjs';
-import { launch, preparePage, pageFingerprint } from '../lib/browser.mjs';
+import { launch, preparePage, pageFingerprint, browserGone } from '../lib/browser.mjs';
 
 const FRAME_ATTR = 'data-dc-frame';
 const FRAME_CANVAS = { width: 1600, height: 1200 };
@@ -23,8 +31,14 @@ const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-
 const args = parseArgs(process.argv.slice(2));
 const cfg = loadConfig(args.config || 'mockups.yaml');
 const runDir = path.resolve(args.out || path.join(cfg.output, timestamp()));
-const only = args.only ? new Set(String(args.only).split(',')) : null;
+const listArg = (v) => (v ? new Set(String(v).split(',').map((x) => x.trim()).filter(Boolean)) : null);
+const only = listArg(args.only);
+const onlyJourneys = listArg(args.journeys);
+const resume = !!args.resume;
 fs.mkdirSync(runDir, { recursive: true });
+const manifestPath = path.join(runDir, 'manifest.json');
+// A subset or a resume adds to the run's manifest instead of starting a new one.
+const previous = (only || onlyJourneys || resume) && fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : null;
 
 const manifest = {
   version: 1,
@@ -49,7 +63,28 @@ const manifest = {
   screens: [],
   pageLanguages: [],
   warnings: [],
+  complete: false,
 };
+if (previous) {
+  manifest.screens = previous.screens || [];
+  manifest.journeys = previous.journeys || [];
+  manifest.pageLanguages = previous.pageLanguages || [];
+  if (previous.inventory) manifest.inventory = previous.inventory;
+}
+
+// What this invocation captures. A crawl state matches its own id or crawl--<id>.
+const wanted = (...ids) => {
+  if (onlyJourneys && !only) return false;
+  return !only || ids.some((id) => id && only.has(id));
+};
+const wantedJourney = (id) => (onlyJourneys ? onlyJourneys.has(id) : !only || only.has(id));
+const done = (id) => resume && manifest.screens.some((s) => s.id === id || s.id.startsWith(`${id}--frame-`));
+// Put a screen in the manifest: in place of an earlier capture with the same id, else at the end.
+function putScreen(s) {
+  const i = manifest.screens.findIndex((x) => x.id === s.id);
+  if (i >= 0) manifest.screens[i] = s; else manifest.screens.push(s);
+}
+function writeManifest() { writeJson(manifestPath, manifest); }
 
 // Paths in the manifest are relative to the config; URLs stay as they are.
 function relSource(s) {
@@ -158,6 +193,15 @@ async function captureHtml(browser, screen) {
         }
         const dataPath = path.join(runDir, 'data', `${tag}.json`);
         writeJson(dataPath, data);
+        // The DOM as reached by steps, for the detectors, which can only load a page as it starts.
+        let domPath = null;
+        const mainDevice = cfg.devices.includes('standard') ? 'standard' : cfg.devices[0];
+        if (!frameMode && step.device === mainDevice && step.variant === 'light' && (sub.steps?.length || sub.setup)) {
+          domPath = path.join(runDir, 'dom', `${sub.id}__${platform}.html`);
+          fs.mkdirSync(path.dirname(domPath), { recursive: true });
+          fs.writeFileSync(domPath, await page.evaluate(domSnapshot).catch(() => ''));
+          if (!fs.statSync(domPath).size) { fs.rmSync(domPath); domPath = null; }
+        }
         let axePath = null;
         if (step.axe) {
           const axe = await runAxe(page, frameMode ? sub.frameIndex : null);
@@ -167,7 +211,7 @@ async function captureHtml(browser, screen) {
           platform, device: step.device, deviceName: preset.name, variant: step.variant,
           viewport: data.viewport, safeTop: preset.safeTop, safeBottom: preset.safeBottom,
           screenshot: relRun(shotPath), fullPage: fullPath && relRun(fullPath),
-          data: relRun(dataPath), axe: axePath && relRun(axePath),
+          data: relRun(dataPath), axe: axePath && relRun(axePath), dom: domPath && relRun(domPath),
         });
         await ctx.close();
       }
@@ -189,75 +233,118 @@ function captureImage(screen) {
   }];
 }
 
-const browser = await launch();
+let browser = await launch();
+// A crashed browser fails every later screen ("Target page, context or browser has been closed"):
+// start a new one and capture the screen once more.
+async function captureWithRelaunch(screen) {
+  try { return await captureHtml(browser, screen); } catch (e) {
+    if (!browserGone(e)) throw e;
+    process.stderr.write(`browser closed during ${screen.id}; relaunching\n`);
+    await browser.close().catch(() => {});
+    browser = await launch();
+    return captureHtml(browser, screen);
+  }
+}
+
+// Journey steps are the user's actions. A `wait` step belongs to the action before it (or to
+// the start), so it is never captured or counted as a step of its own.
+function journeyActions(steps) {
+  const groups = [[]];
+  for (const st of steps) {
+    if (st.wait != null) groups[groups.length - 1].push(st);
+    else groups.push([st]);
+  }
+  return groups;
+}
+
 try {
   for (const mockup of cfg.mockups) {
-    if (only && !only.has(mockup.id)) continue;
     const { screens, warnings } = expandMockup(mockup, runDir);
+    if (!screens.some((sc) => wanted(mockup.id, sc.id))) continue;
     manifest.warnings.push(...warnings);
     for (const screen of screens) {
+      if (!wanted(mockup.id, screen.id) || done(screen.id)) continue;
       process.stderr.write(`capturing ${screen.id}\n`);
       try {
-        const done = screen.kind === 'html' ? await captureHtml(browser, screen) : captureImage(screen);
-        for (const s of done) {
+        const got = screen.kind === 'html' ? await captureWithRelaunch(screen) : captureImage(screen);
+        for (const s of got) {
           relSource(s);
           if (s.reference) s.reference = fs.existsSync(s.reference) ? s.reference : null;
-          manifest.screens.push(s);
+          putScreen(s);
         }
       } catch (e) {
         manifest.warnings.push(`${screen.id}: capture failed: ${e.message.split('\n')[0]}`);
       }
+      writeManifest();
     }
   }
 
   // Journeys (mockups.yaml journeys:): replay the taps from the start mockup and capture every step.
   // A tap that can't be found ends the journey there; the report treats it as a broken journey.
-  manifest.journeys = [];
+  manifest.journeys = manifest.journeys || [];
   for (const j of cfg.journeys) {
-    if (only && !only.has(j.id)) continue;
+    if (!wantedJourney(j.id)) continue;
+    const prev = manifest.journeys.find((r) => r.id === j.id);
+    if (resume && prev && prev.brokenAt == null && prev.screens.every((id) => manifest.screens.some((s) => s.id === id))) continue;
     const startMockup = cfg.mockups.find((m) => m.id === j.start);
     const page0 = expandMockup(startMockup, runDir).screens.find((sc) => (j.state ? sc.state === j.state : true));
     if (!page0 || page0.kind !== 'html') { manifest.warnings.push(`journey ${j.id}: start ${j.start}${j.state ? `/${j.state}` : ''} is not an HTML page; skipped`); continue; }
-    const record = { id: j.id, title: j.title, critical: j.critical, stage: j.stage, ends_at: j.ends_at, notes: j.notes, start: j.start, steps: j.steps.map(stepLabel), screens: [], brokenAt: null, error: null };
-    for (let k = 0; k <= j.steps.length; k++) {
+    const groups = journeyActions(j.steps);
+    const actions = groups.slice(1).map((g) => g[0]);
+    const record = { id: j.id, title: j.title, critical: j.critical, stage: j.stage, ends_at: j.ends_at, notes: j.notes, start: j.start, steps: actions.map(stepLabel), screens: [], brokenAt: null, error: null };
+    // A recapture replaces the journey's earlier screens.
+    manifest.screens = manifest.screens.filter((s) => s.journey !== j.id);
+    for (let k = 0; k <= actions.length; k++) {
       const screen = {
         ...page0,
         id: `journey--${j.id}--${k}`,
-        title: `${j.title} ${k}/${j.steps.length}: ${k ? stepLabel(j.steps[k - 1]) : 'start'}`,
-        steps: [...(page0.steps || []), ...j.steps.slice(0, k)],
+        title: `${j.title} ${k}/${actions.length}: ${k ? stepLabel(actions[k - 1]) : 'start'}`,
+        steps: [...(page0.steps || []), ...groups.slice(0, k + 1).flat()],
         flow: `journey:${j.id}`, step: k + 1, state: null,
-        journey: j.id, journeyStep: k, journeyAction: k ? stepLabel(j.steps[k - 1]) : null,
-        notes: `Journey "${j.title}"${j.critical ? ' (must not fail)' : ''}, step ${k} of ${j.steps.length}${k ? `, after tapping "${stepLabel(j.steps[k - 1])}"` : ''}.`,
+        journey: j.id, journeyStep: k, journeyAction: k ? stepLabel(actions[k - 1]) : null,
+        notes: `Journey "${j.title}"${j.critical ? ' (must not fail)' : ''}, step ${k} of ${actions.length}${k ? `, after tapping "${stepLabel(actions[k - 1])}"` : ''}.`,
       };
       process.stderr.write(`capturing ${screen.id}\n`);
       try {
-        for (const s of await captureHtml(browser, screen)) { relSource(s); manifest.screens.push(s); }
+        for (const s of await captureWithRelaunch(screen)) { relSource(s); putScreen(s); }
         record.screens.push(screen.id);
       } catch (e) {
         record.brokenAt = k;
         record.error = e.message.split('\n')[0];
-        manifest.warnings.push(`journey ${j.id} broke at step ${k} ("${stepLabel(j.steps[k - 1])}"): ${record.error}`);
+        manifest.warnings.push(`journey ${j.id} broke at step ${k} ("${stepLabel(actions[k - 1])}"): ${record.error}`);
         break;
       }
     }
-    manifest.journeys.push(record);
+    const i = manifest.journeys.findIndex((r) => r.id === j.id);
+    if (i >= 0) manifest.journeys[i] = record; else manifest.journeys.push(record);
+    writeManifest();
   }
 
-  // States found by the crawler (scripts/crawl/crawl.mjs): each becomes a screen reached by its path.
-  if (args.inventory) {
-    const inv = JSON.parse(fs.readFileSync(path.resolve(args.inventory), 'utf8'));
-    const startMockup = cfg.mockups.find((m) => m.id === inv.start) || cfg.mockups[0];
-    const page0 = expandMockup(startMockup, runDir).screens[0];
-    manifest.inventory = path.relative(runDir, path.resolve(args.inventory));
+  // States found by the crawler (scripts/crawl/crawl.mjs): each becomes a screen reached by its path
+  // from the crawl start it was found from.
+  // A subset or resume reuses the run's inventory unless another one is given.
+  const invFile = args.inventory ? path.resolve(args.inventory) : previous?.inventory ? path.resolve(runDir, previous.inventory) : null;
+  if (invFile && fs.existsSync(invFile)) {
+    const inv = JSON.parse(fs.readFileSync(invFile, 'utf8'));
+    const page0Of = new Map();
+    const startPage = (id) => {
+      if (!page0Of.has(id)) page0Of.set(id, expandMockup(cfg.mockups.find((m) => m.id === id) || cfg.mockups[0], runDir).screens[0]);
+      return page0Of.get(id);
+    };
+    manifest.inventory = path.relative(runDir, invFile);
     for (const st of inv.states) {
-      const screen = { ...page0, id: `crawl--${st.id}`, title: st.title, steps: [...(page0.steps || []), ...st.steps], flow: 'crawl', step: null, state: null, inventoryState: st.id, notes: `Found by the crawler at depth ${st.depth}${st.steps.length ? ` (${st.steps.map(stepLabel).join(' → ')})` : ''}.` };
+      const id = `crawl--${st.id}`;
+      if (!wanted(st.id, id) || done(id)) continue;
+      const page0 = startPage(st.start || inv.start);
+      const screen = { ...page0, id, title: st.title, steps: [...(page0.steps || []), ...st.steps], flow: 'crawl', step: null, state: null, inventoryState: st.id, notes: `Found by the crawler at depth ${st.depth}${st.steps.length ? ` (${st.steps.map(stepLabel).join(' → ')})` : ''}.` };
       process.stderr.write(`capturing ${screen.id}\n`);
-      try { for (const s of await captureHtml(browser, screen)) { relSource(s); manifest.screens.push(s); } }
+      try { for (const s of await captureWithRelaunch(screen)) { relSource(s); putScreen(s); } }
       catch (e) { manifest.warnings.push(`${screen.id}: capture failed: ${e.message.split('\n')[0]}`); }
+      writeManifest();
     }
   }
 } finally {
-  await browser.close();
+  await browser.close().catch(() => {});
 }
 
 function stepLabel(st) {
@@ -284,9 +371,31 @@ if (cfg.taste.length) {
     manifest.taste.push(`taste/${name}`);
   });
 }
-writeJson(path.join(runDir, 'manifest.json'), manifest);
+// Warnings from an earlier capture of a screen this run captured again no longer apply.
+if (previous) {
+  const fresh = new Set(manifest.warnings.slice(0));
+  const recaptured = (w) => manifest.screens.some((s) => w.startsWith(`${s.id}: capture failed`));
+  const rerun = (w) => { const m = w.match(/^journey (\S+) /); return m && cfg.journeys.some((j) => j.id === m[1] && wantedJourney(j.id)); };
+  manifest.warnings = [...new Set([...(previous.warnings || []).filter((w) => !recaptured(w) && !rerun(w)), ...fresh])];
+}
+manifest.complete = true;
+writeManifest();
 for (const w of manifest.warnings) process.stderr.write(`warning: ${w}\n`);
 const captures = manifest.screens.reduce((n, s) => n + s.captures.length, 0);
 console.log(`Captured ${manifest.screens.length} screens (${captures} renders)`);
 console.log(`RUN_DIR=${runDir}`);
 if (!manifest.screens.length) process.exit(1);
+
+// Runs in the page: the document as it is now, without scripts (so it doesn't start over when
+// opened) and with a <base> so its styles and images still load. Open shadow roots are kept as
+// declarative shadow DOM.
+function domSnapshot() {
+  const html = document.documentElement.getHTML ? document.documentElement.getHTML({ serializableShadowRoots: true, shadowRoots: [...document.querySelectorAll('*')].map((e) => e.shadowRoot).filter(Boolean) }) : document.documentElement.innerHTML;
+  const doc = new DOMParser().parseFromString(`<html>${html}</html>`, 'text/html');
+  for (const el of doc.querySelectorAll('script')) el.remove();
+  for (const el of doc.querySelectorAll('*')) for (const a of [...el.attributes]) if (/^on/i.test(a.name)) el.removeAttribute(a.name);
+  const base = doc.createElement('base');
+  base.href = location.href;
+  doc.head.prepend(base);
+  return `<!doctype html>\n<html lang="${document.documentElement.lang || ''}">${doc.documentElement.innerHTML}</html>`;
+}

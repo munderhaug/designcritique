@@ -27,7 +27,8 @@ also installs Anthropic's product-management skills. Probe Mobbin and Refero up 
 Run the **frame** skill with the product sections: Journeys, Concept model, Scope, Feature map
 and (if the spec fixes it) Navigation, derived from the project's documents. Then make sure
 `mockups.yaml` has `journeys:` (one per journey in PRODUCT.md, as the taps a user makes) and a
-`crawl:` block (`start:` the app's page; `avoid:` any extra controls not to press). Add `content:`
+`crawl:` block (`start:` the app's page, or a list when some screens can't be tapped to from one
+start; `avoid:` any extra controls not to press). Add `content:`
 (the content guide, for the glossary) and `language:` if the pages don't set `<html lang>`.
 
 ## 2. See everything (deterministic)
@@ -41,6 +42,14 @@ node PLUGIN_ROOT/scripts/checks/run-all.mjs --run <RUN_DIR> --review
 Read the crawl summary: if it hit the state limit, or a journey broke, fix `mockups.yaml` (steps,
 `avoid:`, `max_states`) and run again before any reviewer sees the result. Look at
 `coverage.json`: features not captured are "not covered", and the reply asks for captures.
+`notCovered` lists crawl states the tooling couldn't explore (a failed tap or replay, a limit):
+they are kept out of the dead-end and way-back checks and the gate.
+
+Capture writes the manifest as it goes. To redo some screens or journeys, or finish a capture a
+time limit stopped, run capture again into the same `<RUN_DIR>` with `--only <ids>` (mockup,
+screen, journey or crawl state ids), `--journeys <ids>` or `--resume`: the new captures replace
+the old ones with the same id and the rest is kept. A full capture of a large prototype takes
+long; run it in the background, or in parts with `--only`.
 
 ## 3. Independent reviewers, in parallel
 
@@ -61,8 +70,9 @@ journey's screenshots in step order. Details: [lenses/common.md](references/lens
 Run each on `critics.judge_model` when set (or a model other than the one that built the
 prototype), and add `critics.external` judges as in the critique skill. The design-reviewer and
 Impeccable score the key tasks and journeys; the lens reviewers don't. Other design skills in the
-session are never given to a reviewer. The hook validates each
-file as it's saved.
+session are never given to a reviewer. Save every reply with `save-critique.mjs` (critique skill,
+step 5): it extracts, stamps `--coverage` from the brief, validates and saves in one step, and
+reads the agent's transcript when a long reply was cut off.
 
 ## 4. Report and gate
 
@@ -71,7 +81,9 @@ node PLUGIN_ROOT/scripts/report/render-report.mjs --run <RUN_DIR>
 node PLUGIN_ROOT/scripts/report/gate.mjs --run <RUN_DIR>
 ```
 
-The report adds coverage and the state matrix, the IA map, a journey map per journey with a
+Add `--inline-thumbs` to put every screenshot into `report.html` as a small image, for one file
+to send or open on a phone. Gate reasons are labelled `[check]`, `[critic]`, `[check + critic]`
+or `[capture]`. The report adds coverage and the state matrix, the IA map, a journey map per journey with a
 verdict per step, features against the problem, ranked cut/add/move proposals and the
 consistency inventory. The gate adds: no dead end, missing way back or broken step on a
 must-not-fail journey; journeys at `gate.journey_target_score`; at least

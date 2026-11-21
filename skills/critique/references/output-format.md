@@ -65,9 +65,15 @@ Field rules:
 - `tasks[].id`: the key task's ID from PRODUCT.md (its list number: `T1`, `T2`, …). Score every
   key task; the gate fails on a key task nobody scored. `tasks[].coverage`: `whole` when you had
   every screen of the task, `partial` when you had only some (a batch reviewer). Partial scores
-  are reported but never count in the gate.
+  are reported but never count in the gate. The orchestrator stamps `coverage` from your brief
+  when it saves your reply, so a batch stays `partial` whatever it writes.
+- `tasks[].score`: a number 0–10. For a task whose screens you didn't have, set `verdict:
+  "not-covered"` and leave `score` out (or `null`).
 - `screen`: a screen id from the manifest, or `"*"` for the whole set.
-- `rule`: the single most specific principle ID; `basis` lists all that apply, most specific first. IDs come from the principles library.
+- `rule`: the single most specific principle ID; `basis` lists all that apply, most specific first.
+  Use only IDs from [the list below](#valid-principle-ids). Never make one up (`UXCOPY-TONE`,
+  `FITTS`, `GESTALT-FIGURE-GROUND`): cite the nearest real one (`COPY-TONE`, `LAW-FITTS`,
+  `GESTALT-FIGURE`). The validator rejects any other ID and names the nearest.
 - `category`: one of `task-fit, ux, content, visual, layout, typography, color, a11y, platform, tokens`,
   and in a whole-product review also `journey, ia, scope, consistency, logic, spec, states`; `ethics` for
   deceptive patterns (`ETHICS-*`) in either mode.
@@ -118,7 +124,44 @@ In review mode the design-reviewer and Impeccable also get the journeys lens and
 The lens reviewers (`ia`, `scope`, `system`) return, alongside `findings`:
 
 - `moves`: proposed structural moves: `{ item, from, to, reason, impact, finding_id }`.
-- `scope`: feature against problem: `{ feature, verdict: keep | cut | add | move | defer |
-  rethink, job, task, phase, reason, finding_id }`.
+  `impact` is one word, `high`, `medium` or `low`; the why goes in `reason`.
+- `scope`: feature against problem: `{ feature, verdict, job, task, phase, reason, finding_id }`,
+  with `verdict` one of `keep`, `cut`, `add`, `move`, `defer`, `rethink`.
+- Optional fields (`from`, `finding_id`, `job`, `task`, `phase`): leave them out when there is
+  nothing to say. `finding_id` names one of your own findings' `id`.
+- `journeys[].verdict`: `supported`, `at-risk`, `blocked` or `not-covered`; `steps[].verdict`:
+  `ok`, `friction` or `blocked`.
 
 Scores for journeys use the same anchors as key tasks.
+
+## Size
+
+Keep the reply under about 40 KB: evidence names the screenshot and what is visible in one or
+two sentences, and the finding cap above holds. Longer replies can be cut off on the way back.
+
+## Valid principle IDs
+
+From `skills/principles/references/` (the unit tests keep this list in step with it). Each
+file there says what an ID means and its source.
+
+<!-- ids:start -->
+- `AND-APPBAR` `AND-BUTTONS` `AND-COLOR` `AND-FEEDBACK` `AND-ICONS` `AND-LAYOUT` `AND-MOTION` `AND-NAV-BAR` `AND-NOT-IOS` `AND-SHAPE` `AND-TARGET` `AND-TYPE`
+- `CONS-COMPONENT` `CONS-FIGURES` `CONS-FORMAT` `CONS-ICON` `CONS-PATTERN` `CONS-TERM`
+- `COPY-ACTION-LABEL` `COPY-CLEAR` `COPY-CONCISE` `COPY-ERROR` `COPY-PURPOSEFUL` `COPY-TONE`
+- `DS-AGENT-RULES` `DS-CONTRAST` `DS-ESSENTIALS` `DS-ROLES` `DS-SCALE`
+- `ETHICS-ASYMMETRY` `ETHICS-CONFIRMSHAMING` `ETHICS-FORCED` `ETHICS-NAGGING` `ETHICS-OBSTRUCTION` `ETHICS-PRESELECTED` `ETHICS-PRESSURE` `ETHICS-SNEAKING`
+- `GESTALT-CONTINUITY` `GESTALT-FIGURE` `GESTALT-PROXIMITY` `GESTALT-REGION` `GESTALT-SIMILARITY`
+- `IA-DEPTH` `IA-DUPLICATE` `IA-LABEL` `IA-NAV-CONSISTENT` `IA-OBJECTS` `IA-ORPHAN` `IA-PLACEMENT`
+- `IOS-COLOR` `IOS-CONTROLS` `IOS-DESTRUCTIVE` `IOS-ICONS` `IOS-LAYOUT` `IOS-LISTS` `IOS-MATERIALS` `IOS-MODAL` `IOS-MOTION` `IOS-NAV-STACK` `IOS-NAV-TABBAR` `IOS-TARGET` `IOS-TYPE`
+- `JOURNEY-BROKEN` `JOURNEY-CLOSE` `JOURNEY-CONTEST` `JOURNEY-DEAD-END` `JOURNEY-ENTRY` `JOURNEY-HANDOFF` `JOURNEY-HELP` `JOURNEY-PEAK-END` `JOURNEY-WAY-BACK`
+- `LAW-FITTS` `LAW-HICK` `LAW-JAKOB` `LAW-LOAD` `LAW-REACH` `LAW-RESPONSE` `LAW-TESLER`
+- `NN-H1` `NN-H10` `NN-H2` `NN-H3` `NN-H4` `NN-H5` `NN-H6` `NN-H7` `NN-H8` `NN-H9`
+- `NORMAN-CONSTRAINT` `NORMAN-FEEDBACK` `NORMAN-GULFS` `NORMAN-MAPPING` `NORMAN-MODEL` `NORMAN-SIGNIFIER`
+- `SCOPE-ALTERNATIVE` `SCOPE-GAP` `SCOPE-NO-JOB` `SCOPE-OUT` `SCOPE-PHASE`
+- `SPEC-DRIFT` `SPEC-JOURNEY` `SPEC-NAV-ORDER`
+- `STATE-EMPTY` `STATE-ERROR` `STATE-FIRST-RUN` `STATE-LOADING` `STATE-OFFLINE` `STATE-PARTIAL`
+- `TASK-FIT` `TASK-WALK-Q1` `TASK-WALK-Q2` `TASK-WALK-Q3` `TASK-WALK-Q4`
+- `TELL-BUZZWORDS` `TELL-CARDS` `TELL-CTA-STACK` `TELL-EMOJI` `TELL-EYEBROW` `TELL-FAKE-PROOF` `TELL-GRADIENT` `TELL-SAMENESS` `TELL-WEB-IDIOMS`
+- `VIS-COLOR` `VIS-HIERARCHY` `VIS-ISOLATION` `VIS-MOTION` `VIS-SPACING` `VIS-TYPE`
+- `WCAG-1.1.1` `WCAG-1.3.1` `WCAG-1.3.4` `WCAG-1.4.1` `WCAG-1.4.10` `WCAG-1.4.11` `WCAG-1.4.3` `WCAG-1.4.4` `WCAG-2.2.2` `WCAG-2.3.3` `WCAG-2.4.11` `WCAG-2.4.4` `WCAG-2.4.6` `WCAG-2.4.7` `WCAG-2.5.1` `WCAG-2.5.7` `WCAG-2.5.8` `WCAG-3.3.1` `WCAG-3.3.2` `WCAG-3.3.3` `WCAG-3.3.7` `WCAG-3.3.8` `WCAG-4.1.2`
+<!-- ids:end -->

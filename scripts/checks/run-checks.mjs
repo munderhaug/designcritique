@@ -209,7 +209,8 @@ for (const screen of manifest.screens) {
     // poster DOM audit (Yaxin Luo, MIT): ignore slivers under 24 px² or under 8% of the smaller line.
     const overlaps = new Map();
     for (const c of caps.filter((c) => c.variant !== 'dark')) {
-      const texts = load(c.data).texts.filter((t) => t.lines?.length);
+      // Only text a person can see: not under an open sheet, an inert layer or an opaque surface.
+      const texts = load(c.data).texts.filter((t) => t.lines?.length && !t.hidden);
       for (let i = 0; i < texts.length; i++) {
         for (let j = i + 1; j < texts.length; j++) {
           // Content scrolling under fixed or sticky chrome (tab bar, header) is expected.

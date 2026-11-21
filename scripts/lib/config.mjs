@@ -236,10 +236,12 @@ function normalizeJourneys(list, mockups) {
 
 // crawl: explore a single-page app by tapping every control (scripts/crawl/crawl.mjs).
 function normalizeCrawl(c, mockups) {
-  const start = c.start || mockups[0].id;
-  if (!mockups.some((m) => m.id === start)) throw new Error(`crawl.start "${start}" is not a mockup id`);
+  // One start or several (a list): each is a mockup id, crawled in order into one inventory.
+  const starts = [c.start || mockups[0].id].flat().map(String);
+  for (const start of starts) if (!mockups.some((m) => m.id === start)) throw new Error(`crawl.start "${start}" is not a mockup id`);
   return {
-    start,
+    start: starts[0],
+    starts,
     max_states: Number(c.max_states ?? 60),
     max_actions: Number(c.max_actions ?? 40),
     max_depth: Number(c.max_depth ?? 8),

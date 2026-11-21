@@ -97,10 +97,19 @@ mockups.
 - **External judges**, one per name in `critics.external` (for example `codex`), as described at
   the end of critic-brief.md. Skip any that isn't installed and say so.
 
-Save each JSON reply unchanged to `RUN_DIR/critique/anthropic-design.json` (`-2`, … for
-batches), `impeccable.json` and `external-<name>.json`. The plugin's hook validates each file as
-it's saved and reports problems back; fix them, asking the critic again if needed
-(`node PLUGIN_ROOT/scripts/report/validate-critique.mjs <file>` by hand).
+Save each reply with `save-critique.mjs`, which pulls out the JSON, stamps the critic name and
+the coverage from its brief (a batch is `partial` whatever it wrote), validates it and writes
+`RUN_DIR/critique/<name>.json`:
+
+```bash
+node PLUGIN_ROOT/scripts/report/save-critique.mjs --run <RUN_DIR> --critic anthropic-design \
+  --name anthropic-design-2 --coverage partial --from <reply.txt or the agent's transcript .jsonl>
+```
+
+Names: `anthropic-design` (`-2`, … for batches), `impeccable`, `external-<name>`. Write the reply
+to a file first (or pipe it in). A reply over about 40 KB can be cut off on the way back: then
+pass the agent's transcript (`.jsonl`) and the script takes its last reply whole. Errors name
+the nearest valid principle ID; fix them, asking the critic again if needed.
 
 ## 6. Report and build stack
 
@@ -109,7 +118,7 @@ node PLUGIN_ROOT/scripts/report/render-report.mjs --run <RUN_DIR>
 ```
 
 This merges all findings (one per problem) and writes `findings.json`, `report.md` and
-`report.html`, with **Since last run** when an earlier run of the same mockups exists
+`report.html` (`--inline-thumbs` embeds the screenshots, for one file to send), with **Since last run** when an earlier run of the same mockups exists
 (`--base <run>`, `--no-compare`). It ends with **To build this**: picks for the platform and
 stack in PRODUCT.md, only from `PLUGIN_ROOT/catalog/stack.yaml`, each with its source. Never add
 tools that aren't in the catalog; propose catalog additions separately, with sources.

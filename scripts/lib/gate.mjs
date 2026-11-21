@@ -33,6 +33,15 @@ export function journeyScores(journeys) {
 
 const DEAD = new Set(['CHK-DEAD-END', 'CHK-NO-WAY-BACK', 'CHK-JOURNEY-BROKEN']);
 
+// Where a finding comes from, so a gate reason says whether a measurement, a reviewer's judgement
+// or both are behind it: "check" (deterministic checks, motion and detectors) or "critic".
+const isCheck = (src) => src === 'check' || src === 'motion' || String(src).startsWith('detector');
+export function findingOrigin(f) {
+  const by = f.raisedBy?.length ? f.raisedBy : [f.source || 'check'];
+  const checks = by.some(isCheck); const critics = by.some((s) => !isCheck(s));
+  return checks && critics ? 'check + critic' : critics ? 'critic' : 'check';
+}
+
 export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [], keyTasks = [] }, gate = DEFAULT_GATE) {
   const reasons = [];
   // Review mode: the must-not-fail journeys have no dead end, no missing way back and no broken step.
@@ -40,32 +49,35 @@ export function evaluateGate({ findings, tasks = [], critics = [], journeys = []
     for (const cj of criticalJourneys) {
       const titles = new Set(cj.screens || []);
       const hit = findings.filter((f) => DEAD.has(f.rule) && (f.journey === cj.id || (f.affected_screens || []).some((s) => titles.has(s))));
-      if (hit.length) reasons.push(`must-not-fail journey "${cj.title || cj.id}" has ${hit.map((f) => f.rule.replace('CHK-', '').toLowerCase()).join(', ')}`);
+      if (hit.length) reasons.push(`[check] must-not-fail journey "${cj.title || cj.id}" has ${hit.map((f) => f.rule.replace('CHK-', '').toLowerCase()).join(', ')}`);
       const blocked = journeys.filter((j) => j.journey === cj.id && j.verdict === 'blocked');
-      if (blocked.length) reasons.push(`must-not-fail journey "${cj.title || cj.id}" judged blocked by ${blocked.map((j) => j.source).join(', ')}`);
+      if (blocked.length) reasons.push(`[critic] must-not-fail journey "${cj.title || cj.id}" judged blocked by ${blocked.map((j) => j.source).join(', ')}`);
     }
   }
   if (gate.journey_target_score != null) {
-    for (const s of journeyScores(journeys)) if (s.score < gate.journey_target_score) reasons.push(`journey "${s.task}" scored ${s.score} (target ${gate.journey_target_score}, by ${s.source})`);
+    for (const s of journeyScores(journeys)) if (s.score < gate.journey_target_score) reasons.push(`[critic] journey "${s.task}" scored ${s.score} (target ${gate.journey_target_score}, by ${s.source})`);
   }
   if (gate.min_feature_coverage != null && coverage?.share != null && coverage.share < gate.min_feature_coverage) {
-    reasons.push(`only ${Math.round(coverage.share * 100)}% of the feature map was captured (minimum ${Math.round(gate.min_feature_coverage * 100)}%)`);
+    reasons.push(`[capture] only ${Math.round(coverage.share * 100)}% of the feature map was captured (minimum ${Math.round(gate.min_feature_coverage * 100)}%)`);
   }
   if (gate.fail_on && gate.fail_on !== 'none') {
     const limit = SEVERITIES.indexOf(gate.fail_on);
     const blocking = findings.filter((f) => SEVERITIES.indexOf(f.severity) <= limit);
-    if (blocking.length) reasons.push(`${blocking.length} open finding(s) at ${gate.fail_on} or worse`);
+    for (const origin of ['check', 'check + critic', 'critic']) {
+      const n = blocking.filter((f) => findingOrigin(f) === origin).length;
+      if (n) reasons.push(`[${origin}] ${n} open finding(s) at ${gate.fail_on} or worse`);
+    }
   }
   const scores = taskScores(tasks, keyTasks);
   if (gate.target_score != null) {
-    if (!critics.length) reasons.push('no critic has run, so key tasks are unscored');
-    else if (!scores.length) reasons.push('no critic scored the key tasks');
+    if (!critics.length) reasons.push('[critic] no critic has run, so key tasks are unscored');
+    else if (!scores.length) reasons.push('[critic] no critic scored the key tasks');
     else {
       for (const k of keyTasks) {
-        if (!scores.some((s) => s.id === k.id)) reasons.push(`key task ${k.id} "${k.name}"${k.critical ? ' (must not fail)' : ''} was not scored by a critic that walked the whole task`);
+        if (!scores.some((s) => s.id === k.id)) reasons.push(`[critic] key task ${k.id} "${k.name}"${k.critical ? ' (must not fail)' : ''} was not scored by a critic that walked the whole task`);
       }
     }
-    for (const s of scores) if (s.score < gate.target_score) reasons.push(`${s.id ? `${s.id} ` : ''}"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
+    for (const s of scores) if (s.score < gate.target_score) reasons.push(`[critic] ${s.id ? `${s.id} ` : ''}"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
   }
   return { pass: reasons.length === 0, reasons, scores, journeyScores: journeyScores(journeys), gate };
 }

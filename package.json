@@ -1,6 +1,6 @@
 {
   "name": "designcritique",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Mobile design critique for mockups and prototypes, as a Claude Code plugin",
   "type": "module",
   "private": true,
@@ -22,7 +22,8 @@
     "eval:noise": "node scripts/eval/noise.mjs",
     "eval:source": "node scripts/eval/run-source-evals.mjs",
     "eval:tokens": "node scripts/eval/run-token-evals.mjs",
-    "eval:lenses": "node scripts/eval/score-lenses.mjs"
+    "eval:lenses": "node scripts/eval/score-lenses.mjs",
+    "save-critique": "node scripts/report/save-critique.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.0",

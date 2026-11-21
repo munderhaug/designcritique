@@ -171,6 +171,49 @@ export function analyzePage({ frameAttr }) {
     return out;
   };
 
+  // Is the text drawn on top? Text under an open modal or sheet, under an inert layer, or painted
+  // over by an opaque surface (a sheet, the next page fading in) can't be seen, so it can't
+  // overlap anything. Hit-tested at points along each rendered line, through open shadow roots.
+  const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
+  const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
+  const deepHit = (x, y) => {
+    let e = document.elementFromPoint(x, y);
+    while (e && e.shadowRoot) { const inner = e.shadowRoot.elementFromPoint(x, y); if (!inner || inner === e) break; e = inner; }
+    return e;
+  };
+  const opaque = (e) => {
+    const cs = getComputedStyle(e);
+    const c = parseColor(cs.backgroundColor);
+    return (c && c.a >= 0.9) || (cs.backgroundImage && cs.backgroundImage !== 'none') || (cs.backdropFilter && cs.backdropFilter !== 'none');
+  };
+  // Covered at a point: the element hit there, or one of its ancestors below the first one that
+  // also holds the text, paints an opaque surface.
+  const paintedOver = (el, hit) => {
+    for (let e = hit; e && !within(el, e); e = up(e)) if (e.nodeType === 1 && opaque(e)) return true;
+    return false;
+  };
+  const modals = [...document.querySelectorAll('[aria-modal=true],dialog[open]')]
+    .filter((d) => visible(d) && (d.getAttribute('aria-modal') === 'true' || d.matches(':modal')));
+  const topModal = modals[modals.length - 1] || null;
+  const inert = (el) => { for (let e = el; e; e = up(e)) if (e.nodeType === 1 && e.hasAttribute('inert')) return true; return false; };
+  const hiddenText = (el, lines) => {
+    if (topModal && !within(el, topModal)) return 'under an open modal';
+    if (inert(el)) return 'inert';
+    let tested = 0; let shown = 0;
+    for (const q of lines) {
+      const y = q.y + origin.y + q.h / 2;
+      for (const f of [0.2, 0.5, 0.8]) {
+        const x = q.x + origin.x + q.w * f;
+        if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) continue;
+        const hit = deepHit(x, y);
+        if (!hit) continue;
+        tested++;
+        if (within(hit, el) || within(el, hit) || !paintedOver(el, hit)) shown++;
+      }
+    }
+    return tested && !shown ? 'covered' : null;
+  };
+
   for (const el of all) {
     if (!visible(el)) continue;
     const s = getComputedStyle(el);
@@ -196,6 +239,8 @@ export function analyzePage({ frameAttr }) {
         lines: textLines(el),
         fixed: fixedAncestor(el),
       });
+      const t = texts[texts.length - 1];
+      t.hidden = hiddenText(el, t.lines);
       note(colors, colorKey(s.color), lazySel());
       note(fontSizes, `${Math.round(fs * 10) / 10}`, lazySel());
     }

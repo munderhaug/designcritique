@@ -27,7 +27,8 @@ iterate:
 
 # Whole-product review (/designcritique:review):
 # crawl:
-#   start: app                # the mockup to crawl from
+#   start: app                # the mockup to crawl from, or a list ([app, welcome]) when
+#                             # some screens can't be tapped to from one start
 #   max_states: 60
 #   avoid: [Delete account]   # labels not to press, in addition to catalog/vocabulary.yaml
 # journeys:                   # one per journey in PRODUCT.md, as the taps a user makes

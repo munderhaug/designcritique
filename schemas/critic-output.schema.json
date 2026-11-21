@@ -100,10 +100,13 @@
             }
           },
           "score": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 10,
-            "description": "0-10 for this key task, per the anchors in output-format.md"
+            "description": "0-10 for this key task, per the anchors in output-format.md; null (or left out) when the verdict is not-covered"
           },
           "subscores": {
             "type": "object",
@@ -370,7 +373,10 @@
             ]
           },
           "score": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 10
           },
@@ -428,7 +434,10 @@
             "type": "string"
           },
           "from": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "to": {
             "type": "string"
@@ -437,14 +446,18 @@
             "type": "string"
           },
           "finding_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "impact": {
             "enum": [
               "high",
               "medium",
               "low"
-            ]
+            ],
+            "description": "One word: high, medium or low. The reason goes in reason."
           }
         }
       }
@@ -473,19 +486,34 @@
             ]
           },
           "job": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "task": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "phase": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "reason": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "finding_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }

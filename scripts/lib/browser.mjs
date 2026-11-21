@@ -9,6 +9,9 @@ import { chromium } from 'playwright';
 export const LARGE_TEXT_CSS = 'html { font-size: 135% !important; }';
 export const FREEZE_CSS = '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition: none !important; caret-color: transparent !important; }';
 
+/** True when the browser itself died (a crash), so every later page would fail too. */
+export const browserGone = (e) => /Target page, context or browser has been closed|Browser has been closed|browser has disconnected|Target closed/i.test(e?.message || '');
+
 export async function launch() {
   const attempts = [{}, { channel: 'chrome' }, { channel: 'msedge' }];
   let last;
@@ -30,7 +33,30 @@ export async function preparePage(context, url, variant, screen = {}, insets = n
   await injectStyles(page, variant);
   await page.evaluate(() => document.fonts && document.fonts.ready);
   await page.waitForTimeout(150);
+  await settleAnimations(page);
   return page;
+}
+
+// Wait for running page transitions and animations (Web Animations, which capture's frozen CSS
+// doesn't stop: Ionic and Framer drive their page and sheet transitions with element.animate()),
+// then two animation frames, so a screenshot doesn't catch a page half-way in. Endless
+// animations (spinners) are ignored; finite ones still running at the timeout are finished.
+export async function settleAnimations(page, { timeout = 2000 } = {}) {
+  await page.evaluate(async (ms) => {
+    const finite = () => (document.getAnimations ? document.getAnimations() : []).filter((a) => {
+      if (a.playState !== 'running' && a.playState !== 'pending') return false;
+      const end = a.effect?.getComputedTiming?.().endTime;
+      return Number.isFinite(end);
+    });
+    const deadline = Date.now() + ms;
+    let running = finite();
+    while (running.length && Date.now() < deadline) {
+      await Promise.race([Promise.all(running.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 100))]);
+      running = finite();
+    }
+    for (const a of running) { try { a.finish(); } catch { /* infinite or detached */ } }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }, timeout).catch(() => {});
 }
 
 // The device's system-bar insets for env(safe-area-inset-*). As on iOS and Android, a page gets
@@ -92,7 +118,8 @@ export async function runSetupAndSteps(page, screen, variant) {
   for (const [i, st] of (screen.steps || []).entries()) {
     const what = Object.entries(st).map(([k, v]) => `${k} ${JSON.stringify(v)}`).join(', ');
     try {
-      if (st.tap != null) await tapByName(page, String(st.tap));
+      // The first step waits longer: a single-page app may not have rendered yet.
+      if (st.tap != null) await tapByName(page, String(st.tap), { timeout: i === 0 ? 10000 : 5000 });
       else if (st.click != null) await page.locator(st.click).first().click({ timeout: 5000 });
       else if (st.fill != null) await page.locator(st.fill).first().fill(String(st.value), { timeout: 5000 });
       else if (st.press != null) await page.keyboard.press(String(st.press));
@@ -112,26 +139,42 @@ export async function runSetupAndSteps(page, screen, variant) {
     await page.waitForTimeout(50);
     await injectStyles(page, variant);
   }
-  if (screen.steps?.length || screen.setup) await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
+  if (screen.steps?.length || screen.setup) {
+    await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
+    await settleAnimations(page);
+  }
 }
 
 
 // ---------- taps by accessible name ----------
 const TAP_ROLES = ['button', 'link', 'tab', 'menuitem', 'option', 'switch', 'checkbox', 'radio', 'treeitem'];
 
-/** Tap the first visible control whose accessible name is `name` (exact, then partial), else matching text. */
+/**
+ * Tap the first visible control whose accessible name is `name` (exact, then partial), else
+ * matching text. Like Playwright's own locators, it retries until `timeout` (a sheet still sliding
+ * in, an app not rendered yet) and scrolls the control into view (below the fold, inside a
+ * scrolling container) before tapping.
+ */
 export async function tapByName(page, name, { timeout = 5000 } = {}) {
   const tries = [];
   for (const exact of [true, false]) {
     for (const role of TAP_ROLES) tries.push(page.getByRole(role, { name, exact }));
     tries.push(page.getByText(name, { exact }));
   }
-  for (const loc of tries) {
-    const n = await loc.count().catch(() => 0);
-    for (let i = 0; i < Math.min(n, 5); i++) {
-      const el = loc.nth(i);
-      if (await el.isVisible().catch(() => false)) { await el.click({ timeout }); return; }
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    for (const loc of tries) {
+      const n = await loc.count().catch(() => 0);
+      for (let i = 0; i < Math.min(n, 5); i++) {
+        const el = loc.nth(i);
+        if (!(await el.isVisible().catch(() => false))) continue;
+        await el.scrollIntoViewIfNeeded({ timeout: 1000 }).catch(() => {});
+        await el.click({ timeout: Math.max(1000, deadline - Date.now()) });
+        return;
+      }
     }
+    if (Date.now() >= deadline) break;
+    await page.waitForTimeout(200);
   }
   throw new Error(`nothing visible named "${name}" to tap`);
 }
@@ -161,5 +204,52 @@ export function fingerprintFromSnapshot(snapshot, docTitle = '') {
 
 export async function pageFingerprint(page) {
   const snapshot = await page.locator('body').ariaSnapshot({ timeout: 5000 }).catch(() => '');
-  return { ...fingerprintFromSnapshot(snapshot, await page.title().catch(() => '')), snapshot };
+  const fp = fingerprintFromSnapshot(snapshot, await page.title().catch(() => ''));
+  // Name the state after what is on top (an open sheet, the page pushed last), not the first
+  // heading in the document, which in a stacked or tabbed app is often the page underneath.
+  const top = await page.evaluate(topLayerTitle).catch(() => null);
+  return { ...fp, title: top || fp.title, snapshot };
+}
+
+// Runs in the page. The name or first heading of the layer on top: an open dialog or sheet under
+// the viewport, else the page under the upper middle of the viewport. Walks open shadow roots.
+export function topLayerTitle() {
+  const W = innerWidth; const H = innerHeight;
+  const deepHit = (x, y) => {
+    let el = document.elementFromPoint(x, y);
+    while (el?.shadowRoot) { const inner = el.shadowRoot.elementFromPoint(x, y); if (!inner || inner === el) break; el = inner; }
+    return el;
+  };
+  const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
+  const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
+  const shown = (el) => {
+    const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0;
+  };
+  const clean = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const uncovered = (el) => {
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2; const y = r.top + r.height / 2;
+    if (x < 0 || y < 0 || x > W || y > H) return true;
+    const hit = deepHit(x, y);
+    return !hit || within(hit, el) || within(el, hit);
+  };
+  const firstHeading = (layer) => {
+    for (const h of layer.querySelectorAll('h1,h2,h3,[role=heading]')) if (shown(h) && uncovered(h) && clean(h.textContent)) return clean(h.textContent);
+    return null;
+  };
+  const DIALOG = 'dialog,[role=dialog],[role=alertdialog],[aria-modal=true]';
+  for (const [x, y] of [[W / 2, H * 0.8], [W / 2, H * 0.5], [W / 2, H * 0.25]]) {
+    for (let e = deepHit(x, y); e; e = up(e)) {
+      if (e.matches?.(DIALOG)) {
+        const label = e.getAttribute('aria-label') || (e.getAttribute('aria-labelledby') || '').split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ');
+        return clean(label) || firstHeading(e);
+      }
+    }
+  }
+  for (let e = deepHit(W / 2, H * 0.35); e && e !== document.body && e !== document.documentElement; e = up(e)) {
+    const h = firstHeading(e);
+    if (h) return h;
+  }
+  return null;
 }

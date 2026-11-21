@@ -100,6 +100,9 @@ Inputs are in [inputs.md](skills/critique/references/inputs.md) and
 
 ```bash
 node scripts/report/gate.mjs --run .designcritique/runs/<run>   # exit 2 with reasons when it fails
+node scripts/report/render-report.mjs --run <run> --inline-thumbs # one report.html to send, screenshots inside
+node scripts/capture/capture.mjs --config mockups.yaml --out <run> --only <ids>   # redo some screens (or --journeys, --resume)
+node scripts/report/save-critique.mjs --run <run> --critic <name> --from <reply or transcript.jsonl>
 node scripts/report/recommend-stack.mjs --product PRODUCT.md     # build stack without a critique
 node scripts/styles.mjs list                                     # DESIGN.md starting points
 ```

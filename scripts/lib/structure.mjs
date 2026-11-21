@@ -30,9 +30,12 @@ export function stateKindsOf(text, hint = '', vocab = ENGLISH) {
  */
 export function coverage({ screens, model, journeysRun = [], inventory = null, vocab = ENGLISH }) {
   const invTexts = inventory ? inventory.states.map((s) => ({ id: s.id, depth: s.depth, text: s.snapshot || s.title })) : [];
+  // Screens a person reaches by tapping from a crawl start's own page (mockup steps, journeys)
+  // are reachable even when the crawl, started elsewhere, didn't get there.
+  const tapped = new Set(screens.filter((s) => s.reachedByTaps).map((s) => s.id));
   const features = model.features.map((f) => {
     const seenIn = screens.filter((s) => f.seenAs.some((t) => mentions(s.text, t))).map((s) => s.id);
-    const reach = invTexts.filter((s) => f.seenAs.some((t) => mentions(s.text, t)));
+    const reach = [...invTexts.filter((s) => f.seenAs.some((t) => mentions(s.text, t))), ...seenIn.filter((id) => tapped.has(id)).map((id) => ({ id, depth: null }))];
     // Taps to reach the feature: the depth of a screen titled with it, else one more than the
     // depth of the screen where it's only a control.
     const titled = inventory ? inventory.states.filter((s) => f.seenAs.some((t) => mentions(s.title, t))) : [];
@@ -40,7 +43,7 @@ export function coverage({ screens, model, journeysRun = [], inventory = null, v
       feature: f.feature, phase: f.phase, task: f.task, problem: f.problem,
       seen: seenIn.length > 0, seenIn,
       reachable: inventory ? reach.length > 0 : null,
-      depth: titled.length ? Math.min(...titled.map((s) => s.depth)) : reach.length ? Math.min(...reach.map((s) => s.depth)) + 1 : null,
+      depth: titled.length ? Math.min(...titled.map((s) => s.depth)) : reach.some((s) => s.depth != null) ? Math.min(...reach.filter((s) => s.depth != null).map((s) => s.depth)) + 1 : null,
     };
   });
   const journeys = model.journeys.map((j) => {
@@ -98,7 +101,30 @@ export function screenGraph(inventory) {
     e.labels.add(t.label);
     edges.set(key, e);
   }
-  return { nodes, edges: [...edges.values()].map((e) => ({ ...e, labels: [...e.labels] })), start: nodeOf.get(inventory.states[0]?.id) };
+  // The start screens: where each crawl start's first state sits (one start unless crawl.start lists several).
+  const starts = [...new Set(inventory.states.filter((s) => s.depth === 0).map((s) => nodeOf.get(s.id)).filter(Boolean))];
+  const unsure = new Set(uncoveredStates(inventory).map((u) => nodeOf.get(u.state)).filter(Boolean));
+  return { nodes, edges: [...edges.values()].map((e) => ({ ...e, labels: [...e.labels] })), start: starts[0] || nodeOf.get(inventory.states[0]?.id), starts, unsure: [...unsure] };
+}
+
+/**
+ * States the crawler couldn't fully explore because of the tooling, not the prototype: the path
+ * to them doesn't replay, a tap failed (covered control, timeout), or a limit stopped it. What
+ * they lead to is unknown, so they are "not covered", never dead ends or screens without a way back.
+ */
+export function uncoveredStates(inventory) {
+  const out = [];
+  for (const s of inventory?.states || []) {
+    const failed = (s.actions || []).filter((a) => a.error);
+    const limited = (s.actions || []).filter((a) => a.skipped === 'state limit reached');
+    let reason = null;
+    if (s.unexplored) reason = s.unexplored === 'replay failed' ? `replay failed${s.replayError ? `: ${s.replayError}` : ''}` : s.unexplored;
+    else if (failed.length) reason = `${failed.length} tap(s) failed: ${failed.slice(0, 3).map((a) => `"${a.label}"`).join(', ')}${failed.length > 3 ? ', …' : ''}`;
+    else if (limited.length) reason = 'state limit reached';
+    else if (s.truncatedActions) reason = `only the first ${(s.actions || []).length} of ${s.truncatedActions} controls tried`;
+    if (reason) out.push({ state: s.id, title: s.title, reason });
+  }
+  return out;
 }
 
 const reachableFrom = (start, edges) => {
@@ -119,8 +145,15 @@ export function structureFindings({ model, cov, inventory, graph, journeysRun = 
 
   if (graph) {
     const titleOf = (id) => graph.nodes.find((n) => n.id === id)?.title || id;
-    // No way back: screens from which the start screen can't be reached.
-    const back = graph.nodes.filter((n) => !reachableFrom(n.id, graph.edges).has(graph.start));
+    // No way back: screens from which no start screen can be reached. Only where the crawl is
+    // sure: if anything reachable from the screen wasn't fully explored (a failed tap or replay,
+    // a limit), the way back may be there, so the screen is listed as not covered instead.
+    const starts = graph.starts?.length ? graph.starts : [graph.start];
+    const unsure = new Set(graph.unsure || []);
+    const back = graph.nodes.filter((n) => {
+      const r = reachableFrom(n.id, graph.edges);
+      return !starts.some((s) => r.has(s)) && ![...r].some((id) => unsure.has(id));
+    });
     if (back.length) add({
       rule: 'CHK-NO-WAY-BACK', basis: ['JOURNEY-WAY-BACK', 'NN-H3'], level: 'system', category: 'journey', severity: 'P1',
       title: `No way back to ${titleOf(graph.start)} from ${back.length} screen(s)`,
@@ -128,15 +161,15 @@ export function structureFindings({ model, cov, inventory, graph, journeysRun = 
       evidence: `The crawler tapped every control on these screens and none leads, directly or through other screens, back to ${titleOf(graph.start)}: ${back.map((n) => n.title).join(', ')}.`,
       recommendation: 'Give every screen a way back: a back or close control on pushed screens and sheets, or persistent navigation (a tab bar) that includes the start screen.',
     });
-    // Dead ends: states with no way out at all.
-    const dead = inventory.states.filter((s) => !s.unexplored && s.actions.length && !s.actions.some((a) => a.to && a.to !== s.id));
+    // Dead ends: states with no way out at all. A tap that failed is unknown, not "no way out".
+    const dead = inventory.states.filter((s) => !s.unexplored && s.actions.length && !s.actions.some((a) => a.error) && !s.actions.some((a) => a.to && a.to !== s.id));
     const deadNone = inventory.states.filter((s) => !s.unexplored && !s.actions.length && s.depth > 0);
     const allDead = [...dead, ...deadNone];
     if (allDead.length) add({
       rule: 'CHK-DEAD-END', basis: ['JOURNEY-DEAD-END', 'NN-H3'], level: 'journey', category: 'journey', severity: 'P1',
       title: `${allDead.length} dead end(s): nothing on the screen leads anywhere`,
       affected: allDead.map((s) => s.title), states: allDead.map((s) => s.id),
-      evidence: allDead.map((s) => `${s.title} (${s.id}): ${s.actions.length ? s.actions.map((a) => `"${a.label}" ${a.skipped ? `skipped: ${a.skipped}` : a.error ? 'failed' : 'no change'}`).join(', ') : 'no controls'}`).join('\n'),
+      evidence: allDead.map((s) => `${s.title} (${s.id}): ${s.actions.length ? s.actions.map((a) => `"${a.label}" ${a.skipped ? `skipped: ${a.skipped}` : 'no change'}`).join(', ') : 'no controls'}`).join('\n'),
       recommendation: 'Offer a next step and a way back on every screen, especially confirmations and the end of a flow.',
     });
     // Inconsistent navigation: one label, different destinations.
@@ -194,12 +227,16 @@ export function structureFindings({ model, cov, inventory, graph, journeysRun = 
     const lastKey = journeyKeys[j.id]?.[journeyKeys[j.id].length - 1];
     // Any screen inside the next journey counts (not its start screen, usually home).
     const targetKeys = targetRun ? (journeyKeys[target.id] || []).slice(1).filter(Boolean) : [];
-    let closes;
-    if (graph && lastKey && targetKeys.length) {
+    // Either kind of evidence closes the loop: the crawl graph can miss an edge (a failed tap, a
+    // screen captured mid-transition with another key), and the screen can name the step.
+    let closes = next.some((t) => mentions(finalTexts[j.id] || '', t));
+    if (!closes && graph && lastKey && targetKeys.length) {
       const from = graph.nodes.find((n) => n.screenKey === lastKey);
       const tos = graph.nodes.filter((n) => targetKeys.includes(n.screenKey));
       closes = !!(from && tos.some((to) => from.id === to.id || graph.edges.some((e) => e.from === from.id && e.to === to.id)));
-    } else closes = next.some((t) => mentions(finalTexts[j.id] || '', t));
+      // The last screen's exits weren't all explored: unknown, so not reported.
+      if (!closes && from && (graph.unsure || []).includes(from.id)) closes = true;
+    }
     if (!closes) add({
       rule: 'CHK-LOOP-OPEN', basis: ['JOURNEY-CLOSE'], level: 'journey', category: 'journey', severity: 'P2',
       journey: j.id, title: `"${j.title}" doesn't lead into "${target.title}"`, affected: run.screens.slice(-1),
