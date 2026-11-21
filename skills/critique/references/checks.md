@@ -14,5 +14,12 @@ still run.
 | Structure (review) | `structure.mjs` | ways back, dead ends, depth, orphans, inconsistent navigation, broken journeys, loops that don't close, navigation order against `## Navigation`, out-of-scope features | `checks/structure.json`, `coverage.json`, `graph.json` |
 | Consistency (review) | `consistency.mjs` | button variants, one icon with two meanings, glossary terms, number formats, figures that disagree across screens | `checks/consistency.json`, `consistency.json` |
 
-Image inputs get no checks (critics only). Screens reached by steps, journeys or the crawler
-aren't opened by the detectors, which load each page as it starts.
+Image inputs get no checks (critics only). For screens reached by steps, journeys or the
+crawler, the rendered detector checks the DOM that capture saved (scripts removed; styles inside
+web components' shadow roots may be missing).
+
+The checks measure what a person can see: content under an open sheet or modal, in an inert
+layer, covered by an opaque surface or parked off-screen is left out, and controls and text
+inside web components (open shadow roots) are included. `run-all` records which steps ran in
+`checks/status.json`; a step that crashed, a capture that didn't finish and critic findings
+dropped as invalid each fail the gate as a `[tooling]` reason.

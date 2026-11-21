@@ -42,8 +42,13 @@ export function findingOrigin(f) {
   return checks && critics ? 'check + critic' : critics ? 'critic' : 'check';
 }
 
-export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [], keyTasks = [] }, gate = DEFAULT_GATE) {
-  const reasons = [];
+/**
+ * incomplete: what the run is missing or lost (a check step that crashed, a capture that didn't
+ * finish, findings dropped as invalid, key tasks that couldn't be read). A run with holes in its
+ * evidence hasn't passed: each entry fails the gate as a [tooling] reason, apart from the design.
+ */
+export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [], keyTasks = [], incomplete = [] }, gate = DEFAULT_GATE) {
+  const reasons = incomplete.map((r) => `[tooling] ${r}`);
   // Review mode: the must-not-fail journeys have no dead end, no missing way back and no broken step.
   if (gate.no_dead_end_on_critical !== false && criticalJourneys.length) {
     for (const cj of criticalJourneys) {

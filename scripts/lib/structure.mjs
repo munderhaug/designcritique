@@ -103,7 +103,10 @@ export function screenGraph(inventory) {
   }
   // The start screens: where each crawl start's first state sits (one start unless crawl.start lists several).
   const starts = [...new Set(inventory.states.filter((s) => s.depth === 0).map((s) => nodeOf.get(s.id)).filter(Boolean))];
-  const unsure = new Set(uncoveredStates(inventory).map((u) => nodeOf.get(u.state)).filter(Boolean));
+  // Screens whose exits aren't all known: the tooling didn't explore them, or the crawler chose
+  // not to press a control there (avoided: paying, signing out), which may be the way on.
+  const avoidedExit = inventory.states.filter((s) => (s.actions || []).some((a) => /^avoided/.test(a.skipped || ''))).map((s) => s.id);
+  const unsure = new Set([...uncoveredStates(inventory).map((u) => u.state), ...avoidedExit].map((id) => nodeOf.get(id)).filter(Boolean));
   return { nodes, edges: [...edges.values()].map((e) => ({ ...e, labels: [...e.labels] })), start: starts[0] || nodeOf.get(inventory.states[0]?.id), starts, unsure: [...unsure] };
 }
 
@@ -162,14 +165,16 @@ export function structureFindings({ model, cov, inventory, graph, journeysRun = 
       recommendation: 'Give every screen a way back: a back or close control on pushed screens and sheets, or persistent navigation (a tab bar) that includes the start screen.',
     });
     // Dead ends: states with no way out at all. A tap that failed is unknown, not "no way out".
-    const dead = inventory.states.filter((s) => !s.unexplored && s.actions.length && !s.actions.some((a) => a.error) && !s.actions.some((a) => a.to && a.to !== s.id));
+    // A control the crawler didn't press (avoided, an external link, the state limit) is a way
+    // out it didn't take, not the absence of one.
+    const dead = inventory.states.filter((s) => !s.unexplored && s.actions.length && !s.actions.some((a) => a.error || a.skipped) && !s.actions.some((a) => a.to && a.to !== s.id));
     const deadNone = inventory.states.filter((s) => !s.unexplored && !s.actions.length && s.depth > 0);
     const allDead = [...dead, ...deadNone];
     if (allDead.length) add({
       rule: 'CHK-DEAD-END', basis: ['JOURNEY-DEAD-END', 'NN-H3'], level: 'journey', category: 'journey', severity: 'P1',
       title: `${allDead.length} dead end(s): nothing on the screen leads anywhere`,
       affected: allDead.map((s) => s.title), states: allDead.map((s) => s.id),
-      evidence: allDead.map((s) => `${s.title} (${s.id}): ${s.actions.length ? s.actions.map((a) => `"${a.label}" ${a.skipped ? `skipped: ${a.skipped}` : 'no change'}`).join(', ') : 'no controls'}`).join('\n'),
+      evidence: allDead.map((s) => `${s.title} (${s.id}): ${s.actions.length ? s.actions.map((a) => `"${a.label}" no change`).join(', ') : 'no controls'}`).join('\n'),
       recommendation: 'Offer a next step and a way back on every screen, especially confirmations and the end of a flow.',
     });
     // Inconsistent navigation: one label, different destinations.
@@ -205,9 +210,9 @@ export function structureFindings({ model, cov, inventory, graph, journeysRun = 
   for (const r of journeysRun) {
     if (r.brokenAt != null) add({
       rule: 'CHK-JOURNEY-BROKEN', basis: ['JOURNEY-BROKEN', 'TASK-WALK-Q2'], level: 'journey', category: 'journey', severity: r.critical || critical.has(r.id) ? 'P0' : 'P1',
-      journey: r.id, title: `Journey "${r.title}" breaks at step ${r.brokenAt}: "${r.steps[r.brokenAt - 1]}"`, affected: r.screens,
+      journey: r.id, title: r.brokenAt ? `Journey "${r.title}" breaks at step ${r.brokenAt}: "${r.steps[r.brokenAt - 1]}"` : `Journey "${r.title}" can't start: its start screen didn't load`, affected: r.screens,
       evidence: `${r.error}. Steps: ${r.steps.join(' → ')}.`,
-      recommendation: `Make "${r.steps[r.brokenAt - 1]}" available where the journey needs it, or correct the journey in mockups.yaml if the label changed.`,
+      recommendation: r.brokenAt ? `Make "${r.steps[r.brokenAt - 1]}" available where the journey needs it, or correct the journey in mockups.yaml if the label changed.` : 'Check the journey\'s start (start:, state: and the mockup\'s own steps) in mockups.yaml.',
     });
     if (r.brokenAt == null && r.ends_at && !mentions(finalTexts[r.id] || '', r.ends_at)) add({
       rule: 'CHK-JOURNEY-END', basis: ['JOURNEY-CLOSE', 'NN-H1'], level: 'journey', category: 'journey', severity: 'P2',

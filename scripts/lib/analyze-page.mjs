@@ -17,12 +17,28 @@ export function analyzePage({ frameAttr }) {
     return { x: Math.round(r.left - origin.x), y: Math.round(r.top - origin.y), w: Math.round(r.width), h: Math.round(r.height) };
   };
 
+  // Web components keep their native controls and text in shadow roots: walk the composed tree.
+  const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
+  const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
+  const deepAll = (node, sel, out = []) => {
+    for (const el of node.querySelectorAll('*')) {
+      if (!sel || el.matches(sel)) out.push(el);
+      if (el.shadowRoot) deepAll(el.shadowRoot, sel, out);
+    }
+    return out;
+  };
+  const deepHit = (x, y) => {
+    let e = document.elementFromPoint(x, y);
+    while (e && e.shadowRoot) { const inner = e.shadowRoot.elementFromPoint(x, y); if (!inner || inner === e) break; e = inner; }
+    return e;
+  };
+
   const visible = (el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) return false;
     const s = getComputedStyle(el);
     if (s.visibility === 'hidden' || s.display === 'none' || parseFloat(s.opacity) === 0) return false;
-    for (let p = el; p && p !== document.documentElement; p = p.parentElement) {
+    for (let p = el; p && p !== document.documentElement; p = up(p)) {
       if (parseFloat(getComputedStyle(p).opacity) === 0) return false;
     }
     return true;
@@ -30,12 +46,12 @@ export function analyzePage({ frameAttr }) {
 
   const cssPath = (el) => {
     const parts = [];
-    for (let e = el; e && e.nodeType === 1 && e !== document.documentElement && parts.length < 5; e = e.parentElement) {
+    for (let e = el; e && e.nodeType === 1 && e !== document.documentElement && parts.length < 5; e = up(e)) {
       if (e.id && document.querySelectorAll(`#${CSS.escape(e.id)}`).length === 1) { parts.unshift(`#${CSS.escape(e.id)}`); break; }
       let part = e.tagName.toLowerCase();
       const cls = [...e.classList].filter((c) => /^[A-Za-z_-][\w-]*$/.test(c) && !c.startsWith('dc-')).slice(0, 2);
       if (cls.length) part += '.' + cls.join('.');
-      const sibs = e.parentElement ? [...e.parentElement.children].filter((c) => c.tagName === e.tagName) : [];
+      const sibs = e.parentNode?.children ? [...e.parentNode.children].filter((c) => c.tagName === e.tagName) : [];
       if (sibs.length > 1) part += `:nth-of-type(${sibs.indexOf(e) + 1})`;
       parts.unshift(part);
       if (e === root) break;
@@ -57,7 +73,7 @@ export function analyzePage({ frameAttr }) {
   };
 
   const effectiveBg = (el) => {
-    for (let e = el; e; e = e.parentElement) {
+    for (let e = el; e; e = up(e)) {
       const s = getComputedStyle(e);
       if (s.backgroundImage && s.backgroundImage !== 'none') return null;
       const c = parseColor(s.backgroundColor);
@@ -67,7 +83,7 @@ export function analyzePage({ frameAttr }) {
   };
 
   const fixedAncestor = (el) => {
-    for (let e = el; e && e !== root.parentElement; e = e.parentElement) {
+    for (let e = el; e && e !== root.parentElement; e = up(e)) {
       const p = getComputedStyle(e).position;
       if (p === 'fixed' || p === 'sticky') return true;
       if (e === root) break;
@@ -75,7 +91,7 @@ export function analyzePage({ frameAttr }) {
     return false;
   };
 
-  const all = [...root.querySelectorAll('*')].filter((el) => !['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'TITLE', 'NOSCRIPT', 'TEMPLATE'].includes(el.tagName));
+  const all = deepAll(root).filter((el) => !['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'TITLE', 'NOSCRIPT', 'TEMPLATE'].includes(el.tagName));
 
   // Which icon a control shows: an SVG symbol it uses, a hash of its inline SVG, an image, or a
   // leading emoji. Used to find one icon with two meanings.
@@ -96,11 +112,78 @@ export function analyzePage({ frameAttr }) {
     return m ? `emoji:${m[0]}` : null;
   };
 
+  // Can a person see it? Content under an open modal or sheet, in an inert layer, painted over by
+  // an opaque surface (a sheet, the next page fading in) or parked off-screen (a stacked page
+  // translated away) is in the DOM but not on the screen, so no check should measure it.
+  // Hit-tested at sample points, through open shadow roots.
+  const opaque = (e) => {
+    const cs = getComputedStyle(e);
+    const c = parseColor(cs.backgroundColor);
+    return (c && c.a >= 0.9) || (cs.backgroundImage && cs.backgroundImage !== 'none') || (cs.backdropFilter && cs.backdropFilter !== 'none');
+  };
+  // Covered at a point: the element hit there, or one of its ancestors below the first one that
+  // also holds the content, paints an opaque surface.
+  const paintedOver = (el, hit) => {
+    for (let e = hit; e && !within(el, e); e = up(e)) if (e.nodeType === 1 && opaque(e)) return true;
+    return false;
+  };
+  const modals = [...document.querySelectorAll('[aria-modal=true],dialog[open]')]
+    .filter((d) => visible(d) && (d.getAttribute('aria-modal') === 'true' || d.matches(':modal')));
+  const topModal = modals[modals.length - 1] || null;
+  const inert = (el) => { for (let e = el; e; e = up(e)) if (e.nodeType === 1 && e.hasAttribute('inert')) return true; return false; };
+  const scrollerOf = (el) => {
+    for (let e = up(el); e && e !== document.body && e !== document.documentElement; e = up(e)) {
+      const cs = getComputedStyle(e);
+      if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) return e;
+    }
+    return null;
+  };
+  /** points: [x, y] in viewport coordinates. Returns why the element can't be seen, or null. */
+  const hiddenReason = (el, points) => {
+    if (topModal && !within(el, topModal)) return 'under an open modal';
+    if (inert(el)) return 'inert';
+    const W = window.innerWidth; const H = window.innerHeight;
+    let tested = 0; let shown = 0;
+    for (const [x, y] of points) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const hit = deepHit(x, y);
+      if (!hit) continue;
+      tested++;
+      if (within(hit, el) || within(el, hit) || !paintedOver(el, hit)) shown++;
+    }
+    if (tested) return shown ? null : 'covered';
+    // Nothing of it is in the viewport. Below the fold of something that scrolls: seen once
+    // scrolled to, unless that scrolling area is itself covered.
+    const sc = scrollerOf(el);
+    if (sc) {
+      const b = sc.getBoundingClientRect();
+      const cx = (Math.max(b.left, 0) + Math.min(b.right, W)) / 2; const cy = (Math.max(b.top, 0) + Math.min(b.bottom, H)) / 2;
+      if (cx > 0 && cy > 0 && cx < W && cy < H) {
+        const hit = deepHit(cx, cy);
+        if (hit && !within(hit, sc) && !within(sc, hit) && paintedOver(sc, hit)) return 'covered';
+      }
+      return null;
+    }
+    // Off to the side of a page that doesn't scroll sideways: a page or panel parked off-screen.
+    const r = el.getBoundingClientRect();
+    if ((r.left >= W || r.right <= 0) && document.documentElement.scrollWidth <= W + 1) return 'off-screen';
+    return null;
+  };
+  const rectPoints = (el) => {
+    const r = el.getBoundingClientRect();
+    return [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]].map(([fx, fy]) => [r.left + r.width * fx, r.top + r.height * fy]);
+  };
+  const hiddenText = (el, lines) => hiddenReason(el, lines.length
+    ? lines.flatMap((q) => [0.2, 0.5, 0.8].map((f) => [q.x + origin.x + q.w * f, q.y + origin.y + q.h / 2]))
+    : rectPoints(el));
+
   // Interactive targets
   const INTERACTIVE = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=tab],[role=switch],[role=checkbox],[role=radio],[role=menuitem],[role=option],[onclick],[tabindex]:not([tabindex="-1"])';
   const interactive = [];
-  for (const el of root.querySelectorAll(INTERACTIVE)) {
+  for (const el of deepAll(root, INTERACTIVE)) {
     if (!visible(el)) continue;
+    // A component's native control is named by what is slotted into its host.
+    const host = el.getRootNode() instanceof ShadowRoot ? el.getRootNode().host : null;
     const s = getComputedStyle(el);
     let name = el.getAttribute('aria-label') || '';
     if (!name && el.getAttribute('aria-labelledby')) {
@@ -108,6 +191,7 @@ export function analyzePage({ frameAttr }) {
     }
     if (!name && el.labels && el.labels.length) name = el.labels[0].textContent;
     if (!name) name = el.innerText || el.getAttribute('alt') || el.querySelector('img[alt]')?.getAttribute('alt') || el.getAttribute('title') || el.getAttribute('placeholder') || el.value || '';
+    if (!name.trim() && host) name = host.getAttribute('aria-label') || host.innerText || host.getAttribute('title') || '';
     const parentText = el.parentElement ? [...el.parentElement.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 0) : false;
     interactive.push({
       selector: cssPath(el),
@@ -118,6 +202,7 @@ export function analyzePage({ frameAttr }) {
       box: box(el),
       inlineInText: s.display === 'inline' && parentText,
       fixed: fixedAncestor(el),
+      hidden: hiddenReason(el, rectPoints(el)),
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
       style: {
         bg: colorKey(s.backgroundColor), color: colorKey(s.color),
@@ -146,7 +231,7 @@ export function analyzePage({ frameAttr }) {
   // so truncated or visually hidden text isn't counted. Used by the text-overlap check.
   const clipRect = (el) => {
     let r = { l: -Infinity, t: -Infinity, r: Infinity, b: Infinity };
-    for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
+    for (let a = el; a && a !== document.documentElement; a = up(a)) {
       const cs = getComputedStyle(a);
       if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || (cs.clip && cs.clip !== 'auto')) {
         const b = a.getBoundingClientRect();
@@ -169,49 +254,6 @@ export function analyzePage({ frameAttr }) {
       }
     }
     return out;
-  };
-
-  // Is the text drawn on top? Text under an open modal or sheet, under an inert layer, or painted
-  // over by an opaque surface (a sheet, the next page fading in) can't be seen, so it can't
-  // overlap anything. Hit-tested at points along each rendered line, through open shadow roots.
-  const up = (n) => n.parentElement || (n.parentNode instanceof ShadowRoot ? n.parentNode.host : null);
-  const within = (n, anc) => { for (let e = n; e; e = up(e)) if (e === anc) return true; return false; };
-  const deepHit = (x, y) => {
-    let e = document.elementFromPoint(x, y);
-    while (e && e.shadowRoot) { const inner = e.shadowRoot.elementFromPoint(x, y); if (!inner || inner === e) break; e = inner; }
-    return e;
-  };
-  const opaque = (e) => {
-    const cs = getComputedStyle(e);
-    const c = parseColor(cs.backgroundColor);
-    return (c && c.a >= 0.9) || (cs.backgroundImage && cs.backgroundImage !== 'none') || (cs.backdropFilter && cs.backdropFilter !== 'none');
-  };
-  // Covered at a point: the element hit there, or one of its ancestors below the first one that
-  // also holds the text, paints an opaque surface.
-  const paintedOver = (el, hit) => {
-    for (let e = hit; e && !within(el, e); e = up(e)) if (e.nodeType === 1 && opaque(e)) return true;
-    return false;
-  };
-  const modals = [...document.querySelectorAll('[aria-modal=true],dialog[open]')]
-    .filter((d) => visible(d) && (d.getAttribute('aria-modal') === 'true' || d.matches(':modal')));
-  const topModal = modals[modals.length - 1] || null;
-  const inert = (el) => { for (let e = el; e; e = up(e)) if (e.nodeType === 1 && e.hasAttribute('inert')) return true; return false; };
-  const hiddenText = (el, lines) => {
-    if (topModal && !within(el, topModal)) return 'under an open modal';
-    if (inert(el)) return 'inert';
-    let tested = 0; let shown = 0;
-    for (const q of lines) {
-      const y = q.y + origin.y + q.h / 2;
-      for (const f of [0.2, 0.5, 0.8]) {
-        const x = q.x + origin.x + q.w * f;
-        if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) continue;
-        const hit = deepHit(x, y);
-        if (!hit) continue;
-        tested++;
-        if (within(hit, el) || within(el, hit) || !paintedOver(el, hit)) shown++;
-      }
-    }
-    return tested && !shown ? 'covered' : null;
   };
 
   for (const el of all) {
@@ -308,7 +350,7 @@ export function analyzePage({ frameAttr }) {
       }
       return found;
     };
-    const candidates = [...root.querySelectorAll(INTERACTIVE)].filter((el) => visible(el) && !fixedAncestor(el) && !el.closest('[aria-hidden=true],[inert]')).slice(0, 150);
+    const candidates = deepAll(root, INTERACTIVE).filter((el) => visible(el) && !fixedAncestor(el) && !el.closest('[aria-hidden=true],[inert]') && !(topModal && !within(el, topModal)) && !inert(el)).slice(0, 150);
     for (const el of candidates) {
       el.scrollIntoView({ block: 'center', inline: 'nearest' });
       const r = el.getBoundingClientRect();

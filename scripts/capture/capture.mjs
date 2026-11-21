@@ -164,6 +164,7 @@ async function captureHtml(browser, screen) {
           colorScheme: step.variant === 'dark' ? 'dark' : 'light',
           hasTouch: true,
         });
+        try {
         const page = await preparePage(ctx, url, step.variant, sub, frameMode ? null : { top: preset.safeTop, bottom: preset.safeBottom }, { offline });
         const tag = `${sub.id}__${platform}-${step.device}__${step.variant}`;
         const shotPath = path.join(runDir, 'screenshots', `${tag}.png`);
@@ -213,7 +214,7 @@ async function captureHtml(browser, screen) {
           screenshot: relRun(shotPath), fullPage: fullPath && relRun(fullPath),
           data: relRun(dataPath), axe: axePath && relRun(axePath), dom: domPath && relRun(domPath),
         });
-        await ctx.close();
+        } finally { await ctx.close().catch(() => {}); }
       }
     }
     out.push(sub);
@@ -311,7 +312,7 @@ try {
       } catch (e) {
         record.brokenAt = k;
         record.error = e.message.split('\n')[0];
-        manifest.warnings.push(`journey ${j.id} broke at step ${k} ("${stepLabel(actions[k - 1])}"): ${record.error}`);
+        manifest.warnings.push(`journey ${j.id} broke at ${k ? `step ${k} ("${stepLabel(actions[k - 1])}")` : 'its start, before the first step'}: ${record.error}`);
         break;
       }
     }

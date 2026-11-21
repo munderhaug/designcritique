@@ -92,9 +92,15 @@ export function parseNavigation(md) {
 export function parseKeyTasks(md) {
   const out = [];
   for (const line of stripComments(section(md, 'Key Tasks')).split('\n')) {
-    const m = line.match(/^\s*(\d+)\.\s+\*\*([^*]+)\*\*\s*(?:\(([^)]*)\))?/);
-    if (!m) continue;
-    out.push({ id: `T${m[1]}`, name: m[2].trim(), critical: /must not fail|critical/i.test(m[3] || '') });
+    // "1. **Name** (must not fail): story" or a plain "1. Story (must not fail)".
+    const bold = line.match(/^\s*(\d+)[.)]\s+\*\*([^*]+)\*\*\s*(?:\(([^)]*)\))?/);
+    const plain = !bold && line.match(/^\s*(\d+)[.)]\s+(\S.*)$/);
+    if (bold) out.push({ id: `T${bold[1]}`, name: bold[2].trim(), critical: /must not fail|critical/i.test(bold[3] || '') });
+    else if (plain) {
+      const text = plain[2].replace(/[*_`]/g, '').trim();
+      const name = text.replace(/\s*\((?:[^)]*)\)\s*/g, ' ').split(/:\s|\s[—–]\s/)[0].trim().slice(0, 80);
+      out.push({ id: `T${plain[1]}`, name: name || text.slice(0, 80), critical: /\((?:[^)]*\b)?(?:must not fail|critical)\b[^)]*\)/i.test(text) });
+    }
   }
   return out;
 }

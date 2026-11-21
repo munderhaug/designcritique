@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, writeJson } from '../lib/config.mjs';
-import { validateCritique, screensForCritiqueFile, keyTasksForCritiqueFile } from '../lib/validate.mjs';
+import { validateCritique, repairPrincipleIds, screensForCritiqueFile, keyTasksForCritiqueFile } from '../lib/validate.mjs';
 import { extractJson, replyFromTranscript } from '../lib/extract-json.mjs';
 
 const args = parseArgs(process.argv.slice(2));
@@ -28,6 +28,7 @@ const data = extractJson(text);
 if (!data) { console.error('No JSON object with a findings array found in the reply.'); process.exit(2); }
 
 data.critic = args.critic;
+for (const r of repairPrincipleIds(data)) console.error(`repaired: ${r.finding ? `finding ${r.finding}: ` : ''}"${r.from}" → ${r.to}`);
 if (args.coverage) for (const t of data.tasks || []) t.coverage = args.coverage;
 
 const file = path.join(path.resolve(args.run), 'critique', `${args.name || args.critic}.json`);

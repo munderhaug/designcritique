@@ -38,7 +38,14 @@ const AXE_FIX = {
 
 const hash = (s) => crypto.createHash('sha1').update(s).digest('hex').slice(0, 8);
 const tagOf = (c) => `${c.platform}-${c.device}/${c.variant}`;
-const load = (rel) => (rel ? readJson(path.join(runDir, rel)) : null);
+// Page data without what a person can't see (under an open sheet, covered, parked off-screen):
+// analyze-page marks it `hidden`, and no check measures it.
+const load = (rel) => {
+  if (!rel) return null;
+  const d = readJson(path.join(runDir, rel));
+  if (!d || Array.isArray(d) || !d.texts) return d;
+  return { ...d, texts: d.texts.filter((t) => !t.hidden), interactive: (d.interactive || []).filter((i) => !i.hidden) };
+};
 
 // The principles each check rests on (IDs from skills/principles).
 const BASIS = {

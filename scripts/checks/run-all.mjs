@@ -44,6 +44,9 @@ for (const file of CHECK_FILES) {
   }
 }
 writeJson(path.join(runDir, 'checks', 'all.json'), all);
+// Which steps ran and which failed: a step that crashed found nothing, which is not the same as
+// finding nothing. The report and the gate read this.
+writeJson(path.join(runDir, 'checks', 'status.json'), { ranAt: new Date().toISOString(), steps: steps.map(([label]) => label), failed });
 const bySev = Object.fromEntries(['P0', 'P1', 'P2', 'P3'].map((s) => [s, all.filter((f) => f.severity === s).length]));
 console.log(`\nAll checks: ${all.length} findings ${JSON.stringify(bySev)} → checks/all.json${review ? ' (review: structure and consistency included)' : ''}`);
 if (failed.length) { console.error(`Steps that failed: ${failed.join(', ')}. Read their output above; the other steps ran.`); process.exit(1); }

@@ -68,6 +68,31 @@ export function suggestIds(bad, ids = principleIds()) {
 export const suggestId = (bad, ids) => suggestIds(bad, ids)[0] || null;
 
 /**
+ * Replace a principle ID that doesn't exist with the real one it clearly meant (exactly one near
+ * match: FITTS → LAW-FITTS), in place, so a mistyped citation doesn't cost the whole finding.
+ * Ambiguous or unknown IDs are left for validation to reject. Returns what it changed.
+ */
+export function repairPrincipleIds(data, ids = principleIds()) {
+  const repairs = [];
+  const fix = (id) => {
+    if (typeof id !== 'string' || ids.has(id)) return id;
+    const near = suggestIds(id, ids);
+    if (near.length !== 1) return id;
+    repairs.push({ from: id, to: near[0] });
+    return near[0];
+  };
+  for (const f of data?.findings || []) {
+    if (!f || typeof f !== 'object') continue;
+    const before = repairs.length;
+    if (f.rule) f.rule = fix(f.rule);
+    if (Array.isArray(f.basis)) f.basis = [...new Set(f.basis.map(fix))];
+    for (const r of repairs.slice(before)) r.finding = f.id ?? null;
+  }
+  for (const s of data?.strengths || []) if (Array.isArray(s?.basis)) s.basis = [...new Set(s.basis.map(fix))];
+  return repairs;
+}
+
+/**
  * @param data parsed critic JSON
  * @param opts.screens optional Set of screen ids in the run
  * @returns {{ errors: string[], warnings: string[], badFindings: Set<string> }}

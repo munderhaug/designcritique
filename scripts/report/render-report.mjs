@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
 import { recommendStack, stackMarkdown } from '../lib/stack.mjs';
-import { validateCritique } from '../lib/validate.mjs';
+import { validateCritique, repairPrincipleIds } from '../lib/validate.mjs';
 import { findPreviousRun, compareFindings } from '../lib/compare.mjs';
 import { loadDecisions, applyDecisions, decisionsPath } from '../lib/decisions.mjs';
 import { evaluateGate } from '../lib/gate.mjs';
@@ -59,9 +59,14 @@ if (fs.existsSync(critiqueDir)) {
 }
 
 const criticValidity = new Map();
+const dropped = []; // critic findings that failed validation: reported, and severe ones fail the gate
 function validCriticFinding(f, file) {
   const bad = criticValidity.get(file);
-  if (bad && bad.has(f.id ?? '')) { warnings.push(`critique/${file}: finding ${f.id || '?'} dropped (fails validation)`); return false; }
+  if (bad && bad.has(f.id ?? '')) {
+    warnings.push(`critique/${file}: finding ${f.id || '?'} (${f.severity || 'no severity'}: ${String(f.title || '').slice(0, 80)}) dropped: it fails validation`);
+    dropped.push({ file, id: f.id, severity: f.severity });
+    return false;
+  }
   return true;
 }
 
@@ -75,6 +80,8 @@ const moves = [];
 const scopeVerdicts = [];
 const overallScores = [];
 for (const { file, data } of critics) {
+  // A mistyped principle ID with one clear match is corrected, so the finding isn't lost.
+  for (const r of repairPrincipleIds(data)) warnings.push(`critique/${file}: ${r.finding ? `finding ${r.finding}: ` : ''}"${r.from}" read as ${r.to}`);
   const v = validateCritique(data, { screens: screenIds, keyTasks });
   criticValidity.set(file, v.badFindings);
   for (const e of v.errors) warnings.push(`critique/${file}: ${e}`);
@@ -175,7 +182,26 @@ for (const f of findings) {
   if (why) for (const t of f.affected_screens || []) flagged.set(t, flagged.has(t) ? `${flagged.get(t)}, ${why}` : why);
 }
 
-const gate = evaluateGate({ findings, tasks, critics: critics.map((c) => c.data.critic || c.file), journeys: journeysJudged, coverage: coverageData, criticalJourneys, keyTasks }, normalizeGate(manifest.gate || DEFAULT_GATE));
+// ---------- holes in the evidence: a run that lost or never produced part of it hasn't passed ----------
+const gateCfg = normalizeGate(manifest.gate || DEFAULT_GATE);
+const incomplete = [];
+const checkStatus = readJson(path.join(runDir, 'checks', 'status.json'), null);
+const htmlScreens = manifest.screens.filter((sc) => sc.kind === 'html').length;
+if (checkStatus?.failed?.length) incomplete.push(`check step(s) failed and found nothing: ${checkStatus.failed.join(', ')} (run run-all.mjs again and read its output)`);
+else if (htmlScreens && !fs.existsSync(path.join(runDir, 'checks', 'findings.json'))) incomplete.push('the screen checks have not run on this capture (node scripts/checks/run-all.mjs --run <run>)');
+if (manifest.complete === false) incomplete.push('the capture did not finish (run capture again with --resume)');
+const failedCaptures = (manifest.warnings || []).filter((w) => /: capture failed: /.test(w));
+if (failedCaptures.length) incomplete.push(`${failedCaptures.length} screen(s) failed to capture and were not judged: ${capList(failedCaptures.map((w) => w.split(':')[0]), 6)}`);
+const limit = SEV.indexOf(gateCfg.fail_on);
+const lost = dropped.filter((d) => limit >= 0 && (!SEV.includes(d.severity) || SEV.indexOf(d.severity) <= limit));
+if (lost.length) incomplete.push(`${lost.length} critic finding(s) at ${gateCfg.fail_on} or worse were dropped as invalid (${[...new Set(lost.map((d) => `critique/${d.file}`))].join(', ')}): fix the file, see Notes`);
+const tasksText = manifest.framingSnapshot && fs.existsSync(path.join(runDir, manifest.framingSnapshot)) ? section(fs.readFileSync(path.join(runDir, manifest.framingSnapshot), 'utf8'), 'Key Tasks') : '';
+if (gateCfg.target_score != null && tasksText && !keyTasks.length && !unfilledSections(`## Key Tasks\n${tasksText}\n## Users\nx\n## Problem\nx`).length) {
+  incomplete.push('no key task could be read from PRODUCT.md: write ## Key Tasks as a numbered list (1. **Name** (must not fail): …)');
+}
+for (const r of incomplete) warnings.push(r);
+
+const gate = evaluateGate({ findings, tasks, critics: critics.map((c) => c.data.critic || c.file), journeys: journeysJudged, coverage: coverageData, criticalJourneys, keyTasks, incomplete }, gateCfg);
 
 const merged = {
   keyTasks,

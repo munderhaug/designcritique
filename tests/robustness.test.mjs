@@ -159,3 +159,90 @@ test('render-report: a run with agreeing critics and a decided proposal renders 
   const all = JSON.parse(fs.readFileSync(path.join(run, 'findings.json'), 'utf8'));
   assert.match(all.findings[0].evidence, /line 29/, 'findings.json keeps the whole evidence');
 });
+
+// ---------- gate trust: holes in the evidence, lost findings, decisions that reach too far ----------
+import { parseKeyTasks } from '../scripts/lib/product.mjs';
+import { repairPrincipleIds } from '../scripts/lib/validate.mjs';
+import { applyDecisions, decisionFromFinding } from '../scripts/lib/decisions.mjs';
+import { groupChecksByCause } from '../scripts/lib/merge.mjs';
+import { analyzePage } from '../scripts/lib/analyze-page.mjs';
+import { launch } from '../scripts/lib/browser.mjs';
+
+test('key tasks are read from a bold or a plain numbered list', () => {
+  const bold = parseKeyTasks('## Key Tasks\n\n1. **Pay for the order** (must not fail): When …\n2. **Track it**: When …\n');
+  assert.deepEqual(bold.map((t) => [t.id, t.name, t.critical]), [['T1', 'Pay for the order', true], ['T2', 'Track it', false]]);
+  const plain = parseKeyTasks('## Key Tasks\n\n1. Pay for the order (must not fail): when I am done choosing\n2) Track the delivery\n');
+  assert.deepEqual(plain.map((t) => [t.id, t.name, t.critical]), [['T1', 'Pay for the order', true], ['T2', 'Track the delivery', false]]);
+});
+
+test('gate: missing or lost evidence fails it as a tooling reason', () => {
+  const r = evaluateGate({ findings: [], incomplete: ['check step(s) failed and found nothing: detectors'] }, { fail_on: 'P1', target_score: null });
+  assert.equal(r.pass, false);
+  assert.deepEqual(r.reasons, ['[tooling] check step(s) failed and found nothing: detectors']);
+});
+
+test('a mistyped principle ID with one clear match is repaired, an unknown one is not', () => {
+  const data = { critic: 'x', findings: [{ id: 'a', rule: 'FITTS', basis: ['FITTS', 'NN-H5'] }, { id: 'b', rule: 'CALM-TECH', basis: ['CALM-TECH'] }] };
+  const repairs = repairPrincipleIds(data);
+  assert.deepEqual(data.findings[0], { id: 'a', rule: 'LAW-FITTS', basis: ['LAW-FITTS', 'NN-H5'] });
+  assert.equal(data.findings[1].rule, 'CALM-TECH');
+  assert.deepEqual(repairs.map((r) => [r.finding, r.from, r.to]), [['a', 'FITTS', 'LAW-FITTS'], ['a', 'FITTS', 'LAW-FITTS']]);
+});
+
+test('dismissing a check grouped over screens covers those screens only', () => {
+  const chk = (screen) => ({ id: `chk-${screen}-CHK-TARGET-1`, source: 'check', screen, rule: 'CHK-TARGET', severity: 'P1', title: 'Small target', evidence: 'x', basis: ['WCAG-2.5.8'], cause: null });
+  const group = groupChecksByCause([chk('a'), chk('b')]).find((f) => f.screens);
+  const d = decisionFromFinding(group, { decision: 'dismiss', reason: 'decorative' });
+  assert.deepEqual(d.screens, ['a', 'b']);
+  // Later: three more screens fail. They stay open; a and b stay dismissed.
+  const later = groupChecksByCause(['a', 'b', 'c', 'd', 'e'].map(chk));
+  const r = applyDecisions(later, [d]);
+  assert.deepEqual(r.open.map((f) => f.screens), [['c', 'd', 'e']]);
+  assert.match(r.open[0].title, /\(3 screens\)$/);
+  assert.deepEqual(r.decided.map((f) => f.screens), [['a', 'b']]);
+  // Later still: only one of the dismissed screens fails, ungrouped. Still dismissed.
+  const one = applyDecisions([chk('a'), chk('z')], [d]);
+  assert.deepEqual(one.open.map((f) => f.screen), ['z']);
+});
+
+test('structure: a control the crawler chose not to press is not a dead end or a missing way back', () => {
+  const inventory = {
+    states: [
+      { id: 's01', title: 'Home', depth: 0, actions: [{ label: 'Checkout', to: 's02' }] },
+      { id: 's02', title: 'Pay', depth: 1, actions: [{ label: 'Pay now', skipped: 'avoided (destructive or leaving)' }] },
+      { id: 's03', title: 'More', depth: 1, actions: [{ label: 'Next', skipped: 'state limit reached' }] },
+    ],
+    screens: [{ screenKey: 'a', title: 'Home', states: ['s01'] }, { screenKey: 'b', title: 'Pay', states: ['s02'] }, { screenKey: 'c', title: 'More', states: ['s03'] }],
+    transitions: [{ from: 's01', to: 's02', label: 'Checkout' }, { from: 's01', to: 's03', label: 'More' }],
+  };
+  const rules = structureFindings({ model, cov: coverage({ screens: [], model, inventory }), inventory, graph: screenGraph(inventory) }).map((f) => f.rule);
+  assert.deepEqual(rules.filter((r) => /DEAD|WAY-BACK/.test(r)), []);
+});
+
+test('page analysis sees into web components and leaves out what a person cannot see', async (t) => {
+  let browser;
+  try { browser = await launch(); } catch { t.skip('no browser'); return; }
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
+    await page.setContent(`<!doctype html><body style="margin:0;font:16px sans-serif">
+      <div id="base" style="position:fixed;inset:0;background:#fff;padding:16px"><p>Base page text</p><button style="width:20px;height:20px">Under sheet</button></div>
+      <div id="parked" style="position:fixed;inset:0;transform:translateX(100%);background:#fff"><p>Parked page text</p><button>Parked</button></div>
+      <div role="dialog" aria-modal="true" style="position:fixed;left:0;right:0;bottom:0;height:60%;background:#fff;padding:16px">
+        <p>Sheet text</p><x-btn>Shadow label</x-btn></div>
+      <script>customElements.define('x-btn', class extends HTMLElement { connectedCallback() { this.attachShadow({ mode: 'open' }).innerHTML = '<button style="width:18px;height:18px;padding:0"><slot></slot></button><span style="font-size:6px">tiny shadow text</span>'; } });</script>`);
+    const d = await page.evaluate(analyzePage, { frameAttr: null });
+    const control = (name) => d.interactive.find((i) => i.name === name);
+    assert.equal(control('Shadow label').hidden, null, 'a native control inside a shadow root is found, named by its host');
+    assert.ok(control('Shadow label').box.w <= 18);
+    assert.equal(control('Under sheet').hidden, 'under an open modal');
+    assert.equal(control('Parked').hidden, 'under an open modal');
+    assert.ok(d.texts.some((x) => x.text === 'tiny shadow text' && !x.hidden), 'text inside a shadow root is read');
+    assert.equal(d.texts.find((x) => x.text === 'Base page text').hidden, 'under an open modal');
+    // Without the sheet: the base page shows, the parked page is off-screen.
+    await page.evaluate(() => document.querySelector('[role=dialog]').remove());
+    const e = await page.evaluate(analyzePage, { frameAttr: null });
+    assert.equal(e.interactive.find((i) => i.name === 'Under sheet').hidden, null);
+    assert.equal(e.interactive.find((i) => i.name === 'Parked').hidden, 'off-screen');
+    assert.equal(e.texts.find((x) => x.text === 'Parked page text').hidden, 'off-screen');
+  } finally { await browser.close(); }
+});
