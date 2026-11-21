@@ -374,6 +374,20 @@ entries:
     sources:
       - https://playwright.dev/docs/emulation
 
+  - id: playwright-cli
+    role: verify
+    name: "Playwright CLI for coding agents"
+    by: "Microsoft"
+    trust: official
+    platforms: [ios, android, web]
+    stacks: [web, capacitor]
+    why: "Short commands for an agent to open the app, resize to a phone width, screenshot and look before it says a change is done; lighter on context than the Playwright MCP server. Browser only: it can't show native shells."
+    install: "npm install -g @playwright/cli@latest && playwright-cli install --skills"
+    helps_with: [visual, layout]
+    sources:
+      - https://playwright.dev/agent-cli/introduction
+      - https://github.com/microsoft/playwright-cli
+
   - id: capacitor-run
     role: verify
     name: "Capacitor CLI: run on a simulator or device"

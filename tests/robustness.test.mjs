@@ -347,3 +347,17 @@ test('native hierarchy → the data the checks read; a Maestro flow from taps', 
   assert.equal(d.interactive[1].selector, 'com.x:id/close');
   assert.equal(flowFor('com.x', ['Cart', 'Pay "now"']), 'appId: com.x\n---\n- launchApp:\n    clearState: true\n- waitForAnimationToEnd\n- tapOn: "Cart"\n- waitForAnimationToEnd\n- tapOn: "Pay \\"now\\""\n- waitForAnimationToEnd\n');
 });
+
+// What a reviewer or the orchestrating model must load stays small (tokens ≈ bytes / 4): a
+// long skill is read by every reviewer on every run, and a long file is where an agent's edits
+// go wrong. Detail belongs in references/, loaded on demand (CLAUDE.md).
+test('skills, agents and reference files stay within their size budgets', () => {
+  const tokens = (f) => Math.round(fs.statSync(f).size / 4);
+  const list = (dir, pick) => fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? list(path.join(dir, e.name), pick) : pick(e.name) ? [path.join(dir, e.name)] : []));
+  const over = [];
+  for (const f of [...list('skills', (n) => n === 'SKILL.md'), ...list('agents', (n) => n.endsWith('.md')), ...list('commands', (n) => n.endsWith('.md'))]) if (tokens(path.join(ROOT, f)) > 2500) over.push(`${f}: ${tokens(path.join(ROOT, f))} (max 2500)`);
+  for (const f of list('skills', (n) => n.endsWith('.md') && n !== 'SKILL.md')) if (tokens(path.join(ROOT, f)) > 3500) over.push(`${f}: ${tokens(path.join(ROOT, f))} (max 3500)`);
+  // Scripts: a soft ceiling that catches a file growing into the next render-report.
+  for (const f of list('scripts', (n) => n.endsWith('.mjs'))) if (tokens(path.join(ROOT, f)) > 7500) over.push(`${f}: ${tokens(path.join(ROOT, f))} (max 7500): split it`);
+  assert.deepEqual(over, []);
+});

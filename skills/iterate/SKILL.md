@@ -45,11 +45,18 @@ With no config given, use `mockups.yaml` in the current project. `--rounds N` ov
    whatever caps the lowest task score. Structure before motion: task fit, layout, hierarchy,
    copy, accessibility and tokens first; motion findings only once the static screens pass.
 5. **Fix**, in a fresh general-purpose agent that is not one of the critics. Give it the findings
-   (id, screen, evidence, recommendation), `PRODUCT.md`, `DESIGN.md` with the rule in
-   `PLUGIN_ROOT/templates/CLAUDE-design-system.md`, the direction images if any, and the mockup
-   HTML paths. It edits only those files, uses only DESIGN.md tokens and components (or stops and
-   asks), fixes what the findings say rather than re-designing (no other design skill sets the
-   direction), and returns which finding ids it addressed and how.
+   (id, screen, evidence, recommendation, alternatives), `PRODUCT.md`, `DESIGN.md` with the rule
+   in `PLUGIN_ROOT/templates/CLAUDE-design-system.md`, the direction images if any, and the
+   mockup HTML paths. It edits only those files, uses only DESIGN.md tokens and components (or
+   stops and asks), and fixes what the findings say rather than re-designing (no other design
+   skill sets the direction). Two things before it returns:
+   - **It looks at what it made.** After editing, it renders the screens it touched
+     (`node PLUGIN_ROOT/scripts/capture/capture.mjs --config mockups.yaml --out <a scratch
+     folder> --only <ids>`) and opens the standard and compact screenshots, light and dark. A fix
+     nobody looked at isn't done: if the render shows a new problem, it fixes that too.
+   - **It says why.** For every change: the finding id, what it changed, and why this way and
+     not the alternative, in one or two sentences. A change it can't give a reason for is
+     reverted. The designer reads these and can overrule any of them.
 6. Next round.
 
 ## When the loop stops
