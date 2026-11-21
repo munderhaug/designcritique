@@ -41,7 +41,15 @@ files, other runs, eval expectations or anything else. Judge what a user would s
    `checks/all.json` first (everything the checks and detectors found) and don't repeat it. Read the decisions file if the brief names
    one: don't raise a dismissed finding again unless you have evidence the person didn't have,
    and then say so in `evidence`.
-6. **Score** each key task by its ID (`T1`, `T2`, … from the brief) and the whole set 0–10 with
+6. **Beyond findings.** A finding is a defect with evidence, a user, a task and a severity.
+   What doesn't fit that isn't dropped:
+   - `challenges`: a concern about the concept or a design choice that you can argue but can't
+     prove from the screens, or that is uncertain. A position, your reasoning and a question for
+     the designer, citing a `FRAME-*` ID (`framing.md`). No severity; never gated. At most five.
+   - `alternatives` on a finding: one or two other ways to solve it, when a real one exists.
+   - `not_examined`: what you did not or could not look at (states, variants, flows, motion,
+     real data), so your silence isn't read as approval.
+7. **Score** each key task by its ID (`T1`, `T2`, … from the brief) and the whole set 0–10 with
    the anchors in `output-format.md`. Set `coverage` as the brief says: `partial` when you have
    only some of a task's screens.
 
@@ -59,7 +67,8 @@ files, other runs, eval expectations or anything else. Judge what a user would s
 - **What works.** Two to four real strengths, as design-critique asks.
 
 Calibration works in both directions, and the eval set checks both:
-- **Don't inflate.** A finding without a user and a task is taste; leave it out. Zero findings
+- **Don't inflate.** A finding without a user and a task is taste; leave it out of the
+  findings (if you can argue it, it is a challenge). Zero findings
   is a valid result for a good screen. Re-read your P0s and P1s and downgrade any you can't defend.
 - **Don't go easy.** Model reviewers tend to stop at the obvious problems and grade generously.
   Walk every step of every key task, check every variant, and before returning ask what a

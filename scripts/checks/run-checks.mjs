@@ -272,9 +272,12 @@ for (const screen of manifest.screens) {
       notes.push({ screen: screen.id, note: `Safe areas not checked: ${mainData.insets.reason}. Check on a device or simulator.` });
     }
     const skipSafeArea = mainData.safeAreaCss && mainData.viewportFitCover && mainData.insets && !mainData.insets.applied;
-    for (const el of skipSafeArea ? [] : mainData.interactive.filter((e) => !e.disabled && e.box.y < mainData.viewport.height)) {
-      if (el.box.y < main.safeTop && el.box.y + el.box.h > 0) sa.push({ el, where: platform === 'ios' ? 'status bar / Dynamic Island' : 'status bar' });
-      else if (el.fixed && el.box.y + el.box.h > mainData.viewport.height - main.safeBottom + 1) sa.push({ el, where: platform === 'ios' ? 'home indicator' : 'gesture navigation bar' });
+    // Fixed bars are judged where they sit on the screen, also after a scroll step moved the page.
+    const top = (e) => (e.fixed && e.viewY != null ? e.viewY : e.box.y);
+    for (const el of skipSafeArea ? [] : mainData.interactive.filter((e) => !e.disabled && top(e) < mainData.viewport.height)) {
+      const y = top(el);
+      if (y < main.safeTop && y + el.box.h > 0) sa.push({ el, where: platform === 'ios' ? 'status bar / Dynamic Island' : 'status bar' });
+      else if (el.fixed && y + el.box.h > mainData.viewport.height - main.safeBottom + 1) sa.push({ el, where: platform === 'ios' ? 'home indicator' : 'gesture navigation bar' });
     }
     for (const where of [...new Set(sa.map((s) => s.where))]) {
       const els = sa.filter((s) => s.where === where).map((s) => s.el);

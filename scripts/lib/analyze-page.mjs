@@ -177,6 +177,15 @@ export function analyzePage({ frameAttr }) {
     ? lines.flatMap((q) => [0.2, 0.5, 0.8].map((f) => [q.x + origin.x + q.w * f, q.y + origin.y + q.h / 2]))
     : rectPoints(el));
 
+  const tapBox = (el) => {
+    const own = box(el);
+    const label = el.matches('input[type=checkbox],input[type=radio],[role=checkbox],[role=radio],[role=switch]') ? (el.labels?.[0] || el.closest('label')) : null;
+    if (!label || !visible(label)) return own;
+    const l = box(label);
+    const x = Math.min(own.x, l.x); const y = Math.min(own.y, l.y);
+    return { x, y, w: Math.max(own.x + own.w, l.x + l.w) - x, h: Math.max(own.y + own.h, l.y + l.h) - y };
+  };
+
   // Interactive targets
   const INTERACTIVE = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link],[role=tab],[role=switch],[role=checkbox],[role=radio],[role=menuitem],[role=option],[onclick],[tabindex]:not([tabindex="-1"])';
   const interactive = [];
@@ -199,7 +208,10 @@ export function analyzePage({ frameAttr }) {
       role: el.getAttribute('role') || null,
       type: el.getAttribute('type') || null,
       name: name.trim().replace(/\s+/g, ' ').slice(0, 80),
-      box: box(el),
+      // What can be tapped: a checkbox or radio is tapped through its label too.
+      box: tapBox(el),
+      // Fixed and sticky bars stay put when the page scrolls: where they sit on the screen.
+      viewY: Math.round(el.getBoundingClientRect().top),
       inlineInText: s.display === 'inline' && parentText,
       fixed: fixedAncestor(el),
       hidden: hiddenReason(el, rectPoints(el)),

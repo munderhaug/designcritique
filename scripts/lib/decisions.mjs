@@ -19,7 +19,8 @@ export function loadDecisions(baseDir) {
   const raw = YAML.parse(fs.readFileSync(p, 'utf8')) || {};
   return (raw.decisions || []).filter((d) => d && (
     (d.kind === 'proposal' && d.item && ['accept', 'reject', 'defer'].includes(d.decision))
-    || (d.rule && ['dismiss', 'severity', 'accept'].includes(d.decision))));
+    || (d.kind === 'challenge' && d.claim && d.answer)
+    || (d.rule && ['dismiss', 'severity', 'accept', 'discussed'].includes(d.decision))));
 }
 
 export function saveDecisions(baseDir, decisions) {
@@ -27,7 +28,9 @@ export function saveDecisions(baseDir, decisions) {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   const head = '# designcritique decisions: your verdicts on findings, applied to every run.\n' +
     '# decision: dismiss (false alarm or out of scope) | severity (re-rated) | accept (agreed, kept open)\n' +
-    '# kind: proposal entries record your decision on a structural or scope proposal: accept | reject | defer\n';
+    '# decision: discussed (you argued it with the critic, who held its position; kept open, with the exchange)\n' +
+    '# kind: proposal entries record your decision on a structural or scope proposal: accept | reject | defer\n' +
+    '# kind: challenge entries record your answer to a question the critics put to you\n';
   fs.writeFileSync(p, head + YAML.stringify({ decisions }));
 }
 
@@ -36,7 +39,7 @@ const where = (f) => f.element?.selector || f.element?.region || '';
 
 /** Does decision d refer to finding f? */
 export function decisionMatches(d, f) {
-  if (d.kind === 'proposal') return false; // decisions on moves and scope match proposals, not findings
+  if (d.kind === 'proposal' || d.kind === 'challenge') return false; // those match proposals and challenges, not findings
   if (d.screen && d.screen !== '*' && d.screen !== f.screen) return false;
   // A decision made on a check grouped over several screens names those screens: it covers the
   // same check on them (grouped again or alone), never the screens that fail later.
@@ -92,7 +95,7 @@ export function restrictToScreens(f, screens) {
 }
 
 /** A decision recorded from a finding in a run. */
-export function decisionFromFinding(f, { decision, severity, reason, by, evalCandidate }) {
+export function decisionFromFinding(f, { decision, severity, reason, by, evalCandidate, discussion }) {
   const d = {
     screen: f.screen, rule: f.rule, source: f.source,
     title: f.title, decision,
@@ -105,6 +108,7 @@ export function decisionFromFinding(f, { decision, severity, reason, by, evalCan
     date: new Date().toISOString().slice(0, 10),
     ...(by ? { by } : {}),
     ...(evalCandidate ? { eval_candidate: true } : {}),
+    ...(discussion?.length ? { discussion } : {}),
   };
   return d;
 }

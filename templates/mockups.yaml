@@ -16,7 +16,7 @@ critics:
   judge_model:                # model for the design-reviewer, e.g. fable or opus; best one other
                               # than the model that made the mockups (empty: chosen per run)
   external: []                # extra judges on other tools, e.g. [codex]; see critic-brief.md
-gate:
+gate:                         # or `gate: off`: no verdict, the critique as a conversation
   fail_on: P1                 # not passed while any open finding is this severe (P0-P3, none)
   target_score: 8             # not passed while a key task (T1, T2, …) is unscored or scores lower (0-10, lowest critic that walked it)
   journey_target_score: 8     # review: not passed while a journey scores lower (lowest critic)

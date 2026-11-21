@@ -84,7 +84,8 @@ export function evaluateGate({ findings, tasks = [], critics = [], journeys = []
     }
     for (const s of scores) if (s.score < gate.target_score) reasons.push(`[critic] ${s.id ? `${s.id} ` : ''}"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
   }
-  return { pass: reasons.length === 0, reasons, scores, journeyScores: journeyScores(journeys), gate };
+  // Gate off: nothing fails; the reasons are kept as what would have counted.
+  return { pass: gate.enabled === false ? true : reasons.length === 0, off: gate.enabled === false, reasons, scores, journeyScores: journeyScores(journeys), gate };
 }
 
 /**

@@ -18,9 +18,10 @@ const gate = normalizeGate({
   ...(args.target != null ? { target_score: args.target } : {}),
 });
 const rv = merged.review || {};
-const r = evaluateGate({ findings: merged.findings, tasks: merged.tasks, critics: merged.coverage?.critics || [], journeys: rv.journeysJudged || [], coverage: rv.coverage || null, criticalJourneys: rv.criticalJourneys || [], keyTasks: merged.keyTasks || [] }, gate);
+const r = evaluateGate({ findings: merged.findings, tasks: merged.tasks, critics: merged.coverage?.critics || [], journeys: rv.journeysJudged || [], coverage: rv.coverage || null, criticalJourneys: rv.criticalJourneys || [], keyTasks: merged.keyTasks || [], incomplete: merged.incomplete || [] }, gate);
 for (const s of r.scores) console.log(`  ${String(s.score).padStart(4)}  ${s.task}`);
 for (const s of r.journeyScores || []) console.log(`  ${String(s.score).padStart(4)}  journey ${s.task}`);
+if (r.off) { console.log(`Gate is off (gate.enabled: false in mockups.yaml).${r.reasons.length ? ` Would have counted:\n- ${r.reasons.join('\n- ')}` : ''}`); process.exit(0); }
 if (r.pass) { console.log(`Gate passed (fail on ${gate.fail_on}, target ${gate.target_score ?? 'none'}).`); process.exit(0); }
 console.error(`designcritique gate failed (fail on ${gate.fail_on}, target ${gate.target_score ?? 'none'}):\n- ${r.reasons.join('\n- ')}\nSee ${path.join(runDir, 'report.md')}.`);
 process.exit(2);

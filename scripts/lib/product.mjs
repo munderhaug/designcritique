@@ -1,6 +1,7 @@
 // The product model from PRODUCT.md for whole-product review: journeys, concept model, scope
 // and feature map (the frame skill writes these sections; see templates/PRODUCT.md).
 import { section, stripComments } from './framing.mjs';
+import { docWords } from './vocabulary.mjs';
 
 /** Rows of the first Markdown table in `md`, as objects keyed by lower-cased header. */
 export function parseTable(md) {
@@ -14,8 +15,11 @@ const col = (row, ...names) => {
   const k = Object.keys(row).find((key) => names.some((n) => key.includes(n)));
   return k ? row[k] : '';
 };
-const PHASES = [['mvp', /\bmvp\b|must|now|v0/i], ['v1', /\bv1\b|next|1\.0/i], ['later', /later|future|v2|senere|seinere/i], ['out', /out|not|ikke|never|excluded|utenfor/i]];
-export const phaseOf = (s) => (PHASES.find(([, re]) => re.test(s || '')) || [null])[0];
+// Phase names, the "must not fail" marker and column headings in the document's language come
+// from catalog/vocabulary.yaml (doc:), never from this file.
+const DOC = docWords();
+const C = DOC.columns;
+export const phaseOf = (s) => (['mvp', 'v1', 'later', 'out'].find((k) => DOC.phase[k].test(s || '')) || null);
 const list = (s) => String(s || '').split(/[,;]|\s\/\s/).map((x) => x.trim()).filter(Boolean);
 
 /** "1. **checkout** (must not fail, during, leads to track-order): Cart → Pay → Confirm" */
@@ -28,7 +32,7 @@ export function parseJourneys(md) {
     out.push({
       id: m[1].trim().toLowerCase().replace(/\s+/g, '-'),
       title: m[1].trim(),
-      critical: /must not fail|critical|kritisk/.test(flags),
+      critical: DOC.critical.test(flags),
       stage: (flags.match(/\b(before|during|after|setup|routine)\b/) || [])[1] || null,
       leads_to: (flags.match(/leads to ([\w-]+)/) || [])[1] || null,
       steps: m[3].split(/\s*(?:→|->|>)\s*/).map((s) => s.replace(/\[[^\]]*\]/g, '').trim()).filter(Boolean),
@@ -40,7 +44,7 @@ export function parseJourneys(md) {
 export function parseConceptModel(md) {
   const text = section(md, 'Concept model');
   const rows = parseTable(text);
-  if (rows.length) return rows.map((r) => ({ object: col(r, 'object', 'objekt', 'concept'), relations: list(col(r, 'relat', 'has', 'har')), actions: list(col(r, 'action', 'cta', 'handling')), attributes: list(col(r, 'attrib')) })).filter((o) => o.object);
+  if (rows.length) return rows.map((r) => ({ object: col(r, ...C.object), relations: list(col(r, ...C.relations)), actions: list(col(r, 'action', 'cta', 'handling')), attributes: list(col(r, 'attrib')) })).filter((o) => o.object);
   return stripComments(text).split('\n').map((l) => l.match(/^\s*[-*]\s+\*{0,2}([^*:]+)\*{0,2}\s*:\s*(.+)$/)).filter(Boolean).map((m) => ({ object: m[1].trim(), relations: list(m[2]), actions: [], attributes: [] }));
 }
 
@@ -51,8 +55,8 @@ export function parseScope(md) {
   const rows = parseTable(text);
   if (rows.length) {
     for (const r of rows) {
-      const ph = phaseOf(col(r, 'phase', 'fase', 'release'));
-      if (ph) scope[ph].push(...list(col(r, 'include', 'feature', 'items', 'what', 'innhold')));
+      const ph = phaseOf(col(r, ...C.phase));
+      if (ph) scope[ph].push(...list(col(r, ...C.include)));
     }
     return scope;
   }
@@ -69,13 +73,13 @@ export function parseScope(md) {
 /** | Feature | Problem part | Key task | Phase | Seen as | */
 export function parseFeatureMap(md) {
   return parseTable(section(md, 'Feature map')).map((r) => {
-    const feature = col(r, 'feature', 'funksjon');
+    const feature = col(r, ...C.feature);
     return {
       feature,
       problem: col(r, 'problem'),
-      task: col(r, 'task', 'oppgave'),
-      phase: phaseOf(col(r, 'phase', 'fase')),
-      seenAs: [...new Set([feature, ...list(col(r, 'seen', 'label', 'vises'))].filter(Boolean))],
+      task: col(r, ...C.task),
+      phase: phaseOf(col(r, ...C.phase)),
+      seenAs: [...new Set([feature, ...list(col(r, ...C.seen))].filter(Boolean))],
     };
   }).filter((f) => f.feature);
 }
@@ -95,11 +99,11 @@ export function parseKeyTasks(md) {
     // "1. **Name** (must not fail): story" or a plain "1. Story (must not fail)".
     const bold = line.match(/^\s*(\d+)[.)]\s+\*\*([^*]+)\*\*\s*(?:\(([^)]*)\))?/);
     const plain = !bold && line.match(/^\s*(\d+)[.)]\s+(\S.*)$/);
-    if (bold) out.push({ id: `T${bold[1]}`, name: bold[2].trim(), critical: /must not fail|critical/i.test(bold[3] || '') });
+    if (bold) out.push({ id: `T${bold[1]}`, name: bold[2].trim(), critical: DOC.critical.test(bold[3] || '') });
     else if (plain) {
       const text = plain[2].replace(/[*_`]/g, '').trim();
       const name = text.replace(/\s*\((?:[^)]*)\)\s*/g, ' ').split(/:\s|\s[—–]\s/)[0].trim().slice(0, 80);
-      out.push({ id: `T${plain[1]}`, name: name || text.slice(0, 80), critical: /\((?:[^)]*\b)?(?:must not fail|critical)\b[^)]*\)/i.test(text) });
+      out.push({ id: `T${plain[1]}`, name: name || text.slice(0, 80), critical: (text.match(/\(([^)]*)\)/g) || []).some((p) => DOC.critical.test(p)) });
     }
   }
   return out;

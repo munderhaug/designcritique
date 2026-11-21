@@ -15,7 +15,17 @@ export function findPreviousRun(runDir) {
   return candidates.length ? path.join(parent, candidates[candidates.length - 1]) : null;
 }
 
-const words = (s) => new Set(String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2));
+// Words in any script. Scripts written without spaces (Chinese, Japanese, Thai) are compared by
+// character pairs, since a title there is one unbroken "word".
+const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+const words = (s) => {
+  const out = new Set();
+  for (const w of String(s || '').toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N} ]+/gu, ' ').split(/\s+/)) {
+    if (UNSPACED.test(w)) { const ch = [...w]; if (ch.length === 1) out.add(w); for (let i = 0; i < ch.length - 1; i++) out.add(ch[i] + ch[i + 1]); }
+    else if (w.length > 2) out.add(w);
+  }
+  return out;
+};
 export function similarity(a, b) {
   const A = words(a); const B = words(b);
   if (!A.size || !B.size) return 0;

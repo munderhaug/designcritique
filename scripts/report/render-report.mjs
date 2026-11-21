@@ -32,6 +32,7 @@ const notes = [
 const warnings = [...(manifest.warnings || [])];
 
 const SEV = ['P0', 'P1', 'P2', 'P3'];
+const STANCES = { hold: 'holds its position', concede: 'concedes', revise: 'revises' };
 // Long evidence (every overlap on every variant, hundreds of screen names) is cut in the report;
 // findings.json keeps it whole.
 const MAX_LINES = 8;
@@ -72,6 +73,9 @@ function validCriticFinding(f, file) {
 
 const all = checkFindings.map((f) => ({ ...f }));
 let frameCheck = null;
+const frameChecks = []; // every critic's judgement of fit, with the assumptions it rested on
+const challenges = []; // questions and objections for the designer; never gated
+const notExamined = [];
 const tasks = [];
 const strengths = [];
 const comparisons = [];
@@ -100,6 +104,9 @@ for (const { file, data } of critics) {
     });
   }
   if (data.frame_check && !frameCheck) frameCheck = data.frame_check;
+  if (data.frame_check) frameChecks.push({ ...data.frame_check, source });
+  for (const c of data.challenges || []) if (c?.claim && c?.question) challenges.push({ ...c, source });
+  for (const x of data.not_examined || []) notExamined.push({ text: x, source });
   if (typeof data.frame_check?.score === 'number') overallScores.push({ source, score: data.frame_check.score });
   for (const t of data.tasks || []) tasks.push({ ...t, source, finding_ids: undefined, steps: (t.steps || []).map((s) => ({ ...s, finding_ids: (s.finding_ids || []).map((id) => `${source}-${id}`.replace(new RegExp(`^${source}-${source}-`), `${source}-`)) })) });
   for (const s of data.strengths || []) strengths.push({ ...s, source });
@@ -139,6 +146,8 @@ const framing = {
   problem: firstSection('Problem', 'Product Purpose'),
   users: firstSection('Users'),
   context: firstSection('Context of use', 'Operating Context'),
+  purpose: firstSection('Product Purpose'),
+  success: firstSection('Success Criteria'),
   tasks: firstSection('Key tasks'),
   assumptions: assumptionsOf(framingText),
 };
@@ -201,18 +210,30 @@ if (gateCfg.target_score != null && tasksText && !keyTasks.length && !unfilledSe
 }
 for (const r of incomplete) warnings.push(r);
 
+// ---------- the cold reading, and your answers to earlier challenges ----------
+const coldReading = readJson(path.join(runDir, 'blind', 'reading.json'), null);
+challenges.forEach((c, i) => { c.n = `C${i + 1}`; });
+const same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+for (const c of challenges) {
+  const d = decisions.find((x) => x.kind === 'challenge' && same(x.claim, c.claim));
+  if (d) c.answer = { text: d.answer, date: d.date, by: d.by || null };
+}
+
 const gate = evaluateGate({ findings, tasks, critics: critics.map((c) => c.data.critic || c.file), journeys: journeysJudged, coverage: coverageData, criticalJourneys, keyTasks, incomplete }, gateCfg);
 
 const merged = {
   keyTasks,
   generatedAt: new Date().toISOString(),
   run: runDir,
-  framing: { ...framing, present: !!framingText, frameCheck },
+  framing: { ...framing, present: !!framingText, frameCheck, frameChecks },
+  basis: 'Inspection by model reviewers and deterministic checks. Nothing here was tested with users.',
+  coldReading, challenges, notExamined, incomplete,
   tasks, findings, strengths, comparisons, counts, stack,
   scores: { tasks: gate.scores, overall: overallScores },
   taste: { references: manifest.taste || [] },
-  gate: { pass: gate.pass, reasons: gate.reasons, ...gate.gate },
-  decided: decided.map(({ id, screen, rule, severity, title, source, decision }) => ({ id, screen, rule, severity, title, source, decision: decision.decision, newSeverity: decision.severity, reason: decision.reason })),
+  gate: { pass: gate.pass, off: gate.off, reasons: gate.reasons, ...gate.gate },
+  decided: decided.map(({ id, screen, screens, rule, severity, title, source, evidence, recommendation, decision }) => ({ id, screen, screens, rule, severity, title, source, evidence, recommendation, decision: decision.decision, newSeverity: decision.severity, reason: decision.reason, discussion: decision.discussion })),
+  agreed: findings.filter((f) => f.decision && ['accept', 'discussed'].includes(f.decision.decision)).map((f) => ({ id: f.id, n: f.n, title: f.title, decision: f.decision.decision, reason: f.decision.reason })),
   decisionsFile: decisions.length ? decisionsPath(manifest.baseDir) : null,
   review: review ? { coverage: coverageData, journeys: journeysRun, journeysJudged, criticalJourneys, proposals, consistency: consistencyInv, graph: !!graph, journeyScores: gate.journeyScores } : null,
   compare: comparison && { base: comparison.base, fixed: comparison.fixed.length, new: comparison.introduced.length, stillOpen: comparison.persisting.length, notRechecked: comparison.notRechecked.length },
@@ -229,7 +250,10 @@ writeJson(path.join(runDir, 'findings.json'), merged);
 const L = [];
 const screenTitle = (id) => (id === '*' ? 'All screens' : manifest.screens.find((s) => s.id === id)?.title || id);
 L.push(`# Design critique: ${framing.title}`, '', `${new Date().toISOString().slice(0, 10)} · ${merged.coverage.screens} screens · ${merged.coverage.renders} renders · critics: ${merged.coverage.critics.join(', ') || 'none yet (checks only)'}`, '');
-L.push(`**Gate: ${gate.pass ? 'passed' : 'not passed'}** (fail on ${gate.gate.fail_on}, target score ${gate.gate.target_score ?? 'none'})${gate.pass ? '' : `: ${gate.reasons.join('; ')}`}.`, '');
+L.push(gate.off
+  ? `**Gate: off.**${gate.reasons.length ? ` Would have counted: ${gate.reasons.join('; ')}.` : ''}`
+  : `**Gate: ${gate.pass ? 'passed' : 'not passed'}** (fail on ${gate.gate.fail_on}, target score ${gate.gate.target_score ?? 'none'})${gate.pass ? '' : `: ${gate.reasons.join('; ')}`}.`, '');
+L.push(`_${merged.basis}_`, '');
 L.push('## The problem', '');
 if (!framingText) L.push('_No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first._', '');
 else {
@@ -237,12 +261,21 @@ else {
   if (framing.problem) L.push(framing.problem, '');
   if (framing.users) L.push('**Users**', '', framing.users, '');
   if (framing.tasks) L.push('**Key tasks**', '', framing.tasks, '');
+  if (framing.context) L.push('**Context of use**', '', framing.context, '');
+  if (framing.success) L.push('**Success criteria**', '', framing.success, '');
   if (framing.assumptions.length) L.push('**Open assumptions**', '', ...framing.assumptions.map((a) => `- ${a}`), '');
 }
-if (frameCheck) L.push('## Fit to the problem', '', `**${frameCheck.fit}**: ${frameCheck.summary || ''}`, '');
+L.push(...sparring().md);
+if (frameChecks.length) {
+  L.push('## Fit to the problem', '');
+  for (const fc of frameChecks) {
+    L.push(`- **${fc.fit || 'unknown'}**${typeof fc.score === 'number' ? ` ${fc.score}/10` : ''} (${fc.source}): ${md(fc.summary || '')}${fc.assumptions_relied_on?.length ? ` _Rests on: ${fc.assumptions_relied_on.map(md).join('; ')}_` : ''}`);
+  }
+  L.push('');
+}
 if (tasks.length) {
-  L.push('## Key tasks', '', '| Task | Verdict | Score | Why | Critic |', '|---|---|---|---|---|');
-  for (const t of tasks) L.push(`| ${t.id ? `${t.id} ` : ''}${md(t.task)} | ${t.verdict} | ${typeof t.score === 'number' ? `${t.score}/10${t.coverage === 'partial' ? ' (partial view, not gated)' : ''}` : '–'} | ${md(t.summary || '')} | ${t.source} |`);
+  L.push('## Key tasks', '', '| Task | Verdict | Score | Effective / efficient / satisfying | Why | Critic |', '|---|---|---|---|---|---|');
+  for (const t of tasks) L.push(`| ${t.id ? `${t.id} ` : ''}${md(t.task)} | ${t.verdict} | ${typeof t.score === 'number' ? `${t.score}/10${t.coverage === 'partial' ? ' (partial view, not gated)' : ''}` : '–'} | ${subscoresOf(t)} | ${md(t.summary || '')} | ${t.source} |`);
   L.push('');
   if (overallScores.length) L.push(`Overall: ${overallScores.map((o) => `${o.score}/10 (${o.source})`).join(', ')}. The gate uses the lowest task score.`, '');
 }
@@ -262,11 +295,13 @@ for (const sev of SEV) {
     L.push(`- Evidence: ${md(capLines(f.evidence)).replace(/\n/g, '; ')}`);
     if (f.impact) L.push(`- Impact: ${md(f.impact)}`);
     L.push(`- Fix: ${md(f.recommendation)}`);
-    for (const a of f.also || []) L.push(`- Also raised by ${a.source} (${a.severity}): ${md(a.title)}${a.evidence ? `. ${md(capLines(a.evidence)).replace(/\n/g, '; ')}` : ''}`);
+    if (f.alternatives?.length) L.push(`- Other ways: ${f.alternatives.map(md).join('; ')}`);
+    for (const x of f.decision?.discussion || []) L.push(`- ${x.stance ? `${x.by} (${STANCES[x.stance] || x.stance})` : `You (${x.by})`}: ${md(x.text)}`);
+    for (const a of f.also || []) L.push(`- Also raised by ${a.source} (${a.severity}): ${md(a.title)}${a.evidence ? `. ${md(capLines(a.evidence)).replace(/\n/g, '; ')}` : ''}${a.recommendation ? ` Its fix: ${md(a.recommendation)}` : ''}`);
     L.push('');
   }
 }
-if (strengths.length) L.push('## What works', '', ...strengths.map((s) => `- ${md(s.text)}${s.screen && s.screen !== '*' ? ` (${screenTitle(s.screen)})` : ''}${s.basis?.length ? ` · ${s.basis.join(', ')}` : ''}`), '');
+if (strengths.length) L.push('## What works', '', ...strengths.map((s) => `- ${md(s.text)} _(${s.source})_${s.screen && s.screen !== '*' ? ` (${screenTitle(s.screen)})` : ''}${s.basis?.length ? ` · ${s.basis.join(', ')}` : ''}`), '');
 if (manifest.taste?.length) {
   L.push('## The direction you chose', '', `${manifest.taste.length} reference image(s) in taste/. The critics saw them as the intended direction; closeness isn't scored, and it never excuses a usability problem.`, '');
 }
@@ -335,10 +370,11 @@ if (review) {
 }
 if (decided.length) {
   L.push('## Decided by you', '', `From ${DECISIONS_REL}. Dismissed findings are left out of the counts and the gate.`, '');
-  for (const f of decided) L.push(`- ${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${f.severity} → ${f.decision.severity}`}: ${md(f.title)} (${screenTitle(f.screen)}, ${f.rule}, ${f.source})${f.decision.reason ? `. ${md(f.decision.reason)}` : ''}`);
+  for (const f of decided) L.push(`- ${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${f.severity} → ${f.decision.severity}`}: ${md(f.title)} (${screenTitle(f.screen)}, ${f.rule}, ${f.source})${f.decision.reason ? `. ${md(f.decision.reason)}` : ''}${(f.decision.discussion || []).filter((x) => x.stance).map((x) => ` ${x.by} ${STANCES[x.stance] || x.stance}: ${md(x.text)}`).join('')}`);
   L.push('');
 }
 L.push(stackMarkdown(stack), '');
+if (notExamined.length) L.push('## Not examined', '', 'What the critics say they did not or could not look at; silence on these is not approval.', '', ...notExamined.map((x) => `- ${md(x.text)} _(${x.source})_`), '');
 if (notes.length || warnings.length) L.push('## Notes', '', ...notes.map((n) => `- ${n.screen}: ${n.note}`), ...warnings.map((w) => `- Warning: ${w}`), '');
 L.push('---', 'Principle IDs refer to the designcritique principles library (skills/principles). Severity follows Nielsen\'s frequency, impact and persistence, weighted by task criticality.');
 fs.writeFileSync(path.join(runDir, 'report.md'), L.join('\n') + '\n');
@@ -351,6 +387,34 @@ function whereOf(f) {
   return `${screenTitle(f.screen)}${f.platform ? ` (${f.platform})` : ''}`;
 }
 function criticsOf(f) { return [...new Set((f.raisedBy || []).filter((s) => s !== 'check' && s !== 'motion' && !String(s).startsWith('detector:')))]; }
+function subscoresOf(t) {
+  const x = t.subscores;
+  return x && [x.effectiveness, x.efficiency, x.satisfaction].some((v) => typeof v === 'number') ? [x.effectiveness, x.efficiency, x.satisfaction].map((v) => (typeof v === 'number' ? v : '–')).join(' / ') : '';
+}
+// The sparring part of the report, written once for both formats: what a stranger took the
+// screens for beside what the frame says, and the critics' questions for the designer.
+function sparring() {
+  const out = { md: [], html: '' };
+  const KIND = { 'first-read': 'First read', assumption: 'Assumption', premortem: 'Pre-mortem', alternative: 'Alternative', 'blind-spot': 'Blind spot' };
+  if (coldReading) {
+    const rows = [['What it is', coldReading.product, framing.purpose], ['Who it is for', coldReading.audience, framing.users], ['The problem it solves', coldReading.problem, framing.problem], ['What you can do', (coldReading.tasks || []).join('; '), framing.tasks]];
+    out.md.push('## Read cold', '', 'What a reviewer who was told nothing took the screens for, beside what PRODUCT.md says. A difference is a question, not a defect: the screens may not say it, or the frame may not be what was built.', '', '| | Read cold | Your frame |', '|---|---|---|', ...rows.map(([k, a, b]) => `| ${k} | ${md(String(a || '–')).replace(/\n+/g, ' ')} | ${md(String(b || '–')).replace(/\n+/g, ' ')} |`), '');
+    if (coldReading.unclear?.length) out.md.push(`Could not work out: ${coldReading.unclear.map(md).join('; ')}.`, '');
+    out.html += `<h2>Read cold</h2><p class="sub">What a reviewer who was told nothing took the screens for, beside what PRODUCT.md says. A difference is a question, not a defect: the screens may not say it, or the frame may not be what was built.${coldReading.confidence ? ` Reader's confidence: ${esc(coldReading.confidence)}.` : ''}</p><table><tr><th></th><th>Read cold</th><th>Your frame</th></tr>${rows.map(([k, a, b]) => `<tr><th>${k}</th><td>${mdInline(String(a || '–'))}</td><td>${mdInline(String(b || '–'))}</td></tr>`).join('')}</table>${coldReading.unclear?.length ? `<p class="sub">Could not work out: ${coldReading.unclear.map(esc).join('; ')}.</p>` : ''}`;
+  }
+  if (challenges.length) {
+    out.md.push('## Questions for you', '', 'Objections and open questions from the critics, about the frame, the concept or a choice. They are positions to argue with, not defects: none counts in the gate. Answer one with `/designcritique:decide C1 "…"`.', '');
+    for (const c of challenges) {
+      out.md.push(`**${c.n}. ${md(c.claim)}** _(${KIND[c.kind] || c.kind}; ${c.source}${c.confidence ? `; ${c.confidence} confidence` : ''}${c.basis?.length ? `; ${c.basis.join(', ')}` : ''})_  `, `${md(c.question)}`, '');
+      if (c.why) out.md.push(`- Why: ${md(c.why)}`);
+      if (c.if_wrong) out.md.push(`- If so: ${md(c.if_wrong)}`);
+      if (c.answer) out.md.push(`- Your answer (${c.answer.date || ''}): ${md(c.answer.text)}`);
+      out.md.push('');
+    }
+    out.html += `<h2>Questions for you</h2><p class="sub">Objections and open questions from the critics, about the frame, the concept or a choice. They are positions to argue with, not defects: none counts in the gate.</p><ol class="plain">${challenges.map((c) => `<li value="${c.n.slice(1)}"><strong>${esc(c.n)}. ${esc(c.claim)}</strong> <span class="meta">${esc(KIND[c.kind] || c.kind)} · ${esc(c.source)}${c.confidence ? ` · ${esc(c.confidence)} confidence` : ''}${c.basis?.length ? ` · ${esc(c.basis.join(', '))}` : ''}</span><br>${esc(c.question)}${c.why ? `<br><span class="sub">Why: ${esc(c.why)}</span>` : ''}${c.if_wrong ? `<br><span class="sub">If so: ${esc(c.if_wrong)}</span>` : ''}${c.answer ? `<br><em>Your answer:</em> ${esc(c.answer.text)}` : ''}</li>`).join('')}</ol>`;
+  }
+  return out;
+}
 function capLines(s) {
   const lines = String(s ?? '').split('\n').map((l) => (l.length > MAX_LINE ? `${l.slice(0, MAX_LINE)}…` : l));
   return lines.length > MAX_LINES ? [...lines.slice(0, MAX_LINES), `…and ${lines.length - MAX_LINES} more (findings.json has them all)`].join('\n') : lines.join('\n');
@@ -404,8 +468,8 @@ function reviewHtml() {
 function findingItem(f, anchor) {
   const badge = f.agreement === 'critics-agree' ? ` <span class="agree">${criticsOf(f).length} critics</span>` : f.agreement === 'check-and-critic' ? ' <span class="agree">check + critic</span>' : f.agreement === 'rendered-and-source' ? ' <span class="agree">rendered + source</span>' : '';
   const where = f.screens ? `<div class="meta">On ${f.screens.length} screens: ${esc(capList(f.screens.map(screenTitle)))}</div>` : '';
-  const also = (f.also || []).map((a) => `<p><em>Also raised by ${esc(a.source)} (${esc(a.severity)}):</em> ${esc(a.title)}${a.evidence ? `. ${mdInline(capLines(a.evidence))}` : ''}</p>`).join('');
-  return `<li${anchor ? ` id="${anchor}"` : ''} value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}${badge}<div class="meta">${esc(f.basis.join(', '))} · ${esc((f.raisedBy || [f.source]).join(' + '))}${f.platform && !f.screens ? ` · ${esc(f.platform)}` : ''}</div>${where}<details><summary>Evidence and fix</summary><p>${mdInline(capLines(f.evidence))}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p>${also}</details></li>`;
+  const also = (f.also || []).map((a) => `<p><em>Also raised by ${esc(a.source)} (${esc(a.severity)}):</em> ${esc(a.title)}${a.evidence ? `. ${mdInline(capLines(a.evidence))}` : ''}${a.recommendation ? ` <em>Its fix:</em> ${esc(a.recommendation)}` : ''}</p>`).join('');
+  return `<li${anchor ? ` id="${anchor}"` : ''} value="${f.n}"><span class="sev sev-${f.severity}">${f.severity}</span> <strong>${esc(f.title)}</strong>${f.status === 'new' ? ' <span class="new">new</span>' : ''}${badge}<div class="meta">${esc(f.basis.join(', '))} · ${esc((f.raisedBy || [f.source]).join(' + '))}${f.platform && !f.screens ? ` · ${esc(f.platform)}` : ''}</div>${where}<details><summary>Evidence and fix</summary><p>${mdInline(capLines(f.evidence))}</p>${f.impact ? `<p><em>Impact:</em> ${mdInline(f.impact)}</p>` : ''}<p><em>Fix:</em> ${mdInline(f.recommendation)}</p>${f.alternatives?.length ? `<p><em>Other ways:</em> ${f.alternatives.map(esc).join('; ')}</p>` : ''}${also}${(f.decision?.discussion || []).map((x) => `<p><em>${x.stance ? `${esc(x.by)} (${esc(STANCES[x.stance] || x.stance)})` : `You`}:</em> ${esc(x.text)}</p>`).join('')}</details></li>`;
 }
 
 // A finding on many screens is written out once (Across screens); each screen links to it.
@@ -511,17 +575,20 @@ table.matrix td, table.matrix th { text-align:center; } table.matrix td:first-ch
 </style></head><body><main>
 <h1>Design critique: ${esc(framing.title)}</h1>
 <p class="sub">${esc(merged.generatedAt.slice(0, 10))} · ${merged.coverage.screens} screens · ${merged.coverage.renders} renders · critics: ${esc(merged.coverage.critics.join(', ') || 'none yet (checks only)')}</p>
-<p class="gate ${gate.pass ? 'pass' : 'fail'}"><strong>Gate: ${gate.pass ? 'passed' : 'not passed'}</strong> · fail on ${esc(gate.gate.fail_on)} · target score ${esc(gate.gate.target_score ?? 'none')}${gate.pass ? '' : `<br>${gate.reasons.map(esc).join('<br>')}`}</p>
+<p class="gate ${gate.pass ? 'pass' : 'fail'}">${gate.off ? `<strong>Gate: off</strong>${gate.reasons.length ? `<br><span class="sub">Would have counted:</span><br>${gate.reasons.map(esc).join('<br>')}` : ''}` : `<strong>Gate: ${gate.pass ? 'passed' : 'not passed'}</strong> · fail on ${esc(gate.gate.fail_on)} · target score ${esc(gate.gate.target_score ?? 'none')}${gate.pass ? '' : `<br>${gate.reasons.map(esc).join('<br>')}`}`}</p>
+<p class="sub">${esc(merged.basis)}</p>
 <h2>The problem</h2>
 <div class="frame-box">${framingText ? `${unfilled.length ? `<p><strong>${esc(unfilledMessage(unfilled))}</strong></p>` : ''}${framing.problem ? `<p>${mdInline(framing.problem)}</p>` : ''}${framing.users ? `<p><strong>Users</strong><br>${mdInline(framing.users)}</p>` : ''}${framing.tasks ? `<p><strong>Key tasks</strong><br>${mdInline(framing.tasks)}</p>` : ''}${framing.assumptions.length ? `<p><strong>Open assumptions</strong></p><ul class="plain">${framing.assumptions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}` : '<p>No PRODUCT.md was provided, so task fit could not be judged. Run the frame skill first.</p>'}
-${frameCheck ? `<p><strong>Fit to the problem: ${esc(frameCheck.fit)}.</strong> ${esc(frameCheck.summary || '')}</p>` : ''}</div>
-${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>Score</th><th>Why</th><th>Critic</th></tr>${tasks.map((t) => `<tr><td>${t.id ? `${esc(t.id)} ` : ''}${esc(t.task)}</td><td class="verdict v-${esc(t.verdict)}">${esc(t.verdict)}</td><td>${typeof t.score === 'number' ? `${esc(t.score)}/10${t.coverage === 'partial' ? ' <span class="meta">(partial view, not gated)</span>' : ''}` : '–'}</td><td>${esc(t.summary || '')}</td><td class="meta">${esc(t.source)}</td></tr>`).join('')}</table>` : ''}
+${framing.context ? `<p><strong>Context of use</strong><br>${mdInline(framing.context)}</p>` : ''}${framing.success ? `<p><strong>Success criteria</strong><br>${mdInline(framing.success)}</p>` : ''}</div>
+${sparring().html}
+${frameChecks.length ? `<h2>Fit to the problem</h2><ul class="plain">${frameChecks.map((fc) => `<li><strong>${esc(fc.fit || 'unknown')}</strong>${typeof fc.score === 'number' ? ` ${esc(fc.score)}/10` : ''} <span class="meta">${esc(fc.source)}</span><br>${esc(fc.summary || '')}${fc.assumptions_relied_on?.length ? `<br><span class="sub">Rests on: ${fc.assumptions_relied_on.map(esc).join('; ')}</span>` : ''}</li>`).join('')}</ul>` : ''}
+${tasks.length ? `<h2>Key tasks</h2><table><tr><th>Task</th><th>Verdict</th><th>Score</th><th title="Effectiveness / efficiency / satisfaction, each 0-10, assessed before the score">E / E / S</th><th>Why</th><th>Critic</th></tr>${tasks.map((t) => `<tr><td>${t.id ? `${esc(t.id)} ` : ''}${esc(t.task)}</td><td class="verdict v-${esc(t.verdict)}">${esc(t.verdict)}</td><td>${typeof t.score === 'number' ? `${esc(t.score)}/10${t.coverage === 'partial' ? ' <span class="meta">(partial view, not gated)</span>' : ''}` : '–'}</td><td class="meta">${esc(subscoresOf(t))}</td><td>${esc(t.summary || '')}</td><td class="meta">${esc(t.source)}</td></tr>`).join('')}</table>` : ''}
 ${comparison ? `<h2>Since last run</h2><div class="frame-box"><p>Compared with ${esc(path.basename(comparison.base))}: <strong>${comparison.fixed.length} fixed</strong>, <strong>${comparison.introduced.length} new</strong>, ${comparison.persisting.length} still open${comparison.notRechecked.length ? `, ${comparison.notRechecked.length} on screens not in this run` : ''}.</p>${comparison.fixed.length ? `<ul class="plain">${comparison.fixed.map((f) => `<li><s>${esc(f.title)}</s> <span class="meta">${esc(f.severity)} · ${esc(screenTitle(f.screen))}</span></li>`).join('')}</ul>` : ''}</div>` : ''}
 <h2>Findings</h2>
 <p class="counts">${SEV.map((s) => `<span><span class="sev sev-${s}">${s}</span> ${counts[s]}</span>`).join('')}</p>
 ${global.length ? `<div class="screen"><h3>Across screens</h3><ol class="flist">${global.map((f) => `${findingItem(f, `f${f.n}`)}`).join('')}</ol></div>` : ''}
 ${manifest.screens.map(screenCard).join('\n')}
-${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)}${s.basis?.length ? ` <span class="meta">${esc(s.basis.join(', '))}</span>` : ''}</li>`).join('')}</ul>` : ''}
+${strengths.length ? `<h2>What works</h2><ul class="plain">${strengths.map((s) => `<li>${esc(s.text)} <span class="meta">${esc(s.source)}${s.basis?.length ? ` · ${esc(s.basis.join(', '))}` : ''}</span></li>`).join('')}</ul>` : ''}
 ${manifest.taste?.length ? `<h2>The direction you chose</h2><div class="frame-box"><div class="thumbs">${manifest.taste.map((t) => `<figure>${link(t, `<img src="${img(t)}" alt="reference">`)}</figure>`).join('')}</div><p class="sub">The critics saw these as the intended direction. Closeness isn't scored, and it never excuses a usability problem.</p></div>` : ''}
 ${review ? reviewHtml() : ''}
 ${decided.length ? `<h2>Decided by you</h2><ul class="plain">${decided.map((f) => `<li>${f.decision.decision === 'dismiss' ? 'Dismissed' : `Re-rated ${esc(f.severity)} → ${esc(f.decision.severity)}`}: ${esc(f.title)} <span class="meta">${esc(screenTitle(f.screen))} · ${esc(f.rule)} · ${esc(f.source)}</span>${f.decision.reason ? `<br><span class="sub">${esc(f.decision.reason)}</span>` : ''}</li>`).join('')}</ul>` : ''}
@@ -531,13 +598,14 @@ ${comparisons.length ? `<h2>Variant comparison</h2><ul class="plain">${compariso
 ${stack.notes.map((n) => `<p class="sub"><em>${esc(n)}</em></p>`).join('')}
 ${stack.steps.map((st, i) => `<div class="screen"><h3>${i + 1}. ${esc(st.title)}</h3><ul class="plain">${st.picks.map((p) => `<li><strong>${esc(p.name)}</strong> <span class="meta">${esc(p.by)} · ${esc(p.trust)}${stack.decided || st.role === 'prototype' ? '' : ` · for ${esc(p.stacks.join(', '))}`}${p.group && st.picks.filter((x) => x.group === p.group).length > 1 ? ' · alternative' : ''}</span><br>${esc(p.why)}${p.because ? ` <em>${esc(p.because)}.</em>` : ''}<br><code>${esc(p.install)}</code> · ${p.sources.map((u) => `<a href="${esc(u)}">source</a>`).join(' ')}</li>`).join('')}</ul></div>`).join('')}
 ${stack.watch.length ? `<p class="sub">Watched, not recommended yet: ${stack.watch.map((w) => `${esc(w.name)}: ${esc(w.why_not_yet)}`).join(' ')}</p>` : ''}
+${notExamined.length ? `<h2>Not examined</h2><p class="sub">What the critics say they did not or could not look at; silence on these is not approval.</p><ul class="plain">${notExamined.map((x) => `<li>${esc(x.text)} <span class="meta">${esc(x.source)}</span></li>`).join('')}</ul>` : ''}
 ${notes.length || warnings.length ? `<h2>Notes</h2><ul class="plain">${notes.map((n) => `<li>${esc(n.screen)}: ${esc(n.note)}</li>`).join('')}${warnings.map((w) => `<li>Warning: ${esc(w)}</li>`).join('')}</ul>` : ''}
 <p class="sub">Principle IDs refer to the designcritique principles library. Severity follows Nielsen's frequency, impact and persistence, weighted by task criticality.</p>
 </main></body></html>`;
 fs.writeFileSync(path.join(runDir, 'report.html'), html);
 const htmlMb = Buffer.byteLength(html) / 1e6;
 
-console.log(`Gate: ${gate.pass ? 'passed' : `not passed (${gate.reasons.join('; ')})`}`);
+console.log(`Gate: ${gate.off ? 'off' : gate.pass ? 'passed' : `not passed (${gate.reasons.join('; ')})`}`);
 console.log(`Report: ${findings.length} findings ${JSON.stringify(counts)} from ${['checks', ...merged.coverage.critics].join(', ')}`);
 console.log(`Wrote ${path.join(runDir, 'report.md')}`);
 console.log(`Wrote ${path.join(runDir, 'report.html')} (${htmlMb.toFixed(1)} MB${inline.size ? `, ${inline.size} screenshots inlined` : manifest.screens.length ? '; screenshots are linked from the run folder: add --inline-thumbs for one file to send' : ''})`);

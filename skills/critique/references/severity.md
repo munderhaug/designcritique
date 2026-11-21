@@ -14,6 +14,10 @@ of the affected task in `PRODUCT.md`.
 
 Rules:
 - The same problem on a must-not-fail task goes up one level; on an out-of-scope task, down one.
-- When unsure between two levels, pick the lower and say why in `impact`.
-- Accessibility failures that block a group of users are never below P1.
+- When unsure between two levels, pick the lower and say why in `impact`. When unsure whether
+  it is a problem at all, it is a challenge (a question for the designer), not a low finding.
+- A task that completes wrongly and can't be undone (the wrong amount, the wrong person, data
+  exposed) counts as stopping it: P0 on a must-not-fail task.
+- Accessibility failures that shut a group of users out of a must-not-fail task are P0; out of
+  any key task, never below P1.
 - Don't inflate. A report with ten P1s helps no one. If everything seems major, re-rank.

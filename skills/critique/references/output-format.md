@@ -1,7 +1,7 @@
 # Critic output format
 
-Critics reply with **one JSON object and nothing else**. The orchestrator saves it to
-`RUN_DIR/critique/<critic>.json`, and `render-report.mjs` validates and merges it.
+Critics reply with **one JSON object and nothing else**. The orchestrator saves it with
+`save-critique.mjs` to `RUN_DIR/critique/<name>.json`, and `render-report.mjs` validates and merges it.
 The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
 
 ```json
@@ -56,8 +56,8 @@ The JSON Schema is in `PLUGIN_ROOT/schemas/critic-output.schema.json`.
 
 Field rules:
 - `critic`: `anthropic-design` (design-reviewer agent), `impeccable` (converted Impeccable critique),
-  `ia`, `scope` or `system` (the review lenses), or `external-<name>` for an extra judge running
-  on another model or tool (critic-brief.md).
+  `ia`, `scope` or `system` (the review lenses), `frame` (the frame challenger), or
+  `external-<name>` for an extra judge running on another model or tool (critic-brief.md).
 - `method`: optional; what the critic actually used, e.g. `fallback: principles index` when the Anthropic design plugin isn't installed.
 - `frame_check` and `tasks`: the design-reviewer, Impeccable and external judges. Impeccable also
   puts its own heuristic scores in `frame_check.summary`. The lens reviewers return neither.
@@ -86,6 +86,28 @@ Field rules:
 - `impact`: which user, in which task, and how. Use the words of PRODUCT.md.
 - `confidence`: `low` when a static mockup can't show it (motion, real data, behaviour).
 - Up to 15 findings per critic per 8 screens, most severe first. Zero findings is a valid result for a good screen.
+
+## Beyond findings
+
+```json
+"challenges": [
+  { "id": "ad-c1", "kind": "alternative", "basis": ["FRAME-ALTERNATIVE"], "confidence": "medium",
+    "claim": "Paying could happen on the cart itself; the separate checkout screen adds a step.",
+    "why": "checkout__ios-standard__light.png repeats the cart's summary; only the pay button is new.",
+    "question": "What does the separate screen give the person paying that the cart can't?",
+    "if_wrong": null }
+],
+"not_examined": ["The error state after a declined card: no screen shows it."]
+```
+
+- `challenges`: questions and positions for the designer, about the frame, the concept or a
+  choice. Not defects: no `severity`, never in the gate. `kind` is `first-read`, `assumption`,
+  `premortem`, `alternative` or `blind-spot`; `basis` cites `FRAME-*` IDs. Use them for what you
+  can argue but not prove from the screens, instead of dropping it or dressing it as a finding.
+  At most five per critic (eight for the frame challenger, critic `frame`, which returns only these).
+- `findings[].alternatives`: one or two other ways to solve the finding, when a real one exists.
+  `recommendation` stays the one you would pick.
+- `not_examined`: what you did not or could not look at. Silence must not read as approval.
 
 ## Scores (0–10)
 
@@ -150,6 +172,7 @@ file there says what an ID means and its source.
 - `COPY-ACTION-LABEL` `COPY-CLEAR` `COPY-CONCISE` `COPY-ERROR` `COPY-PURPOSEFUL` `COPY-TONE`
 - `DS-AGENT-RULES` `DS-CONTRAST` `DS-ESSENTIALS` `DS-ROLES` `DS-SCALE`
 - `ETHICS-ASYMMETRY` `ETHICS-CONFIRMSHAMING` `ETHICS-FORCED` `ETHICS-NAGGING` `ETHICS-OBSTRUCTION` `ETHICS-PRESELECTED` `ETHICS-PRESSURE` `ETHICS-SNEAKING`
+- `FRAME-ALTERNATIVE` `FRAME-ASSUMPTION` `FRAME-EXCLUDED` `FRAME-FIRST-READ` `FRAME-PREMORTEM` `FRAME-PROBLEM`
 - `GESTALT-CONTINUITY` `GESTALT-FIGURE` `GESTALT-PROXIMITY` `GESTALT-REGION` `GESTALT-SIMILARITY`
 - `IA-DEPTH` `IA-DUPLICATE` `IA-LABEL` `IA-NAV-CONSISTENT` `IA-OBJECTS` `IA-ORPHAN` `IA-PLACEMENT`
 - `IOS-COLOR` `IOS-CONTROLS` `IOS-DESTRUCTIVE` `IOS-ICONS` `IOS-LAYOUT` `IOS-LISTS` `IOS-MATERIALS` `IOS-MODAL` `IOS-MOTION` `IOS-NAV-STACK` `IOS-NAV-TABBAR` `IOS-TARGET` `IOS-TYPE`

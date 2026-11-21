@@ -19,8 +19,14 @@
   lens (Impeccable, Anthropic's design and product-management plugins). Where none does, a lens
   brief in `skills/review/references/lenses/` may define the lens, but every check in it must
   cite a primary source (author, work, year) and every finding must cite a principle ID.
-  New ID families (`IA-*`, `SCOPE-*`, `JOURNEY-*`, `STATE-*`, `CONS-*`, `SPEC-*`) live in the
-  principles index with their sources. Don't invent methods without a source.
+  New ID families (`IA-*`, `SCOPE-*`, `JOURNEY-*`, `STATE-*`, `CONS-*`, `SPEC-*`, `COPY-*`,
+  `FRAME-*`) live in the principles index with their sources. Don't invent methods without a source.
+- The designer is the user: the plugin is their sparring partner, not only an auditor. Findings
+  are defects with evidence and a severity; challenges (`FRAME-*`) are questions and positions
+  for the designer to argue with, and never count in the gate. Keep the two apart.
+- Sequencing and bookkeeping belong in scripts (`scripts/run.mjs`, `scripts/report/briefs.mjs`):
+  the model spawns reviewers, talks with the designer and judges; it doesn't fill templates,
+  choose batches or name files by hand.
 - Prefer deterministic checks over another model reviewer when the question is measurable
   (graph structure, styles, terms, numbers). Reviewers judge what checks can't.
 - The gate, decisions and scores are plumbing around the critics, not critique methods: keep

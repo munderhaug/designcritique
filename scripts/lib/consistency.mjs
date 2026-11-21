@@ -5,6 +5,9 @@
 import { parseTable } from './product.mjs';
 import { parseColor, colorDistance } from './tokens.mjs';
 import { mentions } from './structure.mjs';
+import { docWords } from './vocabulary.mjs';
+
+const COLS = docWords().columns;
 
 const near = (a, b, d = 24) => { const x = parseColor(a); const y = parseColor(b); return !!(x && y && colorDistance(x, y) <= d); };
 
@@ -29,8 +32,13 @@ export function componentVariants(controls, accent) {
 /** Icons used with more than one meaning. controls: [{ screen, name, icon }] */
 export function iconMeanings(controls) {
   const byIcon = new Map();
+  // An icon shared by many differently named controls is decoration (a list row's chevron), not
+  // a symbol with a meaning: only icons used for a few names can be said to mean two things.
+  const uses = new Map();
+  for (const c of controls) if (c.icon && c.name) { const set = uses.get(c.icon) || new Set(); set.add(c.name.toLowerCase().trim()); uses.set(c.icon, set); }
   for (const c of controls) {
     if (!c.icon || !c.name) continue;
+    if (uses.get(c.icon).size > 3) continue;
     const e = byIcon.get(c.icon) || { icon: c.icon, names: new Map() };
     const key = c.name.toLowerCase().trim();
     const n = e.names.get(key) || { name: c.name, screens: new Set() };
@@ -51,8 +59,8 @@ export function parseGlossary(md) {
   for (const block of text.split(/\n(?=#{1,6}\s)/)) {
     for (const r of parseTable(block)) {
       const keys = Object.keys(r);
-      const termKey = keys.find((k) => /^(term|word|use|preferred|begrep|ord|bruk)/.test(k));
-      const avoidKey = keys.find((k) => /(avoid|instead|don.?t|not|unngå|ikke)/.test(k));
+      const termKey = keys.find((k) => COLS.term.some((w) => k.startsWith(w)));
+      const avoidKey = keys.find((k) => COLS.avoid.some((w) => k.includes(w)));
       if (!termKey || !avoidKey) continue;
       const avoid = r[avoidKey].split(/[,;/]/).map((x) => x.replace(/["“”]/g, '').trim()).filter((x) => x && x !== '-' && x !== '—');
       if (r[termKey] && avoid.length) out.push({ term: r[termKey], avoid });

@@ -6,7 +6,8 @@
 // can be cut off on the way back: give the agent's transcript (.jsonl) and the last reply in it
 // is used whole.
 //
-// Usage: node scripts/report/save-critique.mjs --run <RUN_DIR> --critic <name>
+// Usage: node scripts/report/save-critique.mjs --run <RUN_DIR> --blind [--from <file>]   (the cold reading)
+//        node scripts/report/save-critique.mjs --run <RUN_DIR> --critic <name>
 //          [--name <file name without .json>] [--coverage whole|partial] [--from <reply.txt|transcript.jsonl>]
 // Without --from, the reply is read from stdin. Exit 0 when valid, 1 when saved with errors.
 import fs from 'node:fs';
@@ -16,6 +17,22 @@ import { validateCritique, repairPrincipleIds, screensForCritiqueFile, keyTasksF
 import { extractJson, replyFromTranscript } from '../lib/extract-json.mjs';
 
 const args = parseArgs(process.argv.slice(2));
+// The cold reading has its own small shape and its own file.
+if (args.run && args.blind) {
+  const { validateReading } = await import('../lib/blind.mjs');
+  const src = args.from ? fs.readFileSync(path.resolve(args.from), 'utf8') : fs.readFileSync(0, 'utf8');
+  const isReading = (d) => typeof d.product === 'string';
+  const txt = /\.jsonl$/i.test(args.from || '') ? replyFromTranscript(src, isReading) : src;
+  const reading = extractJson(txt, isReading);
+  if (!reading) { console.error('No cold reading (a JSON object with "product") found in the reply.'); process.exit(2); }
+  const errs = validateReading(reading);
+  const out = path.join(path.resolve(args.run), 'blind', 'reading.json');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  writeJson(out, reading);
+  for (const e of errs) console.error(`error: ${e}`);
+  console.log(`Saved ${out}${errs.length ? `, ${errs.length} error(s)` : ', valid'}`);
+  process.exit(errs.length ? 1 : 0);
+}
 if (!args.run || !args.critic) {
   console.error('Usage: save-critique.mjs --run <RUN_DIR> --critic <name> [--name <file>] [--coverage whole|partial] [--from <file>]');
   process.exit(2);

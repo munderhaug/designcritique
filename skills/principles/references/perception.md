@@ -24,6 +24,12 @@ a new principle of perceptual grouping" (*Cognitive Psychology*, 1992).
 | `VIS-ISOLATION` | Von Restorff (isolation) effect: the item that differs is remembered and noticed | Use it for the one primary action. Several "different" items cancel each other out |
 | `VIS-MOTION` | Motion explains change: where something came from and went | Overlays that appear with no transition; closes slower or bouncier than opens; delayed dismissals; a different duration for every element |
 
-Source for the isolation effect: Hedwig von Restorff (1933). Motion: Material 3 motion guidance,
+Sources for hierarchy, colour and spacing: Lidwell, Holden & Butler, *Universal Principles of
+Design* (Rockport, 2003): the entries Hierarchy, Highlighting, Color, Alignment and Proximity;
+Ware, *Information Visualization: Perception for Design* (2nd ed., Morgan Kaufmann, 2004), on
+what the eye picks out first. For type: Bringhurst, *The Elements of Typographic Style* (Hartley
+& Marks, 1992), on measure, leading and scale.
+Source for the isolation effect: Hedwig von Restorff (1933), who measured recall of the item
+that differs; that it is also noticed first rests on Ware (above). Motion: Material 3 motion guidance,
 Apple HIG Motion, and the motion-token rules of transitions.dev (Jakub Antalik), which the
 transitions-agent scanner applies to HTML mockups.

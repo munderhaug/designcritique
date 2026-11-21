@@ -22,7 +22,13 @@ journey and system findings), `affected_screens` (screen ids from the brief), a 
 and `basis` from the principles index, `evidence` naming what you saw and where, and a concrete
 `recommendation`. Structural changes go in `move_to` and `moves`: they are proposals for the
 person, never edits. Calibrate as `severity.md` says; a finding without an affected user and
-task is taste, leave it out.
+task is taste, leave it out of the findings.
+
+**Beyond findings.** Put a concern about the concept or a choice that you can argue but not
+prove, or that is uncertain, in `challenges` (a position, your reasoning and a question for the
+designer, citing a `FRAME-*` ID; no severity, never gated; at most five). Put other ways to
+solve a finding in its `alternatives`, and what you did not or could not look at in
+`not_examined`.
 
 **Allowed values** (the validator rejects anything else):
 - `rule` and `basis`: only IDs in output-format.md's list of valid principle IDs. Never make one up.

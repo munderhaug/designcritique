@@ -10,8 +10,8 @@
   "properties": {
     "critic": {
       "type": "string",
-      "description": "anthropic-design, impeccable, the review lenses ia, scope and system, or external-<name> for an extra judge",
-      "pattern": "^(anthropic-design|impeccable|ia|scope|system|external-[a-z0-9-]+)$"
+      "description": "anthropic-design, impeccable, the review lenses ia, scope and system, frame (the frame challenger), or external-<name> for an extra judge",
+      "pattern": "^(anthropic-design|impeccable|ia|scope|system|frame|external-[a-z0-9-]+)$"
     },
     "frame_check": {
       "type": "object",
@@ -294,6 +294,13 @@
                 }
               }
             ]
+          },
+          "alternatives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Other ways to solve the same problem, for the designer to weigh; the recommendation is the one the critic would pick."
           }
         }
       }
@@ -517,6 +524,78 @@
           }
         }
       }
+    },
+    "challenges": {
+      "type": "array",
+      "description": "Questions and objections for the designer: about the frame, the concept or a design choice. Not defects: they have no severity and never count in the gate. Where an uncertain or concept-level concern goes instead of being dropped.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "claim",
+          "question"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "first-read",
+              "assumption",
+              "premortem",
+              "alternative",
+              "blind-spot"
+            ]
+          },
+          "claim": {
+            "type": "string",
+            "description": "What the critic thinks may be wrong or missing, as a position it will argue."
+          },
+          "why": {
+            "type": "string",
+            "description": "The reasoning and evidence: what in the frame, the cold reading or the screens leads to it."
+          },
+          "question": {
+            "type": "string",
+            "description": "The question the designer should answer."
+          },
+          "if_wrong": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What changes in the design if the claim holds."
+          },
+          "screen": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "basis": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        }
+      }
+    },
+    "not_examined": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What the critic did not or could not look at (states, variants, flows, behaviour a static screen can't show), so silence isn't read as approval."
     }
   }
 }

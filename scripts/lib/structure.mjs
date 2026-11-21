@@ -11,6 +11,8 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** Does the text show the term as a whole word or phrase (Unicode letters, so æøå work)? */
 export function mentions(text, term) {
   if (!term) return false;
+  // Scripts written without spaces have no word boundary to require.
+  if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(term)) return norm(text).includes(norm(term));
   return new RegExp(`(^|[^\\p{L}\\p{N}])${esc(norm(term))}($|[^\\p{L}\\p{N}])`, 'u').test(norm(text));
 }
 

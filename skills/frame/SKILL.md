@@ -54,6 +54,10 @@ With no input, frame the app in the current project.
    `user-research` skill (design plugin) or the `hcd-interviewer` skill to plan real interviews.
    If Mobbin or Refero is connected, looking at how shipped apps handle the key tasks helps make
    them concrete; record what you learn as `[inferred]`.
-7. **Check before finishing.** The file names a specific primary user, a problem without a
+7. **Expect it to be challenged.** The critique reads the screens cold before it reads this
+   file, and a frame challenger then tests the problem statement and the assumptions. Write what
+   is true today, tag what is assumed, and don't smooth over what you aren't sure of: an honest
+   `[assumption]` is what the challenge works from.
+8. **Check before finishing.** The file names a specific primary user, a problem without a
    solution in it, ranked key tasks with one must-not-fail, and judgeable success criteria.
    Then report in two or three lines what changed and which assumptions are open.

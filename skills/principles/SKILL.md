@@ -29,6 +29,7 @@ summarises its primary sources and names them. Read only the files the task need
 | [copy.md](references/copy.md) | Interface copy: clear, concise, purposeful, tone, action labels, error messages (Podmajersky, Yifrah, Nielsen, Redish) | `COPY-*` |
 | [consistency.md](references/consistency.md) | One component, icon, term and format per meaning | `CONS-*` |
 | [spec.md](references/spec.md) | The prototype against the owner's own spec | `SPEC-*` |
+| [framing.md](references/framing.md) | Challenging the frame and concept: first read, problem statement, assumptions, pre-mortem, alternatives, who is left out. For challenges, never findings | `FRAME-*` |
 | [ethics.md](references/ethics.md) | Deceptive patterns: pre-ticked consent, asymmetric choices, confirmshaming, obstruction, sneaking, false pressure, forced action, nagging | `ETHICS-*` |
 
 ## How to use the principles

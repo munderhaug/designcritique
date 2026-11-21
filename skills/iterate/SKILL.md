@@ -27,10 +27,15 @@ With no config given, use `mockups.yaml` in the current project. `--rounds N` ov
 
 ## Each round
 
-1. **Critique.** In the first round run the critique skill's steps 1–6; in later rounds steps 3,
-   5 and 6 (the frame and the references from round 1 are reused). If the person asked to
-   iterate on a whole-product review, run the review skill instead. Fresh critic agents every round, briefed only as critic-brief.md says: never
-   tell them what was changed or what the last round found.
+1. **Critique.** In the first round run the critique skill's steps 1–5. In later rounds, steps
+   3–5 only: `run.mjs --config mockups.yaml` makes a new run folder; copy round 1's
+   `references.md` into it and run `run.mjs --run <RUN_DIR> --from briefs`; run only stage 3 of
+   the plan (the cold read and frame challenge were done in round 1, and the pause for the
+   designer is skipped inside this loop); finish with `run.mjs --run <RUN_DIR> --finish` and
+   `render-report.mjs --run <RUN_DIR> --base <the previous round's run>` so "Since last run"
+   compares with that round. If the designer asked to iterate on a whole-product review, use the
+   review skill the same way. Fresh reviewer agents every round, each given its brief unchanged:
+   never tell them what was changed or what the last round found.
 2. **Save and gate.** `node PLUGIN_ROOT/scripts/report/rounds.mjs save --config mockups.yaml
    --round N --run <RUN_DIR>` snapshots the files this run judged. Then
    `node PLUGIN_ROOT/scripts/report/gate.mjs --run <RUN_DIR>`. Exit 0: stop, it passed.

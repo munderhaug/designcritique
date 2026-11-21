@@ -9,6 +9,12 @@
 //   node scripts/report/decide.mjs --run <RUN_DIR> --proposal M2 --accept|--reject|--defer [--reason "..."]
 //     your decision on a structural or scope proposal (moves M1…, scope S1… in the report); never
 //     applied automatically, but reviewers and iterate respect it
+//   node scripts/report/decide.mjs --run <RUN_DIR> --finding <n|id> --argue "<your case>" --reply "<the critic's answer>" --stance hold|concede|revise [--severity P2]
+//     the outcome of arguing a finding with its critic (the discuss skill): concede dismisses it,
+//     revise re-rates it, hold keeps it open; the exchange is kept with the decision either way
+//   node scripts/report/decide.mjs --run <RUN_DIR> --challenge C2 --answer "..."
+//     your answer to a question the critics put to you; shown in the report and given to the
+//     next run's critics so they don't ask it again without new evidence
 //   node scripts/report/decide.mjs --project <dir> --list
 //     decisions grouped by principle and critic: where the critics are miscalibrated
 import path from 'node:path';
@@ -23,10 +29,10 @@ if (args.list) {
   const decisions = loadDecisions(baseDir);
   if (!decisions.length) { console.log(`No decisions in ${decisionsPath(baseDir)}`); process.exit(0); }
   const groups = new Map();
-  for (const d of decisions) {
+  for (const d of decisions.filter((x) => x.rule)) {
     const key = `${d.rule} · ${d.source || 'any'}`;
     const g = groups.get(key) || { dismiss: 0, severity: 0, accept: 0, eval: 0 };
-    g[d.decision]++;
+    g[d.decision === 'discussed' ? 'accept' : d.decision]++;
     if (d.eval_candidate) g.eval++;
     groups.set(key, g);
   }
@@ -54,8 +60,30 @@ if (args.run && args.proposal) {
   process.exit(0);
 }
 
+if (args.run && args.challenge) {
+  const runDir = path.resolve(args.run);
+  const merged = readJson(path.join(runDir, 'findings.json'));
+  const manifest = readJson(path.join(runDir, 'manifest.json'));
+  const c = (merged.challenges || []).find((x) => x.n === String(args.challenge).toUpperCase());
+  if (!c) fail(`No challenge ${args.challenge} in ${runDir}/findings.json (challenges: ${(merged.challenges || []).map((x) => x.n).join(', ') || 'none'})`);
+  if (!args.answer || args.answer === true) fail('Give your --answer "…"');
+  const decisions = loadDecisions(manifest.baseDir).filter((d) => !(d.kind === 'challenge' && d.claim === c.claim));
+  decisions.push({ kind: 'challenge', challenge_kind: c.kind, claim: c.claim, question: c.question, source: c.source, answer: String(args.answer), date: new Date().toISOString().slice(0, 10), ...(args.by ? { by: args.by } : {}) });
+  saveDecisions(manifest.baseDir, decisions);
+  console.log(`Recorded your answer to ${c.n} in ${decisionsPath(manifest.baseDir)}`);
+  process.exit(0);
+}
+
+const STANCE = { concede: 'dismiss', revise: 'severity', hold: 'discussed' };
+if (args.stance) {
+  if (!STANCE[args.stance]) fail('--stance must be hold, concede or revise');
+  if (!args.argue || args.argue === true || !args.reply || args.reply === true) fail('A discussion needs --argue "<your case>" and --reply "<the critic\'s answer>"');
+  if (args.stance === 'revise' && !SEVERITIES.includes(args.severity)) fail(`--stance revise needs --severity ${SEVERITIES.join('|')}`);
+  args[STANCE[args.stance] === 'severity' ? '__sev' : STANCE[args.stance]] = true;
+  if (!args.reason) args.reason = String(args.argue);
+}
 if (!args.run || !args.finding) fail('Usage: decide.mjs --run <RUN_DIR> --finding <n|id> (--dismiss | --severity P0-P3 | --accept) [--reason "..."] [--eval-candidate]');
-const choice = args.dismiss ? 'dismiss' : args.severity ? 'severity' : args.accept ? 'accept' : null;
+const choice = args.discussed ? 'discussed' : args.dismiss ? 'dismiss' : args.severity ? 'severity' : args.accept ? 'accept' : null;
 if (!choice) fail('Say --dismiss, --severity P0-P3 or --accept');
 if (choice === 'severity' && !SEVERITIES.includes(args.severity)) fail(`--severity must be one of ${SEVERITIES.join(', ')}`);
 if (choice === 'dismiss' && !args.reason) fail('Give a --reason for a dismissal; critics read it in their next brief.');
@@ -71,6 +99,7 @@ const decisions = loadDecisions(manifest.baseDir).filter((d) => !(d.screen === f
 decisions.push(decisionFromFinding(f, {
   decision: choice, severity: args.severity, reason: args.reason === true ? '' : args.reason,
   by: args.by, evalCandidate: !!args['eval-candidate'],
+  discussion: args.stance ? [{ by: args.by || 'designer', text: String(args.argue) }, { by: f.source, stance: args.stance, text: String(args.reply) }] : null,
 }));
 saveDecisions(manifest.baseDir, decisions);
 console.log(`Recorded: ${choice}${choice === 'severity' ? ` ${args.severity}` : ''} for #${f.n} "${f.title}" (${f.screen}, ${f.rule}) in ${decisionsPath(manifest.baseDir)}`);

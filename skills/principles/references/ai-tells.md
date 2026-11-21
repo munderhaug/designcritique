@@ -1,5 +1,10 @@
 # AI tells in generated mobile UI
 
+Sources: the anti-pattern rules of Impeccable's detector (Paul Bakaus, 2025–26) and of
+unslopovich (erkamyaman), which the detector stage runs; see companions.md for the rules
+imported. A tell is an observation about sameness, not a principle: it never stands alone, and
+the principle it breaks (second column) is what the finding rests on.
+
 These patterns make screens look generic and template-made. Each is a finding only when it
 also hurts the user or the brand. Pair each one with the principle it breaks.
 

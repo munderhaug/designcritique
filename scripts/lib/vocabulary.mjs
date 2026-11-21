@@ -43,3 +43,24 @@ export function loadVocabulary(languages = ['en'], extra = {}) {
     states: Object.fromEntries(KINDS.map((k) => [k, words(states[k], false)])),
   };
 }
+
+let cachedDoc = null;
+/**
+ * Words for reading a project's own documents (PRODUCT.md, the content guide), merged over every
+ * language in the catalog: the document's language isn't known from the pages'.
+ * { phase: { mvp, v1, later, out } as RegExp, critical: RegExp, columns: { name: string[] } }
+ */
+export function docWords() {
+  if (cachedDoc) return cachedDoc;
+  const all = YAML.parse(fs.readFileSync(FILE, 'utf8'));
+  const docs = Object.values(all).map((v) => v?.doc).filter(Boolean);
+  const merge = (get) => [...new Set(docs.flatMap((d) => get(d) || []).map((w) => String(w).toLowerCase()))];
+  const anywhere = (list) => (list.length ? new RegExp(list.map(esc).join('|'), 'iu') : /(?!)/);
+  const names = new Set(docs.flatMap((d) => Object.keys(d.columns || {})));
+  cachedDoc = {
+    phase: Object.fromEntries(['mvp', 'v1', 'later', 'out'].map((k) => [k, anywhere(merge((d) => d.phase?.[k]))])),
+    critical: anywhere(merge((d) => d.critical)),
+    columns: Object.fromEntries([...names].map((n) => [n, merge((d) => d.columns?.[n])])),
+  };
+  return cachedDoc;
+}

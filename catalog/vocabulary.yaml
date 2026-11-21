@@ -5,6 +5,10 @@
 # included. Add words for a project with `vocabulary:` in mockups.yaml (same keys), or add a
 # language here. Entries are matched as whole words or phrases, case-insensitively; an entry
 # starting with "re:" is a regular expression.
+#
+# `doc:` holds the words used to read a project's own documents (PRODUCT.md, the content guide)
+# when they are written in that language: phase names, the "must not fail" marker and table
+# column headings. They are matched in every language listed here, whatever the pages' language.
 
 en:
   avoid: [delete, remove, erase, log out, logout, sign out, reset, pay, buy, purchase, checkout, unsubscribe, cancel subscription, deactivate, close account]
@@ -21,6 +25,23 @@ en:
     offline: [offline, no connection, no internet]
     first-run: [welcome, get started, first time, onboarding]
     partial: [incomplete, almost done, partially]
+  doc:
+    phase:
+      mvp: [mvp, must, now, v0]
+      v1: [v1, next, "1.0"]
+      later: [later, future, v2]
+      out: [out, not, never, excluded]
+    critical: [must not fail, critical]
+    columns:
+      phase: [phase, release]
+      object: [object, concept]
+      relations: [relat, has]
+      include: [include, feature, items, what]
+      feature: [feature]
+      task: [task]
+      seen: [seen, label]
+      term: [term, word, use, preferred]
+      avoid: [avoid, instead, "don't", dont, not]
 de:
   avoid: [löschen, entfernen, abmelden, ausloggen, zurücksetzen, bezahlen, kaufen, kündigen]
   consent: [newsletter, werbung, angebote, partner, dritte, daten teilen, tracking, personalisierte werbung, cookies]
@@ -81,6 +102,21 @@ nb:
     offline: [frakoblet, ingen nett, ingen internett, uten nett]
     first-run: [velkommen, kom i gang]
     partial: [ufullstendig, nesten ferdig]
+  doc:
+    phase:
+      later: [senere, seinere]
+      out: [ikke, utenfor]
+    critical: [kritisk, må ikke feile]
+    columns:
+      phase: [fase]
+      object: [objekt]
+      relations: [har]
+      include: [innhold]
+      feature: [funksjon]
+      task: [oppgave]
+      seen: [vises]
+      term: [begrep, ord, bruk]
+      avoid: [unngå, ikke]
 sv:
   avoid: [radera, ta bort, logga ut, återställ, betala, köp, avsluta prenumeration]
   consent: [nyhetsbrev, marknadsföring, erbjudanden, partner, tredje part, dela mina data, spårning, anpassad reklam, reklam, kakor]

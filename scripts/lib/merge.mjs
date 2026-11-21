@@ -46,7 +46,8 @@ export function mergeAcrossSources(findings) {
     const into = out.find((g) => !g.raisedBy.includes(f.source) && sameProblem(g, f));
     if (!into) { out.push({ ...f, raisedBy: [f.source], also: [] }); continue; }
     into.raisedBy.push(f.source);
-    into.also.push({ source: f.source, id: f.id, severity: f.severity, title: f.title, evidence: f.evidence, recommendation: f.recommendation });
+    into.also.push({ source: f.source, id: f.id, severity: f.severity, title: f.title, evidence: f.evidence, recommendation: f.recommendation, impact: f.impact, confidence: f.confidence, alternatives: f.alternatives });
+    if (f.alternatives?.length) into.alternatives = [...new Set([...(into.alternatives || []), ...f.alternatives])];
     if (SEV.indexOf(f.severity) < SEV.indexOf(into.severity)) { into.severityFrom = f.source; into.severity = f.severity; }
     into.basis = [...new Set([...(into.basis || []), ...(f.basis || [])])];
     if (isCheck(into) && isCheck(f)) into.surfaces = [...new Set([...surfacesOf(into), ...surfacesOf(f)])];

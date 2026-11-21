@@ -124,7 +124,7 @@ export function pinned(name) {
 export const withPins = (text) => String(text).replace(/\{pinned:([\w@/.-]+)\}/g, (_, n) => pinned(n) || 'latest');
 /** Files in <run>/checks/ holding deterministic findings (run-all.mjs writes them, the report reads them). */
 export const CHECK_FILES = ['findings.json', 'motion.json', 'detectors.json', 'structure.json', 'consistency.json'];
-export const DEFAULT_GATE = { fail_on: 'P1', target_score: 8, journey_target_score: null, min_feature_coverage: 0.8, no_dead_end_on_critical: true };
+export const DEFAULT_GATE = { enabled: true, fail_on: 'P1', target_score: 8, journey_target_score: null, min_feature_coverage: 0.8, no_dead_end_on_critical: true };
 
 /** taste: a folder or a list of images of the direction the person chose, resolved to image files. */
 export function expandImages(spec, baseDir) {
@@ -150,7 +150,11 @@ function normalizeCritics(raw = {}) {
 }
 
 export function normalizeGate(raw = {}) {
+  // gate: off (or enabled: false) turns the verdict off: the report still says what would have
+  // counted, for a designer who wants the critique as a conversation, not a pass or fail.
+  if (raw === false || raw === 'off') raw = { enabled: false };
   const gate = { ...DEFAULT_GATE, ...(raw || {}) };
+  gate.enabled = gate.enabled !== false && gate.enabled !== 'off';
   if (!SEVERITIES.includes(gate.fail_on) && gate.fail_on !== 'none') throw new Error(`gate.fail_on must be P0-P3 or none (got ${gate.fail_on})`);
   gate.target_score = gate.target_score == null ? null : Number(gate.target_score);
   if (gate.target_score != null && !(gate.target_score >= 0 && gate.target_score <= 10)) throw new Error('gate.target_score must be 0-10');

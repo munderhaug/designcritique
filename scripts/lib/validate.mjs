@@ -88,7 +88,7 @@ export function repairPrincipleIds(data, ids = principleIds()) {
     if (Array.isArray(f.basis)) f.basis = [...new Set(f.basis.map(fix))];
     for (const r of repairs.slice(before)) r.finding = f.id ?? null;
   }
-  for (const s of data?.strengths || []) if (Array.isArray(s?.basis)) s.basis = [...new Set(s.basis.map(fix))];
+  for (const s of [...(data?.strengths || []), ...(data?.challenges || [])]) if (Array.isArray(s?.basis)) s.basis = [...new Set(s.basis.map(fix))];
   return repairs;
 }
 
@@ -127,6 +127,15 @@ export function validateCritique(data, { screens, keyTasks } = {}) {
         badFindings.add(f.id ?? `#${i}`);
       }
     }
+  });
+  // Challenges are questions for the designer: they cite the framing principles, never carry a
+  // severity, and a finding doesn't rest on a FRAME-* ID alone.
+  (data.challenges || []).forEach((c, i) => {
+    for (const id of c?.basis || []) if (!ids.has(id)) warnings.push(`challenges[${i}] (${c.id ?? 'no id'}): "${id}" is not a principle ID${suggestIds(id, ids).length ? `; did you mean ${suggestIds(id, ids).join(' or ')}?` : ''}`);
+    if (c && 'severity' in c) warnings.push(`challenges[${i}] (${c.id ?? 'no id'}): a challenge has no severity; if it is a defect with evidence, make it a finding`);
+  });
+  data.findings.forEach((f, i) => {
+    if (String(f.rule || '').startsWith('FRAME-')) warnings.push(`findings[${i}] (${f.id ?? 'no id'}): ${f.rule} is for challenges; a finding needs a principle about the screen (or move this to "challenges")`);
   });
   const known = new Map((keyTasks || []).map((k) => [k.id, k]));
   for (const t of data.tasks || []) {

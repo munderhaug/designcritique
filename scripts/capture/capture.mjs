@@ -8,6 +8,8 @@
 // --only     capture just these: mockup, screen, journey or crawl state ids (s17-x or crawl--s17-x)
 // --journeys capture just these journeys
 // --resume   keep the screens already in <runDir>/manifest.json and capture the rest
+// --frame-only  capture nothing; copy PRODUCT.md, DESIGN.md and the content guide into the run
+//               again (after the frame was changed, so the critics judge against the new one)
 // With --only or --journeys into a run that has a manifest, the new captures replace the old
 // ones with the same id and everything else is kept. The manifest is written after every
 // screen, so a run stopped by a time limit or a crash keeps what it captured.
@@ -32,12 +34,14 @@ const args = parseArgs(process.argv.slice(2));
 const cfg = loadConfig(args.config || 'mockups.yaml');
 const runDir = path.resolve(args.out || path.join(cfg.output, timestamp()));
 const listArg = (v) => (v ? new Set(String(v).split(',').map((x) => x.trim()).filter(Boolean)) : null);
-const only = listArg(args.only);
+const frameOnly = !!args['frame-only'];
+const only = frameOnly ? new Set(['(nothing)']) : listArg(args.only);
 const onlyJourneys = listArg(args.journeys);
 const resume = !!args.resume;
 fs.mkdirSync(runDir, { recursive: true });
 const manifestPath = path.join(runDir, 'manifest.json');
 // A subset or a resume adds to the run's manifest instead of starting a new one.
+if (frameOnly && !fs.existsSync(manifestPath)) { console.error('--frame-only needs a run that was already captured (--out <runDir>)'); process.exit(2); }
 const previous = (only || onlyJourneys || resume) && fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : null;
 
 const manifest = {
@@ -77,7 +81,7 @@ const wanted = (...ids) => {
   if (onlyJourneys && !only) return false;
   return !only || ids.some((id) => id && only.has(id));
 };
-const wantedJourney = (id) => (onlyJourneys ? onlyJourneys.has(id) : !only || only.has(id));
+const wantedJourney = (id) => !frameOnly && (onlyJourneys ? onlyJourneys.has(id) : !only || only.has(id));
 const done = (id) => resume && manifest.screens.some((s) => s.id === id || s.id.startsWith(`${id}--frame-`));
 // Put a screen in the manifest: in place of an earlier capture with the same id, else at the end.
 function putScreen(s) {

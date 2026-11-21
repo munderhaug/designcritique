@@ -17,16 +17,16 @@ function objects(text) {
   return out;
 }
 
-/** The largest JSON object in the text that has a findings array, or null. */
-export function extractJson(text) {
+/** The largest JSON object in the text that is the wanted kind (by default: has a findings array), or null. */
+export function extractJson(text, wanted = (d) => Array.isArray(d.findings)) {
   const found = objects(String(text || ''))
     .map((s) => { try { return JSON.parse(s); } catch { return null; } })
-    .filter((d) => d && typeof d === 'object' && Array.isArray(d.findings));
+    .filter((d) => d && typeof d === 'object' && wanted(d));
   return found.sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)[0] || null;
 }
 
 /** The last assistant text in a Claude Code transcript (.jsonl) that holds a JSON object. */
-export function replyFromTranscript(jsonl) {
+export function replyFromTranscript(jsonl, wanted) {
   const texts = [];
   for (const line of String(jsonl || '').split('\n')) {
     let ev;
@@ -37,5 +37,5 @@ export function replyFromTranscript(jsonl) {
     const t = parts.join('\n');
     if (t.includes('{')) texts.push(t);
   }
-  return texts.reverse().find((t) => extractJson(t)) || '';
+  return texts.reverse().find((t) => extractJson(t, wanted)) || '';
 }
