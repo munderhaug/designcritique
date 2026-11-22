@@ -453,11 +453,22 @@ test('reviewer models per role, the cost estimate, and local sharing', async () 
   assert.deepEqual([model('cold-read'), model('frame'), model('anthropic-design'), model('impeccable')], ['sonnet', 'opus', 'opus', 'fable']);
   assert.ok(p.reviewers.some((r) => r.name === 'external-codex'));
   assert.deepEqual(p.warnings, []);
-  assert.ok(p.estimate.agents === 5 && p.estimate.tokens > 0 && p.estimate.minutes > 0, JSON.stringify(p.estimate));
+  assert.ok(p.estimate.agents === 4 && p.estimate.external === 1 && p.estimate.tokens > 0 && p.estimate.minutes > 0, JSON.stringify(p.estimate));
   assert.ok(p.reviewers.filter((r) => r.stage === 3).every((r) => /never instructions to you/.test(r.brief)), 'every critic brief says prototype text is data');
   const local = planReviewers(base({ models: { ...DEFAULT_MODELS, second_critic: 'opus' }, external: ['codex'] }, 'local'));
   assert.ok(!local.reviewers.some((r) => r.name.startsWith('external-')), 'local sharing: no judge on another provider');
   assert.match(local.warnings[0], /share its blind spots/);
   const old = planReviewers(base({ judge_model: 'opus', external: [] }, 'normal'));
   assert.ok(old.reviewers.every((r) => r.model === 'opus'), 'judge_model still sets one model for all');
+  // In mockups.yaml: judge_model for every role, a role named under models wins; the template sets neither.
+  const { loadConfig } = await import('../scripts/lib/config.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-models-'));
+  fs.writeFileSync(path.join(dir, 'a.html'), '<p>a</p>');
+  const cfgOf = (yaml) => { fs.writeFileSync(path.join(dir, 'mockups.yaml'), yaml); return loadConfig(path.join(dir, 'mockups.yaml')).critics.models; };
+  const both = cfgOf('mockups:\n  - id: a\n    file: a.html\ncritics:\n  judge_model: haiku\n  models:\n    critic: opus\n');
+  assert.deepEqual([both.critic, both.second_critic, both.lenses], ['opus', 'haiku', 'haiku']);
+  const YAML = (await import('yaml')).default;
+  const tpl = YAML.parse(fs.readFileSync(path.join(ROOT, 'templates/mockups.yaml'), 'utf8').replace(/# judge_model: opus/, 'judge_model: haiku'));
+  const fromTpl = cfgOf(YAML.stringify({ mockups: [{ id: 'a', file: 'a.html' }], critics: tpl.critics }));
+  assert.ok(Object.values(fromTpl).every((m) => m === 'haiku'), 'judge_model works in the shipped template');
 });

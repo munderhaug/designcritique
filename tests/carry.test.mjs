@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { unchangedScreens, carryFindings, carryRun } from '../scripts/lib/carry.mjs';
 import { planReviewers } from '../scripts/lib/briefs.mjs';
 import { validateCritique } from '../scripts/lib/validate.mjs';
@@ -85,7 +86,7 @@ test('carry: only single-screen design-reviewer findings on unchanged screens ca
   // The whole-view reviewer runs again on every screen, so only the batch carries.
   assert.deepEqual(out.map((o) => o.critic), ['anthropic-design-2']);
   const [b] = out.map((o) => o.data);
-  assert.deepEqual(b.findings.map((x) => x.id), ['c-F1']);
+  assert.deepEqual(b.findings.map((x) => x.id), ['c2-F1']);
   for (const d of [b]) {
     assert.equal(d.critic, 'anthropic-design');
     assert.equal(d.method, 'carried from run-1');
@@ -104,7 +105,7 @@ test('carry: a finding carried before keeps its first run, and ids stay unique',
     { file: 'carried-anthropic-design-2.json', data: { critic: 'anthropic-design', findings: [f('F1', { carried_from: 'run-0' })] } },
   ], new Set(['a']), 'run-1');
   assert.equal(out.length, 1);
-  assert.deepEqual(out[0].data.findings.map((x) => [x.id, x.carried_from]), [['c-F1', 'run-1'], ['F1', 'run-0']]);
+  assert.deepEqual(out[0].data.findings.map((x) => [x.id, x.carried_from]), [['c2-F1', 'run-1'], ['F1', 'run-0']]);
 });
 
 test('carry: a run skips only unchanged screens a base batch looked at, and writes what it carried', () => {
@@ -123,7 +124,7 @@ test('carry: a run skips only unchanged screens a base batch looked at, and writ
   assert.deepEqual(r.changed, ['b', 'd']);
   assert.deepEqual(r.carried, { 'anthropic-design-2': 1 });
   const carried = JSON.parse(fs.readFileSync(path.join(run.dir, 'critique', 'carried-anthropic-design-2.json'), 'utf8'));
-  assert.deepEqual(carried.findings.map((x) => [x.id, x.screen, x.carried_from]), [['c-F1', 'a', path.basename(base.dir)]]);
+  assert.deepEqual(carried.findings.map((x) => [x.id, x.screen, x.carried_from]), [['c2-F1', 'a', path.basename(base.dir)]]);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(run.dir, 'carry.json'), 'utf8')).skipped, ['a', 'c']);
   // One reviewer for every screen: nothing skipped, stale carried files removed.
   const one = carryRun({ runDir: run.dir, baseDir: base.dir, manifest: run.manifest, judged: null });
@@ -141,4 +142,44 @@ test('carry: the planner gives skipped screens no batch, but the whole-view revi
   assert.deepEqual(batchesOf(some).map((r) => r.screens), [['s9', 's10', 's11']]);
   assert.equal(some.reviewers.find((r) => r.name === 'anthropic-design').screens.length, 12);
   assert.ok(some.estimate.tokens < full.estimate.tokens);
+});
+
+test('carry: a base finding across screens keeps those screens in a batch, so it is judged again', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  const base = makeRun(ids); const run = makeRun(ids);
+  fs.mkdirSync(path.join(base.dir, 'briefs')); fs.mkdirSync(path.join(base.dir, 'critique'));
+  fs.writeFileSync(path.join(base.dir, 'briefs', 'plan.json'), JSON.stringify({ stages: [[{ name: 'anthropic-design-2', screens: ['a', 'b'] }, { name: 'anthropic-design-3', screens: ['c', 'd'] }]] }));
+  const g = (id, screen, extra = {}) => ({ id, screen, rule: 'NN-H4', severity: 'P1', title: id, evidence: 'e', recommendation: 'r', ...extra });
+  fs.writeFileSync(path.join(base.dir, 'critique', 'anthropic-design-2.json'), JSON.stringify({ critic: 'anthropic-design', findings: [g('F1', 'a', { level: 'flow', affected_screens: ['a', 'b'] })] }));
+  fs.writeFileSync(path.join(base.dir, 'critique', 'anthropic-design-3.json'), JSON.stringify({ critic: 'anthropic-design', findings: [g('F2', 'c'), g('F3', 'd')] }));
+  const r = carryRun({ runDir: run.dir, baseDir: base.dir, manifest: run.manifest, judged: ids });
+  assert.deepEqual(r.skipped, ['c', 'd']);
+  assert.deepEqual(r.kept, ['a', 'b']);
+  // Ids carry their batch number, so two batches' carried findings don't collide.
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(run.dir, 'critique', 'carried-anthropic-design-3.json'), 'utf8')).findings.map((x) => x.id), ['c3-F2', 'c3-F3']);
+  // A "*" finding in a batch keeps that whole batch.
+  fs.writeFileSync(path.join(base.dir, 'critique', 'anthropic-design-3.json'), JSON.stringify({ critic: 'anthropic-design', findings: [g('F2', '*')] }));
+  assert.deepEqual(carryRun({ runDir: run.dir, baseDir: base.dir, manifest: run.manifest, judged: ids }).skipped, []);
+});
+
+test('carry: screens past the whole-view limit are never skipped', () => {
+  const screens = Array.from({ length: 50 }, (_, i) => ({ id: `s${i}`, title: `S${i}`, platform: 'ios', captures: [{ platform: 'ios', device: 'standard', variant: 'light', screenshot: `x/s${i}.png` }] }));
+  const p = planReviewers({ manifest: { screens, baseDir: '/p' }, runDir: '/r', pluginRoot: '/root', skip: new Set(screens.slice(36).map((s) => s.id)) });
+  const batched = p.reviewers.filter((r) => /^anthropic-design-\d+$/.test(r.name)).flatMap((r) => r.screens);
+  for (let i = 40; i < 50; i++) assert.ok(batched.includes(`s${i}`), `s${i} has a reviewer`);
+  for (let i = 36; i < 40; i++) assert.ok(!batched.includes(`s${i}`));
+});
+
+test('carry: a carried finding raised again with the same title loses its carried mark', () => {
+  const run = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-carried-'));
+  fs.mkdirSync(path.join(run, 'critique'));
+  fs.writeFileSync(path.join(run, 'manifest.json'), JSON.stringify({ baseDir: run, gate: { fail_on: 'P1' }, screens: [{ id: 'home', title: 'Home', platform: 'ios', kind: 'image', captures: [] }] }));
+  const f = (id, severity, extra = {}) => ({ id, screen: 'home', rule: 'NN-H4', basis: ['NN-H4'], category: 'ux', severity, title: 'Toggle wording is ambiguous', evidence: 'e', recommendation: 'r', ...extra });
+  fs.writeFileSync(path.join(run, 'critique', 'carried-anthropic-design-2.json'), JSON.stringify({ critic: 'anthropic-design', findings: [f('c2-ad-1', 'P1', { carried_from: 'run-0' })] }));
+  fs.writeFileSync(path.join(run, 'critique', 'anthropic-design.json'), JSON.stringify({ critic: 'anthropic-design', findings: [f('ad-1', 'P2')] }));
+  const r = spawnSync(process.execPath, [path.resolve('scripts/report/render-report.mjs'), '--run', run, '--no-compare'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const all = JSON.parse(fs.readFileSync(path.join(run, 'findings.json'), 'utf8')).findings.filter((x) => x.title === 'Toggle wording is ambiguous');
+  assert.equal(all.length, 1);
+  assert.equal(all[0].carried_from, undefined);
 });

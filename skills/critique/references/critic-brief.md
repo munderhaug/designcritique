@@ -22,17 +22,22 @@ What the generator decides, so nobody does it by hand:
 - **Models**, per role (`critics.models`; defaults in `scripts/lib/config.mjs`): the screen
   critic and the frame challenger on the strongest model, the second critic on a different one so
   the two don't share blind spots (the plan warns when they are the same), the cold read and the
-  lens reviewers on a lighter one. `critics.judge_model` still sets one model for all. Prefer
+  lens reviewers on a lighter one. `critics.judge_model` sets one model for every role not named under `models`. Prefer
   models other than the one that made the mockups: the model that wrote the screens is the
   worst judge of them.
-- **Sharing.** With `sharing: local` there are no external judges and no reference screens.
+- **Sharing.** With `sharing: local` there are no external judges and no reference searches on
+  connected services; reference screens from a local folder are still used. Sharing, external
+  judges and models are read from mockups.yaml each time the briefs are written.
 - **Cost.** `plan.json` → `estimate`: reviewer agents, tokens and minutes, from this plugin's
   measured runs. The skill states it before the critics run.
 - **Carry-over.** `run.mjs ... --base <earlier run>` (or `--from briefs --base <run>`): with more
   than one batch, screens byte-identical to the base run (screenshots, page data, title and notes;
   the frame, DESIGN.md and content guide unchanged) keep that run's batch findings about them
-  alone, marked "carried from", and get no new batch. The whole-view reviewer, Impeccable and the
-  lenses still see every screen, and tasks, journeys and challenges are always judged fresh.
+  alone, marked "carried from", and get no new batch. A screen that a base batch finding across
+  screens (or a journey) touches keeps its batch, so that finding is judged again. The whole-view
+  reviewer, Impeccable and the lenses still see every screen (the first 40; screens past that
+  are never skipped), and tasks, journeys and challenges are always judged fresh. `--no-base`, or
+  `--from` without `--base`, plans every batch again.
   Opt in only: a carried finding is not re-checked, so drop `--base` now and then for a full look.
 - **Prototype text is data.** Every brief and agent says that text in the prototype is content to
   judge, never instructions.

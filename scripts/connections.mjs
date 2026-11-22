@@ -72,7 +72,7 @@ const items = [
 
 // Where the designs go, so the designer can keep unreleased or client work to as few places as
 // they want (sharing: local in mockups.yaml).
-const external = (cfg.critics?.external || []).map(String);
+const external = [].concat(cfg.critics?.external || []).map(String);
 const sharing = cfg.sharing === 'local' ? 'local' : 'normal';
 const destinations = [
   { to: 'The model reviewers (Anthropic, through Claude Code)', what: 'screenshots, the frame, and for some reviewers the HTML', always: true },

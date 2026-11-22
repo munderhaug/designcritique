@@ -56,6 +56,8 @@ export async function renderHtml(ctx) {
     const main = screen.captures.find((c) => c.variant === 'light' && (c.device === 'standard' || c.device === 'frame')) || screen.captures[0];
     const others = screen.captures.filter((c) => c !== main && c.variant !== 'light');
     const own = findings.filter((f) => f.screen === screen.id || f.screens?.includes(screen.id));
+    // A screen whose every capture failed still lists its findings, without a picture.
+    if (!main) return `<section class="screen" id="s-${esc(screen.id)}"><h3>${esc(screen.title)} <small>${esc(screen.id)} · not captured</small></h3><ol class="flist">${own.map((f) => (f.screens ? findingLink(f) : findingItem(f, `f${f.n}`))).join('') || '<li class="none">No findings for this screen.</li>'}</ol></section>`;
     const elementOn = (f) => (f.screens ? f.instances?.find((i) => i.screen === screen.id && (!i.platform || i.platform === main.platform))?.element : f.element);
     const vw = main.viewport?.width || 1;
     const vh = main.viewport?.height || 1;

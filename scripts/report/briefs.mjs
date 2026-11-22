@@ -15,11 +15,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parseArgs, readJson, writeJson } from '../lib/config.mjs';
+import { parseArgs, readJson, writeJson, loadConfig } from '../lib/config.mjs';
 import { parseKeyTasks } from '../lib/product.mjs';
 import { decisionsPath } from '../lib/decisions.mjs';
 import { blindScreens, writeBlindSet } from '../lib/blind.mjs';
-import { planReviewers, judgedScreens, batches } from '../lib/briefs.mjs';
+import { planReviewers, judgedScreens, batches, WHOLE_MAX } from '../lib/briefs.mjs';
 import { carryRun, clearCarry } from '../lib/carry.mjs';
 import { findPreviousRun } from '../lib/compare.mjs';
 
@@ -28,6 +28,14 @@ if (!args.run) { console.error('Usage: briefs.mjs --run <RUN_DIR>'); process.exi
 const runDir = path.resolve(args.run);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const manifest = readJson(path.join(runDir, 'manifest.json'));
+// Who may see the designs (sharing, external judges) and on which models comes from mockups.yaml as
+// it is now, so a change there applies when the briefs are written again (--from briefs).
+try {
+  const live = loadConfig(manifest.config);
+  manifest.sharing = live.sharing; manifest.critics = live.critics;
+} catch (e) {
+  if (manifest.sharing == null) console.error(`warning: could not read ${manifest.config || 'mockups.yaml'} (${e.message}); sharing treated as normal.`);
+}
 
 // Screen family of a captured screen (its fingerprint's screen key), so a crawl's many states of
 // one screen are read and judged once.
@@ -48,17 +56,24 @@ let carry = null;
 if (args.base) {
   const baseDir = args.base === true ? findPreviousRun(runDir)
     : [path.resolve(String(args.base)), path.join(path.dirname(runDir), String(args.base))].find((p) => fs.existsSync(path.join(p, 'manifest.json')));
-  if (!baseDir) { console.error(`No base run${args.base === true ? ' next to this one' : ` at ${args.base}`} with a manifest.json; nothing carried.`); clearCarry(runDir); }
-  else {
-    const judged = judgedScreens(manifest, familyOf).screens;
-    carry = carryRun({ runDir, baseDir, manifest, judged: batches(judged).length > 1 ? judged.map((s) => s.id) : null });
-  }
+  // A base that can't be used stops here, so a plan never silently loses what was asked for.
+  const stop = (why) => { clearCarry(runDir); console.error(`${why} Give another --base, or --no-base to plan every batch.`); process.exit(2); };
+  if (!baseDir) stop(`No base run${args.base === true ? ' next to this one' : ` at ${args.base}`} with a manifest.json.`);
+  if (path.resolve(baseDir) === runDir) stop('The base run is this run.');
+  const judged = judgedScreens(manifest, familyOf).screens;
+  // Only screens the whole-view reviewer sees can skip their batch.
+  carry = carryRun({ runDir, baseDir, manifest, judged: batches(judged).length > 1 ? judged.slice(0, WHOLE_MAX).map((s) => s.id) : null });
 } else clearCarry(runDir);
 const plan = planReviewers({
   manifest, runDir, pluginRoot: root, keyTasks: parseKeyTasks(framing), companions, blindKey, decisions, familyOf,
   hasReferences: fs.existsSync(path.join(runDir, 'references.md')), skip: new Set(carry?.skipped || []),
 });
 
+// Replies saved under names the new plan doesn't have would be read into the report all the same.
+const planned = new Set(plan.reviewers.map((r) => path.basename(r.file || '')));
+const critDir = path.join(runDir, 'critique');
+const stale = fs.existsSync(critDir) ? fs.readdirSync(critDir).filter((f) => f.endsWith('.json') && !f.startsWith('carried-') && !planned.has(f)) : [];
+if (stale.length) plan.warnings.push(`critique/ holds replies from an earlier plan that this one doesn't have (${stale.join(', ')}); move them out, or the report reads them too.`);
 const dir = path.join(runDir, 'briefs');
 fs.rmSync(dir, { recursive: true, force: true });
 fs.mkdirSync(dir, { recursive: true });
@@ -75,7 +90,7 @@ const missing = ['design-critique', 'accessibility-review', 'ux-copy', 'impeccab
 console.log(`Briefs: ${plan.reviewers.length} reviewers in ${plan.stages.length} stages for ${plan.screens} screens${plan.review ? ' (whole-product review: one per screen family)' : ''} → ${path.join(dir, 'plan.json')}`);
 for (const [i, st] of plan.stages.entries()) console.log(`  ${i + 1}. ${st.map((r) => `${r.name} (${r.model || 'any model'})`).join(', ')}`);
 const e = plan.estimate;
-console.log(`  Estimated: ${e.agents} reviewer agents, about ${(e.tokens / 1e6).toFixed(1)} M tokens, about ${e.minutes} minutes with each stage in parallel (from this plugin's measured runs).`);
+console.log(`  Estimated: ${e.agents} reviewer agents, about ${(e.tokens / 1e6).toFixed(1)} M tokens, about ${e.minutes} minutes with each stage in parallel (from this plugin's measured runs)${e.external ? `, plus ${e.external} external judge(s) on other tools` : ''}.`);
 if (carry) {
   const n = Object.values(carry.carried).reduce((a, b) => a + b, 0);
   console.log(`  Carried from ${carry.base}: ${carry.skipped.length} unchanged screen(s) keep its batch findings (${n}) and get no new batch${carry.reason ? `; nothing skipped: ${carry.reason}` : ''}.`);

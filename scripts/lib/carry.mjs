@@ -105,8 +105,9 @@ export function carryFindings(critiques, unchanged, baseName) {
     const seen = new Set(into.findings.map((f) => f.id));
     for (const f of keep) {
       const copy = structuredClone(f);
-      // A new id prefix keeps carried ids apart from the new batches' ids in the same run.
-      if (!f.carried_from) copy.id = `c-${f.id}`;
+      // A prefix with the batch number keeps carried ids apart from each other and from the new
+      // batches' ids in the same run.
+      if (!f.carried_from) copy.id = `c${name.match(/(\d+)$/)?.[1] || ''}-${f.id}`;
       copy.carried_from = f.carried_from || baseName;
       let id = copy.id; let n = 2;
       while (seen.has(id)) id = `${copy.id}-${n++}`;
@@ -151,16 +152,36 @@ export function carryRun({ runDir, baseDir, manifest, judged }) {
   const baseManifest = readJsonSafe(path.join(baseDir, 'manifest.json'));
   const cmp = unchangedScreens({ baseDir, baseManifest, runDir, manifest });
   const close = closelyReviewed(baseDir);
-  const skipped = cmp.unchanged.filter((id) => judged.includes(id) && close.has(id));
-  const changed = judged.filter((id) => !skipped.includes(id));
-  if (!skipped.length) return done({ skipped, changed, reason: cmp.reason || (close.size ? 'no unchanged screen was looked at closely in the base run' : 'the base run had no batch reviewers'), carried: {} });
   const critDir = path.join(baseDir, 'critique');
   const critiques = fs.existsSync(critDir) ? fs.readdirSync(critDir).filter((f) => BATCH_FILE.test(f)).sort().map((f) => ({ file: f, data: readJsonSafe(path.join(critDir, f)) })).filter((c) => c.data) : [];
+  // A batch finding that can't carry (across screens, a journey, the whole batch) is judged again:
+  // every screen it touches keeps its batch, so the finding is neither carried nor lost.
+  const keep = touchedByUncarried(critiques, baseDir, new Set(cmp.unchanged));
+  const skipped = cmp.unchanged.filter((id) => judged.includes(id) && close.has(id) && !keep.has(id));
+  const changed = judged.filter((id) => !skipped.includes(id));
+  const kept = cmp.unchanged.filter((id) => keep.has(id));
+  if (!skipped.length) return done({ skipped, changed, kept, reason: cmp.reason || (close.size ? 'no unchanged screen was looked at closely in the base run, or each one has a finding that is judged again' : 'the base run had no batch reviewers'), carried: {} });
   const carried = {};
   fs.mkdirSync(path.join(runDir, 'critique'), { recursive: true });
   for (const { critic, data } of carryFindings(critiques, new Set(skipped), base)) {
     fs.writeFileSync(path.join(runDir, 'critique', `carried-${critic}.json`), `${JSON.stringify(data, null, 2)}\n`);
     carried[critic] = data.findings.length;
   }
-  return done({ skipped, changed, reason: null, carried });
+  return done({ skipped, changed, kept, reason: null, carried });
+}
+
+/** Screens touched by a base batch finding that can't carry; "*" means every screen of that batch. */
+function touchedByUncarried(critiques, baseDir, unchanged) {
+  const plan = readJsonSafe(path.join(baseDir, 'briefs', 'plan.json'));
+  const batchScreens = new Map((plan?.stages || []).flat().filter((r) => Array.isArray(r.screens)).map((r) => [r.name, r.screens]));
+  const out = new Set();
+  for (const { file, data } of critiques) {
+    for (const f of data.findings || []) {
+      if (screenLevel(f, unchanged)) continue;
+      const named = [f.screen, ...(Array.isArray(f.affected_screens) ? f.affected_screens : [])].filter((x) => typeof x === 'string');
+      const ids = named.includes('*') ? batchScreens.get(path.basename(file, '.json').replace(/^carried-/, '')) || [...unchanged] : named;
+      for (const id of ids) out.add(id);
+    }
+  }
+  return out;
 }

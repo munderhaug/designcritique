@@ -76,7 +76,8 @@ them in: `RUN_DIR/briefs/plan.json`. If it stops (a time limit, a crash), run
 `run.mjs --run <RUN_DIR>` and it continues. Read the warnings and look at one standard-light
 screenshot per screen; fix mis-renders and run it again `--from capture`.
 
-If a reference source works and sharing isn't `local`, gather references now as [references.md](references/references.md)
+If a reference source works, gather references now as [references.md](references/references.md)
+(with `sharing: local`, only from a local folder: no searches on connected services)
 describes (it writes `RUN_DIR/references.md`), then `run.mjs --run <RUN_DIR> --from briefs`.
 
 ## 4. Reviewers, stage by stage

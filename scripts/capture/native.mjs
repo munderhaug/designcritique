@@ -31,7 +31,7 @@ const need = (cmd, why) => { if (run(cmd, ['--version']).error) { console.error(
 need('maestro', 'install Maestro (https://maestro.dev) to replay taps and read the hierarchy');
 
 const manifestPath = path.join(runDir, 'manifest.json');
-const manifest = fs.existsSync(manifestPath) ? readJson(manifestPath) : { version: 1, createdAt: new Date().toISOString(), config: cfg.configPath, baseDir: cfg.baseDir, gate: cfg.gate, critics: cfg.critics, platform: cfg.platform, screens: [], warnings: [], taste: [], journeys: [] };
+const manifest = fs.existsSync(manifestPath) ? readJson(manifestPath) : { version: 1, createdAt: new Date().toISOString(), config: cfg.configPath, baseDir: cfg.baseDir, gate: cfg.gate, critics: cfg.critics, sharing: cfg.sharing, platform: cfg.platform, screens: [], warnings: [], taste: [], journeys: [] };
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-native-'));
 for (const dir of ['screenshots', 'data']) fs.mkdirSync(path.join(runDir, dir), { recursive: true });
 

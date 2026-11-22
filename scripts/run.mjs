@@ -11,7 +11,8 @@
 //   node scripts/run.mjs --run <RUN_DIR> --finish [--inline-thumbs]   report and gate, after the reviewers
 //   node scripts/run.mjs --run <RUN_DIR> --from <stage>  redo from a stage (crawl, capture, checks, briefs)
 //   add --base <earlier run> (bare: the newest finished one) to keep that run's batch findings for
-//   screens that did not change, so only changed screens get new close-look batches
+//   screens that did not change, so only changed screens get new close-look batches; --no-base
+//   (or --from without --base) plans every batch again
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -32,7 +33,10 @@ if (!runDir) runDir = path.resolve(args.out || path.join(cfg.output, timestamp()
 fs.mkdirSync(runDir, { recursive: true });
 status = status || { config: configPath, review: !!(args.review || cfg.crawl), offline: !!args.offline, stages: {} };
 if (args.review) status.review = true;
-if (args.base) status.base = args.base === true ? true : path.resolve(String(args.base));
+// --base is kept for resuming this run; redoing a stage without it (or --no-base) drops it.
+// A path is made absolute; a bare run name is passed on for briefs.mjs to find next to the run.
+if (args.base) status.base = args.base === true ? true : fs.existsSync(String(args.base)) ? path.resolve(String(args.base)) : String(args.base);
+else if (args['no-base'] || args.from) delete status.base;
 const save = () => writeJson(statusPath(), status);
 save();
 

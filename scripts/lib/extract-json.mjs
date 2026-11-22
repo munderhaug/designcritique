@@ -36,7 +36,7 @@ export function replyFromTranscript(jsonl, wanted) {
     // The reply is the text, or what the agent handed back through a final-report tool call.
     const parts = typeof msg.content === 'string' ? [msg.content] : (msg.content || []).flatMap((c) => (
       c?.type === 'text' ? [c.text]
-        : c?.type === 'tool_use' && /hand-?back|final|result|report/i.test(c.name || '') ? Object.values(c.input || {}).filter((v) => typeof v === 'string')
+        : c?.type === 'tool_use' && /hand-?back|^final[_-]?(report|answer|reply)$/i.test(c.name || '') ? Object.values(c.input || {}).filter((v) => typeof v === 'string')
           : []));
     const t = parts.join('\n');
     if (t.includes('{')) texts.push(t);

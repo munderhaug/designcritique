@@ -157,7 +157,7 @@ function normalizeCritics(raw = {}) {
     throw new Error('critics.external must be a list of names (lowercase letters, digits, -), e.g. [codex]');
   }
   const models = { ...DEFAULT_MODELS };
-  // judge_model (older configs): one model for every reviewer.
+  // judge_model: one model for every reviewer; a role named under models wins over it.
   if (raw.judge_model) for (const k of MODEL_ROLES) models[k] = String(raw.judge_model);
   for (const [k, v] of Object.entries(raw.models || {})) {
     if (!MODEL_ROLES.includes(k)) throw new Error(`critics.models.${k} is not a role (${MODEL_ROLES.join(', ')})`);

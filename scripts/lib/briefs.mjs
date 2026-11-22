@@ -9,7 +9,7 @@
 import { DEFAULT_MODELS } from './config.mjs';
 
 const BATCH = 8;
-const WHOLE_MAX = 40;
+export const WHOLE_MAX = 40;
 
 const primary = (s) => s.captures.find((c) => c.variant === 'light' && (c.device === 'standard' || c.device === 'frame')) || s.captures[0];
 
@@ -78,7 +78,8 @@ export function planReviewers(ctx) {
   const evidence = [
     `Design tokens: ${manifest.designSnapshot ? `${run}/${manifest.designSnapshot}` : 'none'}`,
     `Content guide: ${manifest.contentSnapshot ? `${run}/${manifest.contentSnapshot}` : 'none'}`,
-    `Reference screens from shipped apps: ${ctx.hasReferences && !local ? `${run}/references.md` : 'none'}`,
+    // In local mode the skill gathers no references from connected services; a local folder's are kept.
+    `Reference screens from shipped apps: ${ctx.hasReferences ? `${run}/references.md` : 'none'}`,
     `Direction the designer chose (context only; don't score closeness, never excuse a finding by it): ${(manifest.taste || []).length ? (manifest.taste || []).map((t) => `${run}/${t}`).join(', ') : 'none'}`,
     `Gate: ${gate.enabled === false ? 'off (score honestly all the same)' : `fail on ${gate.fail_on}, target score ${gate.target_score ?? 'none'} (score honestly; the gate uses the lowest)`}`,
   ];
@@ -150,7 +151,9 @@ export function planReviewers(ctx) {
     // unchanged since a base run keep that run's batch findings (carry.mjs) and get no new batch.
     const whole = screens.slice(0, WHOLE_MAX);
     add({ name: 'anthropic-design', role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: whole.length === screens.length ? 'whole' : 'partial', screens: ids(whole), file: 'critique/anthropic-design.json', brief: reviewerBrief(whole, whole.length === screens.length ? 'whole' : 'partial', false), save: save('anthropic-design', 'anthropic-design', ` --coverage ${whole.length === screens.length ? 'whole' : 'partial'}`) });
-    batches(screens.filter((s) => !skip.has(s.id))).forEach((g, i) => add({ name: `anthropic-design-${i + 2}`, role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: 'partial', screens: ids(g), file: `critique/anthropic-design-${i + 2}.json`, brief: reviewerBrief(g, 'partial', true), save: save('anthropic-design', `anthropic-design-${i + 2}`, ' --coverage partial') }));
+    // Only screens the whole-view reviewer sees can be skipped: past WHOLE_MAX a batch is their only reviewer.
+    const seen = new Set(ids(whole));
+    batches(screens.filter((s) => !(skip.has(s.id) && seen.has(s.id)))).forEach((g, i) => add({ name: `anthropic-design-${i + 2}`, role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: 'partial', screens: ids(g), file: `critique/anthropic-design-${i + 2}.json`, brief: reviewerBrief(g, 'partial', true), save: save('anthropic-design', `anthropic-design-${i + 2}`, ' --coverage partial') }));
   }
 
   // Impeccable: the same evidence as the design-reviewer, so the two judge the same thing.
@@ -240,5 +243,7 @@ export function estimateCost(stages) {
     tokens += known.reduce((n, m) => n + m.tokens, 0);
     minutes += known.length ? Math.max(...known.map((m) => m.minutes)) : 0;
   }
-  return { agents: stages.flat().length, tokens, minutes: Math.round(minutes) };
+  // External judges run on other providers: counted apart, their tokens aren't Claude's.
+  const all = stages.flat();
+  return { agents: all.filter((r) => r.role).length, external: all.filter((r) => !r.role).length, tokens, minutes: Math.round(minutes) };
 }

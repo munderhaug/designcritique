@@ -118,10 +118,16 @@ const byKey = new Map();
 for (const f of all) {
   const key = [f.screen, f.platform || '', f.rule, f.element?.selector || f.element?.region || f.title].join('|');
   const prev = byKey.get(key);
+  // A carried finding raised again this run is current, not carried.
+  const fresh = prev && (!prev.carried_from || !f.carried_from);
   if (!prev || SEV.indexOf(f.severity) < SEV.indexOf(prev.severity)) {
     if (prev) f.alsoReportedBy = [...new Set([...(prev.alsoReportedBy || []), prev.source])];
+    if (fresh) delete f.carried_from;
     byKey.set(key, f);
-  } else prev.alsoReportedBy = [...new Set([...(prev.alsoReportedBy || []), f.source])];
+  } else {
+    prev.alsoReportedBy = [...new Set([...(prev.alsoReportedBy || []), f.source])];
+    if (fresh) delete prev.carried_from;
+  }
 }
 // ---------- your decisions (.designcritique/decisions.yaml) ----------
 const decisions = loadDecisions(manifest.baseDir);

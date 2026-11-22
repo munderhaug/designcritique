@@ -13,14 +13,14 @@ content: content-guide.md    # optional: content guide with a glossary (Term | â
 # vocabulary:                # optional: extra words in catalog/vocabulary.yaml's shape
 #   avoid: [Archive]         #   controls the crawler must not press
 critics:
-  models:                     # which model each reviewer runs on; leave out to use these defaults
-    critic: opus              #   the design-reviewer: judges the screens (needs the best judgement)
-    second_critic: fable      #   Impeccable: a different model, so the two don't share blind spots
-    frame: opus               #   the frame challenger: argues the concept
-    cold_read: sonnet         #   reads the screens told nothing
-    lenses: sonnet            #   structure, scope and system passes over graphs and check files
-    builder: sonnet           #   /designcritique:iterate's fixer
-  # judge_model: opus         # older setting: one model for every reviewer
+  # models:                   # which model each reviewer runs on; these are the defaults
+  #   critic: opus            #   the design-reviewer: judges the screens (needs the best judgement)
+  #   second_critic: fable    #   Impeccable: a different model, so the two don't share blind spots
+  #   frame: opus             #   the frame challenger: argues the concept
+  #   cold_read: sonnet       #   reads the screens told nothing
+  #   lenses: sonnet          #   structure, scope and system passes over graphs and check files
+  #   builder: sonnet         #   /designcritique:iterate's fixer
+  # judge_model: opus         # one model for every reviewer; a role named under models wins over it
   external: []                # extra judges on other tools, e.g. [codex]; see critic-brief.md
 sharing: normal               # or local: designs go to the model reviewers only; no external judges,
                               # reference searches or other connected services
