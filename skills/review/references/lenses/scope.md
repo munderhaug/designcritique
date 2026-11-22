@@ -21,4 +21,6 @@ generating ideas; here they are tests:
    before MVP must-haves, or out-of-scope items present, are `SCOPE-PHASE` / `SCOPE-OUT`.
 
 Return the `scope` array (one entry per feature: keep, cut, add, move, defer or rethink, with the
-job and task it serves) and findings for every cut, add and rethink. `"critic": "scope"`.
+job and task it serves) and findings for every cut, add and rethink, citing the `SCOPE-*` ID that
+applies. This holds when a check already reported the same item (an out-of-scope feature, say):
+the check says it is there, your finding says what it costs the jobs and key tasks. `"critic": "scope"`.
