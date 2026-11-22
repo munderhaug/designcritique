@@ -55,6 +55,7 @@ const manifest = {
   references: cfg.references.filter((r) => fs.existsSync(r)),
   requires: cfg.requires,
   critics: cfg.critics,
+  sharing: cfg.sharing,
   language: cfg.language,
   vocabulary: cfg.vocabulary,
   gate: cfg.gate,

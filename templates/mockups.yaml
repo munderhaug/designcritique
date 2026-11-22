@@ -13,9 +13,17 @@ content: content-guide.md    # optional: content guide with a glossary (Term | â
 # vocabulary:                # optional: extra words in catalog/vocabulary.yaml's shape
 #   avoid: [Archive]         #   controls the crawler must not press
 critics:
-  judge_model:                # model for the design-reviewer, e.g. fable or opus; best one other
-                              # than the model that made the mockups (empty: chosen per run)
+  models:                     # which model each reviewer runs on; leave out to use these defaults
+    critic: opus              #   the design-reviewer: judges the screens (needs the best judgement)
+    second_critic: fable      #   Impeccable: a different model, so the two don't share blind spots
+    frame: opus               #   the frame challenger: argues the concept
+    cold_read: sonnet         #   reads the screens told nothing
+    lenses: sonnet            #   structure, scope and system passes over graphs and check files
+    builder: sonnet           #   /designcritique:iterate's fixer
+  # judge_model: opus         # older setting: one model for every reviewer
   external: []                # extra judges on other tools, e.g. [codex]; see critic-brief.md
+sharing: normal               # or local: designs go to the model reviewers only; no external judges,
+                              # reference searches or other connected services
 gate:                         # or `gate: off`: no verdict, the critique as a conversation
   fail_on: P1                 # not passed while any open finding is this severe (P0-P3, none)
   confirm: false              # true: a P1-P3 only one critic raised doesn't block until a second source saw it too

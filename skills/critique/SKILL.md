@@ -43,7 +43,9 @@ the one-call probe in [references.md](references/references.md#check-the-source-
 reference source that is connected.
 
 Then ask the designer once, in one question (the question tool when available), which of the
-ones not ready they want to set up now, leading with those this project uses. Nothing is
+ones not ready they want to set up now, leading with those this project uses, and whether the
+work is confidential (then `sharing: local`: the designs go to the model reviewers only, as the
+script's "Where your designs go" lists). Nothing is
 installed, connected, or asked for (accounts, tokens, devices) without that answer; a token is
 never pasted into chat. What they skip is skipped for the session: carry on without it, say in
 the reply which reviewer ran in fallback mode, and don't ask again.
@@ -74,24 +76,26 @@ them in: `RUN_DIR/briefs/plan.json`. If it stops (a time limit, a crash), run
 `run.mjs --run <RUN_DIR>` and it continues. Read the warnings and look at one standard-light
 screenshot per screen; fix mis-renders and run it again `--from capture`.
 
-If a reference source works, gather references now as [references.md](references/references.md)
+If a reference source works and sharing isn't `local`, gather references now as [references.md](references/references.md)
 describes (it writes `RUN_DIR/references.md`), then `run.mjs --run <RUN_DIR> --from briefs`.
 
 ## 4. Reviewers, stage by stage
 
 Follow `briefs/plan.json`. Spawn each reviewer with the agent and model it names and its brief
-file **unchanged**; within a stage, in parallel. Save each reply with the `save` command given
+file **unchanged**; within a stage, in parallel. The models are chosen per role
+(`critics.models`): the strongest judgement for the screen critic and the frame challenger, a
+different model for the second critic, lighter ones for the cold read and the lenses. Save each reply with the `save` command given
 for it (write the reply to a file first; for a long reply pass the agent's transcript). Never
 fill in, shorten or add to a brief, and never tell a reviewer what another found or how the
-screens were made. Use `critics.judge_model` when set; otherwise a model other than the one
-that made the mockups.
+screens were made. Prefer models other than the one that made the mockups.
 
 1. **Cold read.** A reviewer told nothing says what the screens themselves communicate.
 2. **Frame challenge.** A devil's advocate tests the frame against that reading: the problem
    statement, the assumptions, a pre-mortem, who is left out, alternatives.
    **Then stop and talk.** Show the designer the cold reading beside their frame and the
    challenger's questions, argue the ones you find strong, and ask whether they want to change
-   `PRODUCT.md` before the screens are judged against it. Record answers with
+   `PRODUCT.md` before the screens are judged against it. Say what stage 3 will cost (the
+   plan's estimate: agents, tokens, minutes) in the same message, so the go-ahead covers both. Record answers with
    `decide.mjs --challenge`. If the frame changed: `capture.mjs --config mockups.yaml --out
    <RUN_DIR> --frame-only`, then `run.mjs --run <RUN_DIR> --from briefs`. Skip the pause only
    inside `/designcritique:iterate` or when told to run straight through.

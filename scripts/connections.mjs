@@ -70,7 +70,18 @@ const items = [
   },
 ];
 
-if (args.json) { console.log(JSON.stringify({ project, items }, null, 2)); process.exit(0); }
+// Where the designs go, so the designer can keep unreleased or client work to as few places as
+// they want (sharing: local in mockups.yaml).
+const external = (cfg.critics?.external || []).map(String);
+const sharing = cfg.sharing === 'local' ? 'local' : 'normal';
+const destinations = [
+  { to: 'The model reviewers (Anthropic, through Claude Code)', what: 'screenshots, the frame, and for some reviewers the HTML', always: true },
+  { to: `External judges on other providers${external.length ? ` (${external.join(', ')})` : ''}`, what: 'the same as the reviewers', used: external.length > 0 && sharing !== 'local' },
+  { to: 'Mobbin or Refero, when connected', what: 'short searches describing the key tasks (no screenshots)', used: sharing !== 'local' },
+  { to: 'Figma, when connected', what: 'reads your files; sends nothing of the run', used: sharing !== 'local' },
+];
+
+if (args.json) { console.log(JSON.stringify({ project, items, sharing, destinations }, null, 2)); process.exit(0); }
 const mark = (i) => (i.ready === true ? 'ready' : i.ready === false ? 'not set up' : 'check');
 console.log('Connections that need something from you (nothing is connected or installed without asking):');
 for (const i of [...items.filter((x) => x.relevant), ...items.filter((x) => !x.relevant)]) {
@@ -78,3 +89,5 @@ for (const i of [...items.filter((x) => x.relevant), ...items.filter((x) => !x.r
   console.log(`    gives: ${i.enables}`);
   if (i.ready !== true) console.log(`    to set up: ${i.setup}`);
 }
+console.log(`\nWhere your designs go (sharing: ${sharing}; set sharing: local in mockups.yaml to keep them to the model reviewers):`);
+for (const d of destinations) console.log(`- ${d.always ? 'always' : d.used ? 'yes' : 'no'}: ${d.to}: ${d.what}`);

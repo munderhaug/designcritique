@@ -50,6 +50,9 @@ export function loadConfig(configPath) {
     language: raw.language ? [].concat(raw.language).map(String) : [],
     vocabulary: raw.vocabulary || {},
     critics: normalizeCritics(raw.critics),
+    // sharing: local — the designs go to the model reviewers only: no external judges on other
+    // providers, no reference searches (Mobbin, Refero), no Figma or other connected services.
+    sharing: normalizeSharing(raw.sharing),
     gate: normalizeGate(raw.gate),
     iterate: { max_rounds: Number(raw.iterate?.max_rounds ?? 3) },
     output: rel(raw.output || '.designcritique/runs'),
@@ -142,12 +145,31 @@ export function expandImages(spec, baseDir) {
   return out;
 }
 
+// Which model each reviewer role runs on. Chosen by what the role needs: judging screenshots and
+// arguing a frame need the strongest judgement; the second critic runs on a different model so the
+// two don't share blind spots; structured passes over graphs and check files need less.
+export const MODEL_ROLES = ['cold_read', 'frame', 'critic', 'second_critic', 'lenses', 'builder'];
+export const DEFAULT_MODELS = { cold_read: 'sonnet', frame: 'opus', critic: 'opus', second_critic: 'fable', lenses: 'sonnet', builder: 'sonnet' };
+
 function normalizeCritics(raw = {}) {
   const external = raw.external || [];
   if (!Array.isArray(external) || external.some((e) => !/^[a-z0-9-]+$/.test(String(e)))) {
     throw new Error('critics.external must be a list of names (lowercase letters, digits, -), e.g. [codex]');
   }
-  return { judge_model: raw.judge_model ? String(raw.judge_model) : null, external: external.map(String) };
+  const models = { ...DEFAULT_MODELS };
+  // judge_model (older configs): one model for every reviewer.
+  if (raw.judge_model) for (const k of MODEL_ROLES) models[k] = String(raw.judge_model);
+  for (const [k, v] of Object.entries(raw.models || {})) {
+    if (!MODEL_ROLES.includes(k)) throw new Error(`critics.models.${k} is not a role (${MODEL_ROLES.join(', ')})`);
+    if (v) models[k] = String(v);
+  }
+  return { judge_model: raw.judge_model ? String(raw.judge_model) : null, models, external: external.map(String) };
+}
+
+function normalizeSharing(v) {
+  const s = v == null ? 'normal' : String(v);
+  if (!['normal', 'local'].includes(s)) throw new Error(`sharing must be normal or local (got ${s})`);
+  return s;
 }
 
 export function normalizeGate(raw = {}) {

@@ -50,8 +50,15 @@ for (const r of plan.reviewers) fs.writeFileSync(path.join(dir, `${r.name}.txt`)
 writeJson(path.join(dir, 'plan.json'), {
   note: 'Run the stages in order. Within a stage, spawn the reviewers in parallel; none sees another\'s output. Give each its brief file unchanged, then save its reply with its save command.',
   stages: plan.stages.map((st) => st.map((r) => ({ name: r.name, agent: r.agent, model: r.model, coverage: r.coverage, brief: `briefs/${r.name}.txt`, saves_to: r.file, save: r.save }))),
+  estimate: plan.estimate,
+  sharing: plan.local ? 'local' : 'normal',
+  warnings: plan.warnings,
 });
 const missing = ['design-critique', 'accessibility-review', 'ux-copy', 'impeccable'].filter((n) => !companions[n]);
 console.log(`Briefs: ${plan.reviewers.length} reviewers in ${plan.stages.length} stages for ${plan.screens} screens${plan.review ? ' (whole-product review: one per screen family)' : ''} → ${path.join(dir, 'plan.json')}`);
-for (const [i, st] of plan.stages.entries()) console.log(`  ${i + 1}. ${st.map((r) => r.name).join(', ')}`);
+for (const [i, st] of plan.stages.entries()) console.log(`  ${i + 1}. ${st.map((r) => `${r.name} (${r.model || 'any model'})`).join(', ')}`);
+const e = plan.estimate;
+console.log(`  Estimated: ${e.agents} reviewer agents, about ${(e.tokens / 1e6).toFixed(1)} M tokens, about ${e.minutes} minutes with each stage in parallel (from this plugin's measured runs).`);
+if (plan.local) console.log('  Sharing: local. The designs go to the model reviewers only: no external judges, reference searches or connected services.');
+for (const w of plan.warnings) console.log(`  warning: ${w}`);
 if (missing.length) console.log(`  Not installed: ${missing.join(', ')}. ${companions.impeccable ? '' : 'The Impeccable critic is left out. '}Reviewers fall back to the principles index and say so (setup.sh --install-companions).`);

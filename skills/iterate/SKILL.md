@@ -47,7 +47,7 @@ With no config given, use `mockups.yaml` in the current project. `--rounds N` ov
 4. **Pick what to fix**, from `findings.json` (decisions already applied): P0 and P1 first, then
    whatever caps the lowest task score. Structure before motion: task fit, layout, hierarchy,
    copy, accessibility and tokens first; motion findings only once the static screens pass.
-5. **Fix**, in a fresh general-purpose agent that is not one of the critics. Give it the findings
+5. **Fix**, in a fresh general-purpose agent on `critics.models.builder` that is not one of the critics. Give it the findings
    (id, screen, evidence, recommendation, alternatives), `PRODUCT.md`, `DESIGN.md` with the rule
    in `PLUGIN_ROOT/templates/CLAUDE-design-system.md`, the direction images if any, and the
    mockup HTML paths. It edits only those files, uses only DESIGN.md tokens and components (or

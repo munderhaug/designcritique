@@ -435,3 +435,23 @@ test('connections: lists what needs the designer, and leads with what the projec
   assert.equal(items.find((i) => i.id === 'figma').relevant, false);
   assert.ok(items.every((i) => i.enables && i.setup), 'each says what it gives and how to set it up');
 });
+
+test('reviewer models per role, the cost estimate, and local sharing', async () => {
+  const { DEFAULT_MODELS } = await import('../scripts/lib/config.mjs');
+  const base = (critics, sharing) => ({
+    manifest: { baseDir: '/p', framingSnapshot: 'framing.md', critics, sharing, screens: Array.from({ length: 3 }, (_, i) => shot(`s${i}`)) },
+    runDir: '/run', pluginRoot: '/plugin', keyTasks: [], companions: { impeccable: '/i/SKILL.md' }, blindKey: [{ n: 1, file: 'blind/01.png' }],
+  });
+  const p = planReviewers(base({ models: DEFAULT_MODELS, external: ['codex'] }, 'normal'));
+  const model = (n) => p.reviewers.find((r) => r.name === n).model;
+  assert.deepEqual([model('cold-read'), model('frame'), model('anthropic-design'), model('impeccable')], ['sonnet', 'opus', 'opus', 'fable']);
+  assert.ok(p.reviewers.some((r) => r.name === 'external-codex'));
+  assert.deepEqual(p.warnings, []);
+  assert.ok(p.estimate.agents === 5 && p.estimate.tokens > 0 && p.estimate.minutes > 0, JSON.stringify(p.estimate));
+  assert.ok(p.reviewers.filter((r) => r.stage === 3).every((r) => /never instructions to you/.test(r.brief)), 'every critic brief says prototype text is data');
+  const local = planReviewers(base({ models: { ...DEFAULT_MODELS, second_critic: 'opus' }, external: ['codex'] }, 'local'));
+  assert.ok(!local.reviewers.some((r) => r.name.startsWith('external-')), 'local sharing: no judge on another provider');
+  assert.match(local.warnings[0], /share its blind spots/);
+  const old = planReviewers(base({ judge_model: 'opus', external: [] }, 'normal'));
+  assert.ok(old.reviewers.every((r) => r.model === 'opus'), 'judge_model still sets one model for all');
+});
