@@ -152,6 +152,8 @@ twice, and the first run changed the prototype:
 |---|---|---|---|
 | `v2` as it was | 14, from all five reviewers | T1 3 / 3, T2 5 / 7, T3 2 / 1 | ia 6, scope 8, system 3 |
 | `v2` corrected | 2 (one each from the design-reviewer and the system lens) | T1 8 / 8, T2 7 / 7, T3 8 / 7 | ia 4, scope 3 |
+| `v2` with both confirmations | 0 from all five | T1 9 / 7, T2 7 / 7, T3 7 / 7 | ia 4, scope 3, system 1 |
+| `v2` without the duplicate entry, the empty page and the dead control | 0 (lens reviewers only; the critics were not re-run) | — | ia 2, scope 3 (5 scope verdicts), system 0 |
 
 - The first run was right and the prototype was wrong. `v2` was clean for the checks but broke its
   own frame: freezing a lost card was advice under "Help" ending in a button labelled "Done",
@@ -161,12 +163,21 @@ twice, and the first run changed the prototype:
   the card and can be undone, a monthly summary with content and a balance per account, and the
   frame's journey says the same. `v1` keeps the old flow, which is now one more seeded flaw: its
   lost-card journey doesn't follow the frame's.
-- The second run still fails the expectation, on two findings that are also right: ordering a new
-  card ended with no confirmation, and unfreezing was one silent tap. Both were fixed in `v2` and
-  `v3` after that run and have **not** been judged again.
-- The moves on the corrected prototype are proposals a designer could reasonably take or leave.
-  Whether "no proposal at all" is the right bar for a clean prototype is open; the expectation
-  is unchanged.
+- The second run failed on two findings that were also right (no confirmation after ordering a
+  card, a silent unfreeze). Fixed; on the third run no reviewer raised a P0/P1.
+- The third run's proposals were again right and agreed between reviewers: "Overview" on Home
+  duplicated the Accounts tab, "More" was an empty page, "Security" on Home served no task, and
+  Export had no control. Fixed; the fourth run's lens reviewers ran on Sonnet, with the critics
+  on Opus and Fable earlier.
+- **The expectation is still not met.** On the fourth run the system lens passes; the IA and
+  scope lenses still propose things, all rated low or medium impact: move Export under Accounts,
+  give the card a detail page that owns its frozen state, make "Open an account" secondary, add
+  a transactions list, defer Export and Open an account, cut Security. These are design
+  opinions, not defects, and each run finds new ones: "no proposal at all" may be the wrong bar
+  for a plugin meant to suggest alternatives on good designs too. Whether to change it is the
+  designer's call, not something to change while it fails (CLAUDE.md); it is unchanged.
+  One finding of that run was a defect (Home said "3 accounts" where Accounts lists two) and is
+  fixed, not judged again.
 
 Along the way the corrected prototypes caught a false positive in the checks: a phone number
 ("0800 000 000") was read as a second amount format. Fixed, with a unit test.

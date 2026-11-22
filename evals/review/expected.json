@@ -95,6 +95,7 @@
       "Monthly summary",
       "Menu",
       "Export statements",
+      "Security",
       {
         "title": "Open an account",
         "kind": "sheet"

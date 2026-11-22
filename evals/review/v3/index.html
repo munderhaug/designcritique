@@ -35,10 +35,8 @@
 <section data-view="home">
   <header><h1>Home</h1><button data-go="menu">Menu</button></header>
   <main>
-    <div class="card"><strong>Your money</strong><p>Balance 1,240.00</p><p class="muted">3 accounts</p></div>
+    <div class="card"><strong>Your money</strong><p>Balance 1,240.00</p><p class="muted">2 accounts</p></div>
     <button class="primary" data-go="lost">Card lost or stolen</button>
-    <button class="icon" data-go="security"><svg><use href="#shield"/></svg>Security</button>
-    <button data-go="accounts">Overview</button>
     <button data-go="monthly">Monthly summary</button>
   </main>
 </section>
@@ -61,8 +59,9 @@
 <section data-view="cards" hidden>
   <header><h1>Cards</h1></header>
   <main>
-    <div class="card"><strong>Debit card</strong><p class="muted">Ends in 4821</p></div>
-    <button data-go="lost">Card lost or stolen</button>
+    <div class="card"><strong>Debit card</strong><p class="muted">Ends in 4821</p><p data-frozen-note hidden><strong>Frozen</strong>: nobody can pay with it.</p></div>
+    <button data-go="unfrozen" data-frozen-only hidden>Unfreeze card</button>
+    <button data-go="lost" data-active-only>Card lost or stolen</button>
     <button data-go="order">Order new card</button>
   </main>
 </section>
@@ -73,7 +72,7 @@
   </main>
 </section>
 <section data-view="security" hidden>
-  <header><h1>Security</h1><button data-go="home">Back</button></header>
+  <header><h1>Security</h1><button data-go="menu">Back</button></header>
   <main>
     <p>Two-step sign-in is on.</p>
   </main>
@@ -117,22 +116,24 @@
     <button class="primary" data-go="cards">Back to cards</button><button data-go="home">Home</button>
   </main>
 </section>
+<section data-view="exported" hidden>
+  <header><h1>Statements downloaded</h1></header>
+  <main>
+    <div class="card"><strong>Your statements are saved</strong><p class="muted">The file is in your downloads.</p></div>
+    <button class="primary" data-go="menu">Back to menu</button>
+  </main>
+</section>
 <section data-view="menu" hidden>
   <header><h1>Menu</h1><button data-go="home">Close</button></header>
   <main>
-    <button data-go="export">Export statements</button><button data-go="more">More</button>
-  </main>
-</section>
-<section data-view="more" hidden>
-  <header><h1>More</h1><button data-go="menu">Back</button></header>
-  <main>
-    <p>Nothing else here yet.</p>
+    <button data-go="export">Export statements</button><button class="icon" data-go="security"><svg><use href="#shield"/></svg>Security</button>
   </main>
 </section>
 <section data-view="export" hidden>
   <header><h1>Export statements</h1><button data-go="menu">Back</button></header>
   <main>
     <p>Download your statements as a file.</p>
+    <button class="primary" data-go="exported">Download statements</button>
   </main>
 </section>
 
@@ -151,7 +152,12 @@
     mark(view) { for (const b of this.shadowRoot.querySelectorAll('button')) { b.removeAttribute('aria-current'); if (b.dataset.go === view) b.setAttribute('aria-current', 'page'); } }
   });
   let current = null;
+  let frozen = false;
   const show = (view) => {
+    if (view === 'done') frozen = true;
+    if (view === 'unfrozen') frozen = false;
+    for (const el of document.querySelectorAll('[data-frozen-note],[data-frozen-only]')) el.hidden = !frozen;
+    for (const el of document.querySelectorAll('[data-active-only]')) el.hidden = frozen;
     const page = sheets[view] || view;
     for (const s of document.querySelectorAll('[data-view]')) {
       const on = s.dataset.view === page;
