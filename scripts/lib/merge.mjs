@@ -68,10 +68,12 @@ export function mergeAcrossSources(findings) {
     // The same critic can say one thing twice: its whole-view reviewer and a batch share a name.
     // That is one finding from one source, not agreement.
     const twin = isCheck(f) ? null : out.find((g) => g.source === f.source && sameProblem({ ...g, source: `${g.source}#` }, f));
-    if (twin) { twin.repeats = (twin.repeats || 1) + 1; if (f.alternatives?.length) twin.alternatives = [...new Set([...(twin.alternatives || []), ...f.alternatives])]; continue; }
+    // A carried finding raised again this run is current, not carried.
+    if (twin) { twin.repeats = (twin.repeats || 1) + 1; if (!f.carried_from) delete twin.carried_from; if (f.alternatives?.length) twin.alternatives = [...new Set([...(twin.alternatives || []), ...f.alternatives])]; continue; }
     const into = out.find((g) => !g.raisedBy.includes(f.source) && sameProblem(g, f));
     if (!into) { out.push({ ...f, raisedBy: [f.source], also: [] }); continue; }
     into.raisedBy.push(f.source);
+    if (!f.carried_from) delete into.carried_from;
     into.also.push({ source: f.source, id: f.id, severity: f.severity, title: f.title, evidence: f.evidence, recommendation: f.recommendation, impact: f.impact, confidence: f.confidence, alternatives: f.alternatives });
     if (f.alternatives?.length) into.alternatives = [...new Set([...(into.alternatives || []), ...f.alternatives])];
     if (SEV.indexOf(f.severity) < SEV.indexOf(into.severity)) { into.severityFrom = f.source; into.severity = f.severity; }

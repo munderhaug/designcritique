@@ -110,8 +110,14 @@ test('save-critique: JSON from a fenced reply or a transcript, stamped and valid
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: JSON.stringify(obj) }] } },
   ].map((e) => JSON.stringify(e)).join('\n');
   assert.deepEqual(extractJson(replyFromTranscript(transcript)), obj);
+  // An agent that hands its final report back through a tool call, not as text.
+  const handback = [
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/x.json' } }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'SubagentHandback', input: { message: JSON.stringify(obj) } }] } },
+  ].map((e) => JSON.stringify(e)).join('\n');
+  assert.deepEqual(extractJson(replyFromTranscript(handback)), obj);
 
-  const run = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-save-'));
+  const run =fs.mkdtempSync(path.join(os.tmpdir(), 'dc-save-'));
   fs.writeFileSync(path.join(run, 'manifest.json'), JSON.stringify({ screens: [{ id: 'home' }] }));
   const reply = { critic: 'whatever', findings: [], tasks: [{ id: 'T1', task: 'Pay', verdict: 'supported', score: 8, coverage: 'whole' }] };
   const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts/report/save-critique.mjs'), '--run', run, '--critic', 'anthropic-design', '--name', 'anthropic-design-2', '--coverage', 'partial'], { input: `Result:\n${JSON.stringify(reply)}`, encoding: 'utf8' });

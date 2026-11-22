@@ -10,6 +10,8 @@
 //   node scripts/run.mjs --run <RUN_DIR>                 continue an unfinished run
 //   node scripts/run.mjs --run <RUN_DIR> --finish [--inline-thumbs]   report and gate, after the reviewers
 //   node scripts/run.mjs --run <RUN_DIR> --from <stage>  redo from a stage (crawl, capture, checks, briefs)
+//   add --base <earlier run> (bare: the newest finished one) to keep that run's batch findings for
+//   screens that did not change, so only changed screens get new close-look batches
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -30,6 +32,7 @@ if (!runDir) runDir = path.resolve(args.out || path.join(cfg.output, timestamp()
 fs.mkdirSync(runDir, { recursive: true });
 status = status || { config: configPath, review: !!(args.review || cfg.crawl), offline: !!args.offline, stages: {} };
 if (args.review) status.review = true;
+if (args.base) status.base = args.base === true ? true : path.resolve(String(args.base));
 const save = () => writeJson(statusPath(), status);
 save();
 
@@ -45,7 +48,7 @@ const steps = {
     return code === 0 && cfg.native.length ? node('capture/native.mjs', ['--config', configPath, '--out', runDir]) : code;
   },
   checks: () => node('checks/run-all.mjs', ['--run', runDir, ...(status.review ? ['--review'] : [])]),
-  briefs: () => node('report/briefs.mjs', ['--run', runDir]),
+  briefs: () => node('report/briefs.mjs', ['--run', runDir, ...(status.base === true ? ['--base'] : status.base ? ['--base', status.base] : [])]),
 };
 const htmlCapture = () => node('capture/capture.mjs', ['--config', configPath, '--out', runDir, ...offline, ...(fs.existsSync(inventory) ? ['--inventory', inventory] : []), ...(status.stages.capture?.resumed && fs.existsSync(path.join(runDir, 'manifest.json')) ? ['--resume'] : [])]);
 

@@ -32,7 +32,8 @@ With no config given, use `mockups.yaml` in the current project. `--rounds N` ov
 
 1. **Critique.** In the first round run the critique skill's steps 1–5. In later rounds, steps
    3–5 only: `run.mjs --config mockups.yaml` makes a new run folder; copy round 1's
-   `references.md` into it and run `run.mjs --run <RUN_DIR> --from briefs`; run only stage 3 of
+   `references.md` into it and run `run.mjs --run <RUN_DIR> --from briefs` (add `--base <the
+   previous round's run>` on a large prototype, so unchanged screens skip their batch); run only stage 3 of
    the plan (the cold read and frame challenge were done in round 1, and the pause for the
    designer is skipped inside this loop); finish with `run.mjs --run <RUN_DIR> --finish` and
    `render-report.mjs --run <RUN_DIR> --base <the previous round's run>` so "Since last run"

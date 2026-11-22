@@ -51,7 +51,7 @@ export function renderMarkdown(ctx) {
     if (!list.length) continue;
     L.push(`### ${sev}`, '');
     for (const f of list) {
-      L.push(`**${f.n}. ${md(f.title)}**${f.status === 'new' ? ' _(new)_' : ''}${agreementNote(f) ? ` _(${agreementNote(f)})_` : ''}  `, `${whereOf(f)} · ${f.basis.join(', ')} · ${(f.raisedBy || [f.source]).join(' + ')}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
+      L.push(`**${f.n}. ${md(f.title)}**${f.status === 'new' ? ' _(new)_' : ''}${agreementNote(f) ? ` _(${agreementNote(f)})_` : ''}  `, `${whereOf(f)} · ${f.basis.join(', ')} · ${(f.raisedBy || [f.source]).join(' + ')}${f.carried_from ? ` · carried from ${f.carried_from} (screen unchanged)` : ''}${f.confidence !== 'high' ? ` · ${f.confidence} confidence` : ''}`, '');
       L.push(`- Evidence: ${md(capLines(f.evidence)).replace(/\n/g, '; ')}`);
       if (f.impact) L.push(`- Impact: ${md(f.impact)}`);
       L.push(`- Fix: ${md(f.recommendation)}`);

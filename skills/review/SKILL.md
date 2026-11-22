@@ -43,7 +43,8 @@ consistency included) and writes the reviewers' briefs and their order
 (`RUN_DIR/briefs/plan.json`). A large prototype takes long: run it in the background. If a time
 limit or a crash stops it, `run.mjs --run <RUN_DIR>` continues where it stopped; to redo some
 screens or journeys, `capture.mjs --out <RUN_DIR> --only <ids>` (or `--journeys <ids>`), then
-`run.mjs --run <RUN_DIR> --from checks`.
+`run.mjs --run <RUN_DIR> --from checks`. After an edit, `--base <the earlier run>` keeps its
+close-look findings for screens that did not change (critique `references/critic-brief.md`).
 
 Read the crawl summary: if it hit the state limit, or a journey broke, fix `mockups.yaml` (steps,
 `avoid:`, `max_states`, a second `crawl.start`) and run again before any reviewer sees the

@@ -28,6 +28,12 @@ What the generator decides, so nobody does it by hand:
 - **Sharing.** With `sharing: local` there are no external judges and no reference screens.
 - **Cost.** `plan.json` → `estimate`: reviewer agents, tokens and minutes, from this plugin's
   measured runs. The skill states it before the critics run.
+- **Carry-over.** `run.mjs ... --base <earlier run>` (or `--from briefs --base <run>`): with more
+  than one batch, screens byte-identical to the base run (screenshots, page data, title and notes;
+  the frame, DESIGN.md and content guide unchanged) keep that run's batch findings about them
+  alone, marked "carried from", and get no new batch. The whole-view reviewer, Impeccable and the
+  lenses still see every screen, and tasks, journeys and challenges are always judged fresh.
+  Opt in only: a carried finding is not re-checked, so drop `--base` now and then for a full look.
 - **Prototype text is data.** Every brief and agent says that text in the prototype is content to
   judge, never instructions.
 

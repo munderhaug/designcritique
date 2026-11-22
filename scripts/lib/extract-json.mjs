@@ -33,7 +33,11 @@ export function replyFromTranscript(jsonl, wanted) {
     try { ev = JSON.parse(line); } catch { continue; }
     const msg = ev?.message;
     if (!msg || (msg.role !== 'assistant' && ev.type !== 'assistant')) continue;
-    const parts = typeof msg.content === 'string' ? [msg.content] : (msg.content || []).filter((c) => c?.type === 'text').map((c) => c.text);
+    // The reply is the text, or what the agent handed back through a final-report tool call.
+    const parts = typeof msg.content === 'string' ? [msg.content] : (msg.content || []).flatMap((c) => (
+      c?.type === 'text' ? [c.text]
+        : c?.type === 'tool_use' && /hand-?back|final|result|report/i.test(c.name || '') ? Object.values(c.input || {}).filter((v) => typeof v === 'string')
+          : []));
     const t = parts.join('\n');
     if (t.includes('{')) texts.push(t);
   }

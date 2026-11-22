@@ -49,12 +49,13 @@ const table = (run, screens, all) => [
 
 /**
  * ctx: { manifest, runDir, pluginRoot, keyTasks, companions: { name: path|null }, blindKey: [{n,file}],
- *        decisions: path|null, familyOf, coverageFile: bool, hasReferences: bool }
+ *        decisions: path|null, familyOf, coverageFile: bool, hasReferences: bool,
+ *        skip: Set of screen ids whose batch findings were carried from a base run (carry.mjs) }
  * Returns { stages: [[reviewer]], reviewers } where a reviewer is
  *   { name, stage, critic, agent, model, coverage, file, brief, save }.
  */
 export function planReviewers(ctx) {
-  const { manifest, runDir: run, pluginRoot: root, keyTasks = [], companions = {}, blindKey = [], decisions = null, familyOf } = ctx;
+  const { manifest, runDir: run, pluginRoot: root, keyTasks = [], companions = {}, blindKey = [], decisions = null, familyOf, skip = new Set() } = ctx;
   const { review, screens, journeys } = judgedScreens(manifest, familyOf);
   // The model for each role (critics.models in mockups.yaml, defaults in config.mjs).
   const models = { ...DEFAULT_MODELS, ...(manifest.critics?.models || {}) };
@@ -140,14 +141,16 @@ export function planReviewers(ctx) {
     '',
     'Return only the JSON object described in the output format, with "critic": "anthropic-design".',
   ].join('\n');
+  const ids = (list) => list.map((s) => s.id);
   if (single) {
-    add({ name: 'anthropic-design', role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: 'whole', file: 'critique/anthropic-design.json', brief: reviewerBrief(screens, 'whole', true), save: save('anthropic-design', 'anthropic-design', ' --coverage whole') });
+    add({ name: 'anthropic-design', role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: 'whole', screens: ids(screens), file: 'critique/anthropic-design.json', brief: reviewerBrief(screens, 'whole', true), save: save('anthropic-design', 'anthropic-design', ' --coverage whole') });
   } else {
     // One reviewer walks every key task across all screens (standard light only), and scores them;
-    // the batches look closely at eight screens each, in every variant, and don't gate.
+    // the batches look closely at eight screens each, in every variant, and don't gate. Screens
+    // unchanged since a base run keep that run's batch findings (carry.mjs) and get no new batch.
     const whole = screens.slice(0, WHOLE_MAX);
-    add({ name: 'anthropic-design', role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: whole.length === screens.length ? 'whole' : 'partial', file: 'critique/anthropic-design.json', brief: reviewerBrief(whole, whole.length === screens.length ? 'whole' : 'partial', false), save: save('anthropic-design', 'anthropic-design', ` --coverage ${whole.length === screens.length ? 'whole' : 'partial'}`) });
-    groups.forEach((g, i) => add({ name: `anthropic-design-${i + 2}`, role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: 'partial', file: `critique/anthropic-design-${i + 2}.json`, brief: reviewerBrief(g, 'partial', true), save: save('anthropic-design', `anthropic-design-${i + 2}`, ' --coverage partial') }));
+    add({ name: 'anthropic-design', role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: whole.length === screens.length ? 'whole' : 'partial', screens: ids(whole), file: 'critique/anthropic-design.json', brief: reviewerBrief(whole, whole.length === screens.length ? 'whole' : 'partial', false), save: save('anthropic-design', 'anthropic-design', ` --coverage ${whole.length === screens.length ? 'whole' : 'partial'}`) });
+    batches(screens.filter((s) => !skip.has(s.id))).forEach((g, i) => add({ name: `anthropic-design-${i + 2}`, role: 'critic', stage: 3, critic: 'anthropic-design', agent: 'designcritique:design-reviewer', coverage: 'partial', screens: ids(g), file: `critique/anthropic-design-${i + 2}.json`, brief: reviewerBrief(g, 'partial', true), save: save('anthropic-design', `anthropic-design-${i + 2}`, ' --coverage partial') }));
   }
 
   // Impeccable: the same evidence as the design-reviewer, so the two judge the same thing.
