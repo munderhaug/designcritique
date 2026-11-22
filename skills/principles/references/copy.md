@@ -16,3 +16,7 @@ are `STATE-EMPTY`; form labels for accessibility are `WCAG-3.3.2`.
 | `COPY-TONE` | Tone fits the user's situation and the product's voice, and never blames (Podmajersky: conversational; voice chart) | Jokes in an emergency or an error, cold system language, mixed voices |
 | `COPY-ACTION-LABEL` | Buttons and links say what will happen, as a verb and its object (Yifrah; Podmajersky) | "OK", "Submit", "Click here"; two buttons that both say "Continue" |
 | `COPY-ERROR` | Errors say what happened and how to fix it, in human words, near the problem (Nielsen 2001; Yifrah) | Codes, "Invalid input", blame, an error far from its field |
+
+Reading ease is measured by a check: LIX (C. H. Björnsson, *Läsbarhet*, Liber, 1968), sentence
+length plus the share of long words. It reports under `COPY-CLEAR` when running text scores
+above 55 ("difficult" on Björnsson's scale); it says nothing about short labels.

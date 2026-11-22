@@ -111,6 +111,8 @@ function renderPlan(frameMode) {
   const main = frameMode ? 'frame' : (devices.includes('standard') ? 'standard' : devices[0]);
   if (want.has('dark')) plan.push({ device: main, variant: 'dark', axe: true });
   if (want.has('large-text') && !frameMode && main !== 'compact') plan.push({ device: main, variant: 'large-text' });
+  // expanded: every text a third longer, as a translation would be (opt-in: variants: [..., expanded]).
+  if (want.has('expanded')) plan.push({ device: main, variant: 'expanded' });
   return plan;
 }
 

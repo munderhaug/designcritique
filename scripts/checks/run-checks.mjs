@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { parseArgs, readJson, writeJson, MIN_TARGET, MIN_TEXT } from '../lib/config.mjs';
+import { inputPurposeProblems, focusOrderProblems, lix } from '../lib/form-checks.mjs';
+import { nativeChecks } from './native-checks.mjs';
 import { loadTokens, nearestColor, onScale, parseColor } from '../lib/tokens.mjs';
 import { designSystemFindings } from './design-system.mjs';
 import { readProductStack } from '../lib/stack.mjs';
@@ -53,6 +55,9 @@ const BASIS = {
   'CHK-TARGET': (p) => [p === 'ios' ? 'IOS-TARGET' : 'AND-TARGET', 'WCAG-2.5.8', 'LAW-FITTS'],
   'CHK-TEXT-MIN': (p) => [p === 'ios' ? 'IOS-TYPE' : 'AND-TYPE', 'VIS-TYPE'],
   'CHK-TEXT-SCALE': (p) => ['WCAG-1.4.4', p === 'ios' ? 'IOS-TYPE' : 'AND-TYPE'],
+  'CHK-INPUT-PURPOSE': () => ['WCAG-1.3.5', 'LAW-TESLER'],
+  'CHK-FOCUS-ORDER': () => ['WCAG-2.4.3', 'WCAG-1.3.2'],
+  'CHK-READABILITY': () => ['COPY-CLEAR', 'COGA-PURPOSE'],
   'CHK-TEXT-CLIP': () => ['WCAG-1.4.4', 'NN-H6'],
   'CHK-TEXT-OVERLAP': () => ['WCAG-1.4.4', 'GESTALT-FIGURE'],
   'CHK-OVERFLOW': () => ['WCAG-1.4.10'],
@@ -82,6 +87,8 @@ function add(f) {
     ? (AXE_BASIS[f.rule.slice(4)] || (f.wcag?.length ? f.wcag : ['WCAG-4.1.2']))
     : (BASIS[f.rule] ? BASIS[f.rule](f.platform) : []);
   delete f.wcag;
+  // A problem seen only in the longer-text render is about room for other languages.
+  if ((f.seenIn || []).length && f.seenIn.every((t) => t.endsWith('/expanded'))) basis.push('INTL-EXPANSION');
   findings.push({ id, source: 'check', confidence: 'high', basis, ...f });
 }
 
@@ -97,41 +104,8 @@ const productStacks = framingPath && fs.existsSync(framingPath) ? readProductSta
 // Words in the prototype's languages (deceptive-pattern checks).
 const vocab = loadVocabulary(languagesOf([manifest.language, manifest.pageLanguages]), manifest.vocabulary || {});
 
-// A native screen (scripts/capture/native.mjs): what its accessibility hierarchy can show.
-// Target sizes in pt or dp, and controls a screen reader can't name. Type, contrast and layout
-// need the rendering engine's own tools and are left to the critics.
-function nativeChecks(screen) {
-  for (const platform of [...new Set(screen.captures.map((c) => c.platform))]) {
-    const main = primaryCapture(screen, platform);
-    if (!main?.data) { notes.push({ screen: screen.id, note: 'Native screen without a readable hierarchy: critics only.' }); continue; }
-    const d = load(main.data);
-    const base = { screen: screen.id, mockup: screen.mockupId, platform, surface: 'native-render' };
-    const min = MIN_TARGET[platform]; const unit = PLATFORM_UNIT[platform];
-    const small = d.interactive.filter((el) => !el.disabled && (el.box.w < min - 0.5 || el.box.h < min - 0.5));
-    for (const el of small.slice(0, 8)) {
-      add({
-        ...base, rule: 'CHK-TARGET', category: 'a11y', severity: Math.min(el.box.w, el.box.h) < min * 0.75 ? 'P1' : 'P2',
-        title: `Tap target ${el.box.w}×${el.box.h} is below ${min}×${min} ${unit}`,
-        element: { selector: el.selector, name: el.name, box: el.box },
-        evidence: `${el.tag}${el.name ? ` "${el.name}"` : ' (no name)'} is ${el.box.w}×${el.box.h} ${unit} in the app's accessibility hierarchy on ${main.deviceName}.`,
-        recommendation: `Make the tappable area at least ${min}×${min} ${unit}. The visible shape can stay smaller if the hit area is padded.`,
-        seenIn: [tagOf(main)],
-      });
-    }
-    const unnamed = d.interactive.filter((el) => !el.disabled && !el.name);
-    if (unnamed.length) add({
-      ...base, rule: 'CHK-NATIVE-NAME', category: 'a11y', severity: 'P1',
-      title: `${unnamed.length} control(s) have no name for a screen reader`,
-      element: { selector: unnamed[0].selector, box: unnamed[0].box },
-      evidence: unnamed.slice(0, 5).map((el) => `${el.tag} at ${el.box.x},${el.box.y} (${el.box.w}×${el.box.h}): no label, text or description in the accessibility hierarchy`).join('\n'),
-      recommendation: platform === 'ios' ? 'Give each control an accessibilityLabel that says what it does.' : 'Give each control a contentDescription (or visible text) that says what it does.',
-      seenIn: [tagOf(main)], key: 'unnamed',
-    });
-  }
-}
-
 for (const screen of manifest.screens) {
-  if (screen.kind === 'native') { nativeChecks(screen); continue; }
+  if (screen.kind === 'native') { nativeChecks(screen, { add, load, notes, primaryCapture, tagOf }); continue; }
   if (screen.kind !== 'html') {
     notes.push({ screen: screen.id, note: 'Static image: deterministic checks skipped, critic only.' });
     continue;
@@ -185,6 +159,38 @@ for (const screen of manifest.screens) {
     }
     if (small.length > 8) notes.push({ screen: screen.id, note: `${small.length - 8} more small tap targets not listed.` });
 
+    // --- fields that don't say what they collect (autofill, the right keyboard) ---
+    const purpose = inputPurposeProblems(mainData.fields);
+    if (purpose.length) add({
+      ...base, rule: 'CHK-INPUT-PURPOSE', category: 'a11y', severity: 'P2',
+      title: `${purpose.length} field(s) don't tell the system what they collect`,
+      element: { selector: purpose[0].field.selector, name: purpose[0].field.name },
+      evidence: purpose.slice(0, 6).map((p) => `${p.field.name ? `"${p.field.name}"` : p.field.selector} (type ${p.field.type}): ${p.missing.includes('autocomplete') ? `no autocomplete (expected ${p.purpose})` : ''}${p.missing.length === 2 ? '; ' : ''}${p.missing.includes('keyboard') ? 'no matching type or inputmode, so the wrong keyboard opens' : ''}`).join('\n'),
+      recommendation: 'Set autocomplete to what the field collects and the matching type or inputmode, so the phone offers the saved value and the right keyboard. In a native app: textContentType and keyboardType (iOS), autofillHints and inputType (Android).',
+      seenIn: [tagOf(main)], key: 'input-purpose',
+    });
+
+    // --- moving through the controls jumps back up the screen ---
+    const order = focusOrderProblems(mainData.interactive);
+    if (order.forced.length || order.jumps.length >= 2) add({
+      ...base, rule: 'CHK-FOCUS-ORDER', category: 'a11y', severity: 'P2', confidence: 'medium',
+      title: order.forced.length ? `${order.forced.length} control(s) force their own place in the focus order` : `The order of the controls jumps back up the screen ${order.jumps.length} times`,
+      element: { selector: (order.forced[0] || order.jumps[0].to).selector, name: (order.forced[0] || order.jumps[0].to).name },
+      evidence: [...order.forced.slice(0, 3).map((c) => `${c.tag}${c.name ? ` "${c.name}"` : ''} has tabindex ${c.tabindex}`), ...order.jumps.slice(0, 4).map((j) => `after ${j.from.name ? `"${j.from.name}"` : j.from.tag} (y=${j.from.box.y}) comes ${j.to.name ? `"${j.to.name}"` : j.to.tag} (y=${j.to.box.y})`)].join('\n'),
+      recommendation: 'Put the controls in the code in the order they are read on screen, and remove positive tabindex values: a screen reader and a keyboard follow the code, not the layout.',
+      seenIn: [tagOf(main)], key: 'focus-order',
+    });
+
+    // --- running text that is hard to read ---
+    const ease = lix((mainData.prose || []).join('\n'));
+    if (ease && ease.score > 55) add({
+      ...base, rule: 'CHK-READABILITY', category: 'content', severity: 'P3', confidence: 'medium',
+      title: `Running text is hard to read (LIX ${ease.score})`,
+      evidence: `${ease.words} words in ${ease.sentences} sentence(s) of running text: LIX ${ease.score}. On Björnsson's scale 40 to 50 is ordinary prose, above 50 difficult, above 60 very difficult.`,
+      recommendation: 'Shorter sentences and everyday words: one idea per sentence, the key word first.',
+      seenIn: [tagOf(main)], key: 'readability',
+    });
+
     // --- minimum text size ---
     const minText = MIN_TEXT[platform];
     const tiny = mainData.texts.filter((t) => t.fontSize < minText - 0.25);
@@ -237,7 +243,7 @@ for (const screen of manifest.screens) {
       const atDefault = list.some((e) => e.seenIn.has(tagOf(main)));
       add({
         ...base, rule: 'CHK-TEXT-CLIP', category: 'layout', severity: atDefault ? 'P3' : 'P2',
-        title: atDefault ? `${list.length} text element(s) truncated at default size` : `${list.length} text element(s) truncate at large text or small screens`,
+        title: atDefault ? `${list.length} text element(s) truncated at default size` : `${list.length} text element(s) truncate at large text, longer text or small screens`,
         element: { selector: list[0].t.selector, text: list[0].t.text },
         evidence: list.slice(0, 4).map((e) => `"${e.t.text}" in ${[...e.seenIn].join(', ')}`).join('\n'),
         recommendation: 'Let important text wrap to two lines, or make sure the full text is reachable (detail view, accessibility label). Check the layout at the largest text size.',
@@ -272,7 +278,7 @@ for (const screen of manifest.screens) {
       const atDefault = list.some((e) => e.seenIn.has(tagOf(main)));
       add({
         ...base, rule: 'CHK-TEXT-OVERLAP', category: 'layout', severity: list[0].ratio >= 0.15 ? 'P1' : 'P2',
-        title: atDefault ? `${list.length} pair(s) of text overlap at default size` : `${list.length} pair(s) of text overlap at large text or small screens`,
+        title: atDefault ? `${list.length} pair(s) of text overlap at default size` : `${list.length} pair(s) of text overlap at large text, longer text or small screens`,
         element: { selector: list[0].a.selector, text: list[0].a.text },
         evidence: list.slice(0, 4).map((e) => `"${e.a.text}" over "${e.b.text}" (${Math.round(e.ratio * 100)}% of the smaller line) in ${[...e.seenIn].join(', ')}`).join('\n'),
         recommendation: 'Keep text in the flow instead of positioning it over other text; let rows grow with the text size, and check the layout at the largest text size.',

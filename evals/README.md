@@ -95,7 +95,7 @@ The script crawls, captures, runs the checks, structure and consistency audits a
 against `review/expected.json`: every seeded rule must fire on `v1`, and on `v2` and `v3` none of
 the watched rules and no P0–P2 from any check.
 
-Seeded: the must-not-fail "card lost" journey ends on a screen with no controls (dead end) and
+Seeded (on `v1`): the must-not-fail "card lost" journey ends on a screen with no controls (dead end) and
 no screen in it leads back home; it doesn't lead into ordering a new card; "Export statements"
 is four taps deep; the monthly summary exists only as a separate page (orphan); "Overview" leads
 to different places; the tab order differs from `## Navigation`; an out-of-scope feature is
@@ -143,9 +143,33 @@ On `v1`, scored by `npm run eval:lenses`: `ia` pass (cites `IA-DEPTH`, `IA-ORPHA
 `IA-NAV-CONSISTENT`; moves proposed), `scope` pass (`SCOPE-OUT`; a cut proposed), `system` pass
 (`CONS-FIGURES`, `CONS-TERM`, `CONS-COMPONENT`), and both the design-reviewer and Impeccable
 judged the must-not-fail "card lost" journey blocked (scores 4 and 2). The run's two partial
-design-reviewer batches were left out to save cost; the lens scoring doesn't use them. The lens
-reviewers have **not** been run on `v2`, so "no P0/P1 and no cut or move on the clean version"
-is still unmeasured.
+design-reviewer batches were left out to save cost; the lens scoring doesn't use them.
+
+On `v2` the expectation is no P0/P1 from any reviewer and no cut or move proposal. It was run
+twice, and the first run changed the prototype:
+
+| Run | P0/P1 | Task scores (design-reviewer / Impeccable) | Cut or move proposals |
+|---|---|---|---|
+| `v2` as it was | 14, from all five reviewers | T1 3 / 3, T2 5 / 7, T3 2 / 1 | ia 6, scope 8, system 3 |
+| `v2` corrected | 2 (one each from the design-reviewer and the system lens) | T1 8 / 8, T2 7 / 7, T3 8 / 7 | ia 4, scope 3 |
+
+- The first run was right and the prototype was wrong. `v2` was clean for the checks but broke its
+  own frame: freezing a lost card was advice under "Help" ending in a button labelled "Done",
+  three taps from Home where the frame says two; the monthly summary was an empty screen; there
+  was no balance per account. All five reviewers said so independently. `v2` and `v3` now have a
+  "Card lost or stolen" entry on Home and Cards, a "Freeze card" action, a confirmation that names
+  the card and can be undone, a monthly summary with content and a balance per account, and the
+  frame's journey says the same. `v1` keeps the old flow, which is now one more seeded flaw: its
+  lost-card journey doesn't follow the frame's.
+- The second run still fails the expectation, on two findings that are also right: ordering a new
+  card ended with no confirmation, and unfreezing was one silent tap. Both were fixed in `v2` and
+  `v3` after that run and have **not** been judged again.
+- The moves on the corrected prototype are proposals a designer could reasonably take or leave.
+  Whether "no proposal at all" is the right bar for a clean prototype is open; the expectation
+  is unchanged.
+
+Along the way the corrected prototypes caught a false positive in the checks: a phone number
+("0800 000 000") was read as a second amount format. Fixed, with a unit test.
 
 ## Sparring: cold read and frame challenge (`npm run eval:frame`, 2026-11-22)
 
@@ -174,35 +198,54 @@ Not measured: whether challenges are ones a designer would find useful (that nee
 the discuss skill (whether a critic concedes when it should and holds when it should), and
 run-to-run variation of the sparring stages.
 
-## Noise: the same screens judged twice (2026-11-17)
+## Noise: the same screens judged twice (2026-11-22, plugin 0.8.0)
 
-**Not repeated for 0.8.0.** The numbers below are from six screens and the briefs of that date.
-`gate.confirm` (a finding only one critic raised doesn't block until a second source saw it)
-exists because of them.
+`npm run eval:noise` measures occasion noise (Kahneman, Sibony & Sunstein, *Noise*, 2021). The
+whole-view design-reviewer and Impeccable judged the nine screens a second time, cold, from the
+same briefs and on the same models, and the two judgements were compared.
 
-`npm run eval:noise` measures occasion noise (Kahneman, Sibony & Sunstein, *Noise*, 2021): the
-critics judged the critic run above a second time, cold, with the same models, briefs and plugin
-files (commit `1f7c259`), and the two judgements were compared.
+| Critic | Task scores differ by | Same verdict | Findings in both runs | Same severity |
+|---|---|---|---|---|
+| design-reviewer | 0.4 on average, at most 1 | 6 of 7 | 9 of 14 and 10 (60% overlap) | 89% |
+| Impeccable critique | 0.3 on average, at most 1 | 6 of 7 | 10 of 15 and 14 (53% overlap) | 100% |
 
-| Critic | Task scores differ by | Same verdict | Findings in both runs | Same severity | P0/P1 reproduced |
-|---|---|---|---|---|---|
-| design-reviewer | 0.2 on average, at most 1 | 6 of 6 | 10 of 15 (67% overlap) | 90% | 3 of 4 (one moved P1 → P2) |
-| Impeccable critique | 0.2 on average, at most 1 | 6 of 6 | 12 of 15 (67% overlap) | 100% | 5 of 5 |
-
-Recall on the seeded screens was 10/10 in both runs, with no P0/P1 on the clean screens.
+The earlier measurement (2026-11-17, six screens) gave 0.2 on average, 6 of 6 and 67%.
 
 What this means:
-- Task scores and verdicts are stable, so the gate's "lowest score" rule isn't failing runs at
-  random.
-- Serious findings mostly reproduce. The one that moved (placeholder-only labels at checkout)
-  sits on the P1/P2 boundary that `severity.md` asks critics to settle by task criticality; a
-  finding on a boundary can flip the `fail_on: P1` gate between runs.
-- About a third of P2 and P3 findings come and go between runs. Treat a single run's minor
-  findings as a sample, not a full list: a second run, or the other critic, finds more.
+- Task scores are stable to within a point, so the gate's score rule doesn't fail runs at random,
+  except for a task sitting exactly on the target.
+- Roughly half of a single run's findings come back in a second run. Treat one run's lesser
+  findings as a sample, not a full list. `gate.confirm: true` exists for this: a finding only one
+  critic raised doesn't block until a second source has seen it too.
+- Findings both critics raise, or a critic and a check, are the ones to trust first; the report
+  marks them.
 
-One repetition of two critics on six screens is a small sample. Re-run after changing a brief,
-an agent or the principles index; critics now also record `subscores` before each task score,
-which this measurement predates.
+One repetition of two critics on nine screens is still a small sample.
+
+## The discussion and the fix loop, end to end (2026-11-22)
+
+Both were run once, by hand along the skill's steps, on real findings from the runs above.
+
+- **Discuss.** Two findings were argued with the critic that raised them. On "Delete order looks
+  exactly like Pay now" (P0), against "people read labels; P0 is absurd", the critic granted the
+  point about labels, kept the finding as a slip risk and revised it to P1, because the screens
+  can't show that the order is lost for good. On "Pay button doesn't show the amount" (P3),
+  against a new fact (the button opens the system payment sheet, which shows the amount), it
+  conceded. Both exchanges were recorded with `decide.mjs` and appear under the finding and in
+  "Decided by you". Not measured: whether a critic holds when it should against a weak case
+  (neither case here ended in a hold).
+- **Iterate.** One screen (a checkout with planted problems), two rounds. Round 1: gate failed,
+  P0 1, P1 3, P2 7, both critics scoring the task 3. A builder agent fixed ten findings in the
+  HTML, stopped on one it had no design token for instead of inventing a component, gave a reason
+  for every change and looked at its own renders. Round 2, judged cold by fresh critics: P0 0,
+  P1 1, P2 3; Impeccable scored the task 7, the design-reviewer 4 for one new P1 (the pinned pay
+  bar clips at large text on the compact phone). "Since last run" reported 11 fixed, 9 new, 1
+  still open, and `rounds.mjs best` picked round 2. The loop was stopped there: it works, and the
+  gate was not yet passed after one fix round.
+
+Seen along the way and not fixed: a full-page screenshot paints a sticky or fixed bar where the
+first viewport ends, so it can cover content in the `__full` image that it wouldn't cover on a
+phone. Critics should judge bars from the viewport screenshots.
 
 ## Learning from decisions
 

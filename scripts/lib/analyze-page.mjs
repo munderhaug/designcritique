@@ -194,6 +194,7 @@ export function analyzePage({ frameAttr }) {
       fixed: fixedAncestor(el),
       hidden: hiddenReason(el, rectPoints(el)),
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
+      tabindex: el.hasAttribute('tabindex') ? Number(el.getAttribute('tabindex')) : null,
       style: {
         bg: colorKey(s.backgroundColor), color: colorKey(s.color),
         border: parseFloat(s.borderTopWidth) > 0 && s.borderTopStyle !== 'none' ? colorKey(s.borderTopColor) : null,
@@ -203,6 +204,19 @@ export function analyzePage({ frameAttr }) {
       checked: el.checked === true || el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-pressed') === 'true',
     });
   }
+
+  // Fields a person types into: what they are for, as the system can know it (WCAG 1.3.5).
+  const fields = [];
+  for (const el of deepAll(root, 'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=range]):not([type=file]):not([type=color]):not([type=image]):not([type=reset]),textarea')) {
+    if (!visible(el)) continue;
+    fields.push({
+      selector: cssPath(el), name: nameOf(el).slice(0, 60), type: (el.getAttribute('type') || 'text').toLowerCase(),
+      inputmode: el.getAttribute('inputmode'), autocomplete: el.getAttribute('autocomplete'),
+      key: `${el.id || ''} ${el.getAttribute('name') || ''}`.trim().toLowerCase(), hidden: hiddenReason(el, rectPoints(el)),
+    });
+  }
+  // Running text, whole (the text list keeps 60 characters each): for the readability check.
+  const prose = [];
 
   // Text, colours, spacing
   const texts = [];
@@ -273,6 +287,7 @@ export function analyzePage({ frameAttr }) {
       });
       const t = texts[texts.length - 1];
       t.hidden = hiddenText(el, t.lines);
+      if (!t.hidden && prose.length < 60 && ownText.split(/\s+/).length >= 8) prose.push(ownText.replace(/\s+/g, ' ').slice(0, 800));
       note(colors, colorKey(s.color), lazySel());
       note(fontSizes, `${Math.round(fs * 10) / 10}`, lazySel());
     }
@@ -393,6 +408,8 @@ export function analyzePage({ frameAttr }) {
     viewportFitCover,
     title: document.title || null,
     interactive,
+    fields,
+    prose,
     texts,
     colors,
     spacing,

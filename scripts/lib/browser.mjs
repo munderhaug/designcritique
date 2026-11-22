@@ -36,7 +36,24 @@ export async function preparePage(context, url, variant, screen = {}, insets = n
   await page.evaluate(() => document.fonts && document.fonts.ready);
   await page.waitForTimeout(150);
   await settleAnimations(page);
+  if (variant === 'expanded') await page.evaluate(expandText).catch(() => {});
   return page;
+}
+
+// Runs in the page, after the steps (which tap by the original names): makes every piece of
+// text about a third longer, short ones more, as translation from English commonly does (W3C
+// Internationalization, "Text size in translation"), so the clipping, overlap and overflow
+// checks see whether the layout has room for another language.
+function expandText() {
+  const pad = (t) => { const core = t.trim(); if ([...core].length < 2 || !/\p{L}/u.test(core)) return t; const n = Math.max(2, Math.ceil([...core].length * (core.length <= 10 ? 0.6 : 0.35))); return t.replace(core, `${core} ${[...core].slice(0, n).join('')}`); };
+  const walk = (root) => {
+    const it = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (it.nextNode()) if (!['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(it.currentNode.parentElement?.tagName)) nodes.push(it.currentNode);
+    for (const n of nodes) n.textContent = pad(n.textContent);
+    for (const el of root.querySelectorAll('*')) if (el.shadowRoot) walk(el.shadowRoot);
+  };
+  walk(document.body);
 }
 
 // Wait for running page transitions and animations (Web Animations, which capture's frozen CSS

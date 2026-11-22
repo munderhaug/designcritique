@@ -375,3 +375,51 @@ test('gate.confirm: a finding one critic raised alone does not block; a P0 or a 
   assert.deepEqual(confirm.reasons, ['[check] 1 open finding(s) at P1 or worse', '[critic] 2 open finding(s) at P1 or worse']);
   assert.equal(confirm.unconfirmed, 1);
 });
+
+import { inputPurposeProblems, focusOrderProblems, lix } from '../scripts/lib/form-checks.mjs';
+import { mergeAcrossSources as mergeAll, EQUIVALENT } from '../scripts/lib/merge.mjs';
+
+test('fields say what they collect; an account name is not a person\'s name', () => {
+  const f = (o) => ({ type: 'text', key: '', name: '', autocomplete: null, inputmode: null, hidden: null, ...o });
+  const out = inputPurposeProblems([
+    f({ type: 'email', key: 'email' }),                               // no autocomplete
+    f({ key: 'phone' }),                                              // no autocomplete, text keyboard
+    f({ type: 'email', key: 'email', autocomplete: 'email' }),        // fine
+    f({ key: 'name', name: 'Account name' }),                         // not about the person
+    f({ type: 'password', key: 'pw', autocomplete: 'off' }),          // off is not an answer
+    f({ type: 'email', key: 'email', hidden: 'under an open modal' }), // not on screen
+  ]);
+  assert.deepEqual(out.map((p) => [p.field.key, p.missing.join('+')]), [['email', 'autocomplete'], ['phone', 'autocomplete+keyboard'], ['pw', 'autocomplete']]);
+});
+
+test('focus order: jumps back up the screen and forced tab order; reading ease by LIX', () => {
+  const c = (name, y, extra = {}) => ({ name, tag: 'button', box: { x: 0, y, w: 100, h: 44 }, hidden: null, fixed: false, disabled: false, tabindex: null, ...extra });
+  assert.equal(focusOrderProblems([c('a', 100), c('b', 160), c('c', 160), c('d', 300)]).jumps.length, 0);
+  const bad = focusOrderProblems([c('a', 400), c('b', 100), c('c', 500), c('d', 60), c('tab', 800, { fixed: true }), c('first', 20, { tabindex: 3 })]);
+  assert.equal(bad.jumps.length, 2);
+  assert.deepEqual(bad.forced.map((x) => x.name), ['first']);
+  assert.equal(lix('Short text.'), null);
+  const easy = lix(Array.from({ length: 20 }, () => 'You can pay now. It is safe.').join(' '));
+  const hard = lix(Array.from({ length: 6 }, () => 'Notwithstanding aforementioned considerations regarding transactional authorisation procedures, cardholders acknowledge institutional responsibilities concerning unauthorised disbursements').join(' ') + '.');
+  assert.ok(easy.score < 30 && hard.score > 60, `${easy.score} ${hard.score}`);
+  assert.equal(lix('支付按钮太小'.repeat(40)), null);
+});
+
+test('two critics citing different IDs for one defect merge; every equivalent ID exists', () => {
+  const ids = principleIds();
+  for (const id of EQUIVALENT.flat()) assert.ok(ids.has(id), `${id} is not in the principles index`);
+  const out = mergeAll([
+    { id: 'a', source: 'anthropic-design', screen: 'pay', rule: 'NN-H9', basis: ['NN-H9'], severity: 'P1', title: 'The payment error does not say what went wrong' },
+    { id: 'b', source: 'impeccable', screen: 'pay', rule: 'COPY-ERROR', basis: ['COPY-ERROR'], severity: 'P2', title: 'Payment error message does not say what went wrong or how to fix it' },
+    { id: 'c', source: 'impeccable', screen: 'pay', rule: 'LAW-FITTS', basis: ['LAW-FITTS'], severity: 'P2', title: 'Close button is tiny' },
+  ]);
+  assert.equal(out.length, 2);
+  assert.equal(out.find((f) => f.rule === 'NN-H9').agreement, 'critics-agree');
+});
+
+import { amountFormats as formatsOf } from '../scripts/lib/consistency.mjs';
+test('a phone number is not a second amount format', () => {
+  const f = formatsOf([{ screen: 'a', text: 'Balance 1,240.00' }, { screen: 'b', text: 'Call us on 0800 000 000 or 020 7946 0000' }, { screen: 'c', text: 'Spent 1,120.00' }]);
+  assert.deepEqual(f.map((x) => x.format), ['grouping comma, decimal dot']);
+  assert.equal(formatsOf([{ screen: 'a', text: '1,240.00' }, { screen: 'b', text: '1 240,00' }]).length, 2);
+});

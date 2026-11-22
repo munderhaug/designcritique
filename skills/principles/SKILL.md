@@ -17,7 +17,7 @@ summarises its primary sources and names them. Read only the files the task need
 | [cognitive-walkthrough.md](references/cognitive-walkthrough.md) | Task-based evaluation method (Wharton et al.) | `TASK-FIT`, `TASK-WALK-Q1`–`Q4` |
 | [perception.md](references/perception.md) | Gestalt grouping, visual hierarchy, type, colour, isolation effect | `GESTALT-*`, `VIS-*` |
 | [interaction-laws.md](references/interaction-laws.md) | Fitts, Hick–Hyman, Jakob, cognitive load, reach, response time | `LAW-*` |
-| [accessibility.md](references/accessibility.md) | WCAG 2.2 success criteria that apply to phone screens | `WCAG-x.y.z` |
+| [accessibility.md](references/accessibility.md) | WCAG 2.2 success criteria that apply to phone screens; cognitive accessibility (W3C, 2021) | `WCAG-x.y.z`, `COGA-*` |
 | [ios.md](references/ios.md) | Apple Human Interface Guidelines on iPhone | `IOS-*` |
 | [android.md](references/android.md) | Material 3 and Android conventions | `AND-*` |
 | [design-systems.md](references/design-systems.md) | Colour roles, token contrast, scales, the eight essentials, agent rules | `DS-*` |
@@ -30,6 +30,8 @@ summarises its primary sources and names them. Read only the files the task need
 | [consistency.md](references/consistency.md) | One component, icon, term and format per meaning | `CONS-*` |
 | [spec.md](references/spec.md) | The prototype against the owner's own spec | `SPEC-*` |
 | [framing.md](references/framing.md) | Challenging the frame and concept: first read, problem statement, assumptions, pre-mortem, alternatives, who is left out. For challenges, never findings | `FRAME-*` |
+| [privacy.md](references/privacy.md) | Permissions asked in context and explained, the app working without them, data minimum, private by default | `PRIV-*` |
+| [international.md](references/international.md) | Longer text in other languages, right-to-left layouts | `INTL-*` |
 | [ethics.md](references/ethics.md) | Deceptive patterns: pre-ticked consent, asymmetric choices, confirmshaming, obstruction, sneaking, false pressure, forced action, nagging | `ETHICS-*` |
 
 ## How to use the principles

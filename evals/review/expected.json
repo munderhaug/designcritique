@@ -39,6 +39,8 @@
       "Home",
       "Accounts",
       "Cards",
+      "Card lost or stolen",
+      "Card frozen",
       "Open an account"
     ],
     "no_failed_taps": true
@@ -88,9 +90,9 @@
       "Home",
       "Accounts",
       "Cards",
-      "Help",
-      "Card lost",
+      "Card lost or stolen",
       "Card frozen",
+      "Monthly summary",
       "Menu",
       "Export statements",
       {

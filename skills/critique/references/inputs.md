@@ -136,6 +136,9 @@ don't drive native apps yet.
 
 ## Not supported yet
 
+- Full-page screenshots (`__full`) with a sticky or fixed bar: the bar is painted where the first
+  viewport ends, mid-page. Judge bars from the viewport screenshots.
+
 - Single-file React (`.jsx` / `.tsx`) artifacts as rendered screens. Export them as HTML, or
   render a screenshot; list the source under `source:` so the detectors still read it.
 - Crawling a native app, or replaying `journeys:` on one: native capture reaches the screens

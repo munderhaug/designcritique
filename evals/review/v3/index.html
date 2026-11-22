@@ -25,6 +25,7 @@
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; background: var(--surface); border-radius: 1rem 1rem 0 0; padding: 0 0 calc(env(safe-area-inset-bottom) + 1rem); }
   .sheet header { padding-top: 0.75rem; }
   .sheet header h1 { font-size: 1.375rem; }
+  a.call { display: flex; align-items: center; min-height: 2.75rem; padding: 0 1rem; color: var(--primary); font-weight: 600; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -35,7 +36,7 @@
   <header><h1>Home</h1><button data-go="menu">Menu</button></header>
   <main>
     <div class="card"><strong>Your money</strong><p>Balance 1,240.00</p><p class="muted">3 accounts</p></div>
-    <button class="primary" data-go="help">Help</button>
+    <button class="primary" data-go="lost">Card lost or stolen</button>
     <button class="icon" data-go="security"><svg><use href="#shield"/></svg>Security</button>
     <button data-go="accounts">Overview</button>
     <button data-go="monthly">Monthly summary</button>
@@ -45,8 +46,8 @@
   <header><h1>Accounts</h1></header>
   <main>
     <p>Balance 1,240.00</p>
-    <div class="card"><strong>Everyday account</strong><p class="muted">Main account</p></div>
-    <div class="card"><strong>Savings</strong><p class="muted">Rainy day</p></div>
+    <div class="card"><strong>Everyday account</strong><p>840.00</p><p class="muted">Main account</p></div>
+    <div class="card"><strong>Savings</strong><p>400.00</p><p class="muted">Rainy day</p></div>
     <button class="primary" data-go="open">Open an account</button>
   </main>
 </section>
@@ -61,6 +62,7 @@
   <header><h1>Cards</h1></header>
   <main>
     <div class="card"><strong>Debit card</strong><p class="muted">Ends in 4821</p></div>
+    <button data-go="lost">Card lost or stolen</button>
     <button data-go="order">Order new card</button>
   </main>
 </section>
@@ -79,33 +81,26 @@
 <section data-view="monthly" hidden>
   <header><h1>Monthly summary</h1><button data-go="home">Back</button></header>
   <main>
-    <div class="card">See where your money went this month</div><button class="primary">Open summary</button>
-  </main>
-</section>
-<section data-view="help" hidden>
-  <header><h1>Help</h1><button data-go="home">Back</button></header>
-  <main>
-    <button data-go="lost">Card lost</button>
-    <button data-go="stolen">Card stolen</button>
+    <div class="card"><strong>This month</strong><p>Spent 1,120.00</p><p class="muted">180.00 less than last month</p></div>
+    <div class="card"><strong>Groceries</strong><p>410.00</p></div>
+    <div class="card"><strong>Rent and bills</strong><p>520.00</p></div>
+    <div class="card"><strong>Everything else</strong><p>190.00</p></div>
   </main>
 </section>
 <section data-view="lost" hidden>
-  <header><h1>Card lost</h1><button data-go="help">Back</button></header>
+  <header><h1>Card lost or stolen</h1><button data-go="home">Back</button></header>
   <main>
-    <ol><li>Freeze the card</li><li>Check recent payments</li><li>Call us if you see fraud</li></ol>
-    <button class="primary" data-go="done">Done</button>
-  </main>
-</section>
-<section data-view="stolen" hidden>
-  <header><h1>Card stolen</h1><button data-go="help">Back</button></header>
-  <main>
-    <p>Freeze the card and report it to the police.</p><button class="primary" data-go="done">Done</button>
+    <div class="card"><strong>Debit card</strong><p class="muted">Ends in 4821</p></div>
+    <p>Freezing stops every payment with this card at once. You can unfreeze it if you find the card.</p>
+    <button class="primary" data-go="done">Freeze card</button>
+    <a class="call" href="tel:0800000000">Call us on 0800 000 000</a>
   </main>
 </section>
 <section data-view="done" hidden>
   <header><h1>Card frozen</h1></header>
   <main>
-    <p>Nobody can use the card now.</p><button class="primary" data-go="order">Order new card</button><button data-go="home">Home</button>
+    <div class="card"><strong>Debit card ending in 4821 is frozen</strong><p class="muted">Nobody can pay with it now.</p></div>
+    <button class="primary" data-go="order">Order new card</button><button data-go="cards">Unfreeze card</button><button data-go="home">Home</button>
   </main>
 </section>
 <section data-view="menu" hidden>

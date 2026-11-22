@@ -96,6 +96,9 @@ export function amountFormats(texts) {
     for (const m of String(text).matchAll(re)) {
       // An amount has digit grouping or a decimal part; a bare number (4821, 2024) is an ID, a code or a year.
       if (!m[2] && !m[3]) continue;
+      // Not an amount: a group of a longer digit run (a phone number, a card number), or digits
+      // with a leading zero.
+      if (/\d[ ,.\u00a0\u202f']$/.test(String(text).slice(Math.max(0, m.index - 2), m.index)) || /^0\d/.test(m[1])) continue;
       const group = m[2] ? (m[2] === ',' ? 'comma' : m[2] === '.' ? 'dot' : m[2] === "'" ? 'apostrophe' : 'space') : 'none';
       if (m[2] && m[3] && m[2] === m[3]) continue; // ambiguous (e.g. 1.000.00)
       const fmt = `grouping ${group}${m[3] ? `, decimal ${m[3] === ',' ? 'comma' : 'dot'}` : ''}`;

@@ -20,13 +20,35 @@ const isCheck = isDeterministic;
 export const surfacesOf = (f) => (f.surfaces || (f.surface ? String(f.surface).split('+') : [f.source === 'motion' ? 'source' : 'rendered']));
 const mainShared = (a, b) => (b.basis || []).includes(a.basis?.[0]) || (a.basis || []).includes(b.basis?.[0]);
 
+// Principles that name the same defect from different sources. Two critics citing different IDs
+// of one cluster for one thing are raising one problem, so they may merge (on the stricter
+// wording match, or the same place). IDs are not renamed or removed: each keeps its own source.
+export const EQUIVALENT = [
+  ['NN-H9', 'COPY-ERROR', 'STATE-ERROR', 'WCAG-3.3.1', 'WCAG-3.3.3'],
+  ['NN-H1', 'NORMAN-FEEDBACK', 'TASK-WALK-Q4', 'LAW-RESPONSE', 'STATE-LOADING', 'AND-FEEDBACK'],
+  ['NN-H3', 'JOURNEY-WAY-BACK', 'JOURNEY-DEAD-END', 'IOS-NAV-STACK', 'AND-APPBAR'],
+  ['IA-LABEL', 'COPY-CLEAR', 'COPY-ACTION-LABEL', 'NN-H2', 'TASK-WALK-Q3', 'WCAG-2.4.6', 'COGA-PURPOSE'],
+  ['VIS-HIERARCHY', 'VIS-ISOLATION', 'LAW-HICK', 'TELL-CTA-STACK', 'AND-BUTTONS', 'COGA-FIND'],
+  ['WCAG-2.5.8', 'IOS-TARGET', 'AND-TARGET', 'LAW-FITTS'],
+  ['NN-H5', 'IOS-DESTRUCTIVE', 'COGA-MISTAKES'],
+  ['TASK-FIT', 'JOURNEY-BROKEN', 'SCOPE-GAP'],
+  ['IA-PLACEMENT', 'IA-DEPTH', 'JOURNEY-ENTRY'],
+  ['NN-H4', 'CONS-COMPONENT', 'CONS-PATTERN'],
+  ['JOURNEY-HANDOFF', 'WCAG-3.3.7', 'LAW-LOAD', 'COGA-MEMORY'],
+  ['ETHICS-PRESELECTED', 'PRIV-DEFAULT'],
+  ['WCAG-1.3.5', 'LAW-TESLER'],
+];
+const clusterOf = new Map();
+EQUIVALENT.forEach((c, i) => c.forEach((id) => clusterOf.set(id, [...(clusterOf.get(id) || []), i])));
+const sameCluster = (a, b) => (clusterOf.get(a) || []).some((i) => (clusterOf.get(b) || []).includes(i));
+
 /** Do two findings on the same screen describe the same problem? */
 export function sameProblem(a, b) {
   if (a.screen !== b.screen) return false;
   // Two deterministic sources (never two findings of the same check) agree when they cite
   // the same main principle on the same screen: e.g. axe on the render, a detector in the code.
   if (isCheck(a) && isCheck(b)) return a.source !== b.source && mainShared(a, b);
-  const linked = ids(b).includes(a.rule) || ids(a).includes(b.rule);
+  const linked = ids(b).includes(a.rule) || ids(a).includes(b.rule) || (!isCheck(a) && !isCheck(b) && sameCluster(a.rule, b.rule));
   if (!linked) return false;
   if (isCheck(a) !== isCheck(b)) {
     // A check measures one thing; a critic citing the check's principle on that screen means it.
@@ -43,6 +65,10 @@ export function mergeAcrossSources(findings) {
   const order = [...findings].sort((a, b) => Number(isCheck(b)) - Number(isCheck(a)) || SEV.indexOf(a.severity) - SEV.indexOf(b.severity));
   const out = [];
   for (const f of order) {
+    // The same critic can say one thing twice: its whole-view reviewer and a batch share a name.
+    // That is one finding from one source, not agreement.
+    const twin = isCheck(f) ? null : out.find((g) => g.source === f.source && sameProblem({ ...g, source: `${g.source}#` }, f));
+    if (twin) { twin.repeats = (twin.repeats || 1) + 1; if (f.alternatives?.length) twin.alternatives = [...new Set([...(twin.alternatives || []), ...f.alternatives])]; continue; }
     const into = out.find((g) => !g.raisedBy.includes(f.source) && sameProblem(g, f));
     if (!into) { out.push({ ...f, raisedBy: [f.source], also: [] }); continue; }
     into.raisedBy.push(f.source);

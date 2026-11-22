@@ -16,7 +16,7 @@ journeys:
   - id: card-lost
     title: Card lost
     critical: true
-    steps: [Help, Card lost, Done]
+    steps: [Card lost or stolen, Freeze card]
   - id: order-card
     title: Order a card
     steps: [Cards, Order new card, Confirm]

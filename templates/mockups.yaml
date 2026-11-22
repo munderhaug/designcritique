@@ -39,7 +39,8 @@ iterate:
 #     critical: true          # must not fail
 #     steps: [Cart, Checkout, Pay, Done]
 # devices: [compact, standard]          # default; phone sizes per platform
-# variants: [light, dark, large-text]   # default
+# variants: [light, dark, large-text]   # default; add `expanded` for a render with every text a
+#                                       # third longer, to see if the layout has room for other languages
 # output: .designcritique/runs          # default
 
 mockups:

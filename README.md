@@ -31,8 +31,10 @@ The tools it builds on, with versions, sources and what was considered and left 
   phone-frame canvases, single-page-app states, served PWAs (`url:`), app source (`source:`)
   and, experimentally, native apps on a simulator or emulator.
 - **Deterministic checks** where no tool exists for mockups: 44pt/48dp targets, safe areas, text
-  scaling and overlap, overflow, controls hidden under fixed bars, endless looping motion, dark
-  mode, token drift against DESIGN.md, the design system itself, and deceptive consent patterns,
+  scaling and overlap (also with a third more text, for other languages), overflow, controls
+  hidden under fixed bars, fields that don't say what they collect, control order, reading ease,
+  endless looping motion, dark mode, token drift against DESIGN.md, the design system itself,
+  and deceptive consent patterns,
   measured on what a person can see, inside web components too
   ([checks.md](skills/critique/references/checks.md)).
 - **Independent critics** on a model other than the one that made the mockups, each citing a

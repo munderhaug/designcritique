@@ -33,7 +33,7 @@ People don't know what to do first when a card is lost or stolen, and they lose 
 
 ## Journeys
 
-1. **card-lost** (must not fail, during, leads to order-card): Help → Card lost → Done
+1. **card-lost** (must not fail, during, leads to order-card): Card lost or stolen → Freeze card
 2. **order-card** (after): Cards → Order new card → Confirm
 
 ## Concept model
@@ -60,7 +60,7 @@ People don't know what to do first when a card is lost or stolen, and they lose 
 
 | Feature | Problem part | Key task | Phase | Seen as |
 |---|---|---|---|---|
-| Lost card | Not knowing what to do first | Task 1 | MVP | Card lost, Card stolen |
+| Lost card | Not knowing what to do first | Task 1 | MVP | Card lost, Card stolen, Card lost or stolen |
 | Accounts | Not knowing what you have | Task 2 | MVP | Accounts |
 | Cards | Managing cards | Task 1 | MVP | Debit card |
 | Monthly summary | Losing track of spending | Task 3 | v1 | Monthly summary |
