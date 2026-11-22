@@ -32,16 +32,21 @@ Invoked as `/designcritique:critique`, the input is: $ARGUMENTS
 With no input, use `mockups.yaml` in the current project. If there is none, ask which mockups to
 critique, then create one from `PLUGIN_ROOT/templates/mockups.yaml`. Always frame the problem first.
 
-## 0. Setup
+## 0. Ask first: what to connect
 
-Run `bash PLUGIN_ROOT/scripts/setup.sh`, then
-`node PLUGIN_ROOT/scripts/companions.mjs --project <project>`. If Impeccable or an Anthropic
-plugin is missing, offer once to run `bash PLUGIN_ROOT/scripts/setup.sh --install-companions`.
-If the designer declines, continue and say which reviewer ran in fallback mode.
+At the start of every session that uses this plugin, before any other step, run
+`bash PLUGIN_ROOT/scripts/setup.sh` (script dependencies and a browser; no account needed), then
+`node PLUGIN_ROOT/scripts/connections.mjs --project <project>`. It lists everything that needs
+something from the designer (companion skills to install, Mobbin or Refero, Figma, a running
+native app) and what each gives. Check your own tool list for the MCP servers it names, and run
+the one-call probe in [references.md](references/references.md#check-the-source-first) for any
+reference source that is connected.
 
-Reference sources are optional. If Mobbin or Refero is connected, run the one-call probe in
-[references.md](references/references.md#check-the-source-first) and say the result; if neither
-is, say so in one line and go on.
+Then ask the designer once, in one question (the question tool when available), which of the
+ones not ready they want to set up now, leading with those this project uses. Nothing is
+installed, connected, or asked for (accounts, tokens, devices) without that answer; a token is
+never pasted into chat. What they skip is skipped for the session: carry on without it, say in
+the reply which reviewer ran in fallback mode, and don't ask again.
 
 ## 1. Frame the problem
 

@@ -21,6 +21,9 @@ With no input, frame the app in the current project.
 
 ## Steps
 
+0. **Ask first what to connect**, as in the critique skill, step 0, if no other step of this
+   session has: framing uses Impeccable's `init` and, when connected, a reference source.
+
 1. **Run Impeccable's init.** If the Impeccable skill is installed, run `/impeccable init` and let
    it write or update `PRODUCT.md`, including `## Platform` (`ios`, `android` or `adaptive`) and
    `## Stack`. If it isn't installed, write the same sections yourself from

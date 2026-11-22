@@ -25,7 +25,8 @@
     "eval:lenses": "node scripts/eval/score-lenses.mjs",
     "save-critique": "node scripts/report/save-critique.mjs",
     "eval:frame": "node scripts/eval/score-frame.mjs",
-    "run": "node scripts/run.mjs"
+    "run": "node scripts/run.mjs",
+    "connections": "node scripts/connections.mjs"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.10.0",

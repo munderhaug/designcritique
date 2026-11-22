@@ -19,8 +19,9 @@ reviewers will run.
 
 ## 0. Setup
 
-As in the critique skill, step 0, plus the scope lens's companion: `setup.sh --install-companions`
-also installs Anthropic's product-management skills.
+As in the critique skill, step 0: ask first what to connect, once, before anything else. For a
+whole-product review it matters most whether a Figma prototype's flows or a running native app
+should be read; `connections.mjs` says what each needs.
 
 ## 1. Frame the whole product
 

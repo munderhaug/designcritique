@@ -19,6 +19,9 @@ With no config given, use `mockups.yaml` in the current project. `--rounds N` ov
 
 ## Before the first round
 
+- Ask first what to connect, as in the critique skill, step 0, once for the whole loop: the
+  rounds don't stop to ask.
+
 - Only HTML mockups can be fixed. Image inputs are critiqued but left alone; say so.
 - Each round's mockups are saved under `.designcritique/iterate/round-N/` (below), so round 1 is
   the starting point and any round can be restored. A git commit first doesn't hurt.

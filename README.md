@@ -81,6 +81,11 @@ git clone -q --depth 1 https://github.com/munderhaug/designcritique /tmp/dc-setu
 rm -rf /tmp/dc-setup
 ```
 
+At the start of every session that uses the plugin, it lists what needs something from you
+(companion skills to install, Mobbin or Refero, Figma, a running native app) and asks once which
+of them to set up; nothing is connected, installed or asked for without your answer, and what you
+skip it does without (`node scripts/connections.mjs` shows the same list).
+
 Connect a reference source with `claude mcp add --transport http mobbin https://api.mobbin.com/mcp`
 or `claude mcp add --transport http refero https://api.refero.design/mcp` (both paid for search;
 sign in from `/mcp`). Add Refero's connector alone, not its plugin: the plugin also installs a

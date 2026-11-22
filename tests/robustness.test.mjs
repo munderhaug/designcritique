@@ -423,3 +423,15 @@ test('a phone number is not a second amount format', () => {
   assert.deepEqual(f.map((x) => x.format), ['grouping comma, decimal dot']);
   assert.equal(formatsOf([{ screen: 'a', text: '1,240.00' }, { screen: 'b', text: '1 240,00' }]).length, 2);
 });
+
+test('connections: lists what needs the designer, and leads with what the project uses', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-conn-'));
+  fs.writeFileSync(path.join(dir, 'mockups.yaml'), 'mockups:\n  - id: a\n    file: a.png\nnative:\n  - id: shop\n    app: com.example.shop\n');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'scripts/connections.mjs'), '--project', dir, '--json'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const items = JSON.parse(r.stdout).items;
+  assert.deepEqual(items.map((i) => i.id), ['companions', 'references', 'figma', 'native']);
+  assert.equal(items.find((i) => i.id === 'native').relevant, true);
+  assert.equal(items.find((i) => i.id === 'figma').relevant, false);
+  assert.ok(items.every((i) => i.enables && i.setup), 'each says what it gives and how to set it up');
+});

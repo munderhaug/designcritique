@@ -100,7 +100,7 @@ the page's own files.
 ## Figma prototypes: flows and structure from the design itself
 
 ```bash
-FIGMA_TOKEN=… node PLUGIN_ROOT/scripts/import/figma-flows.mjs --file <file key> --out figma --images
+FIGMA_TOKEN=… node PLUGIN_ROOT/scripts/import/figma-flows.mjs --file <file key> --out figma --images   # only if the designer chose Figma at the start
 ```
 
 Reads the prototype's flow starting points and every node's interactions through Figma's REST
