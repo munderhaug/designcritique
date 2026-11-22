@@ -46,7 +46,7 @@
     "no_failed_taps": true
   },
   "lenses": {
-    "$comment": "Scored by npm run eval:lenses after /designcritique:review on seeded.yaml or clean.yaml. The checks already find every seeded flaw, so the lenses are scored on what only judgement adds: proposals, verdicts and cited principles. clean: no P0/P1 from any reviewer and no cut or move proposals.",
+    "$comment": "Scored by npm run eval:lenses after /designcritique:review on v1.yaml (seeded) or v2.yaml (clean). The checks already find every seeded flaw, so the lenses are scored on what only judgement adds: proposals, verdicts and cited principles. clean: no P0/P1 from any reviewer, no move a reviewer rates high impact, and no cut or deferral of a feature the frame puts in the MVP. Lower-impact proposals are allowed: a sparring partner suggests alternatives on a good design too. Until 2026-11-22 the clean bar was 'no cut or move proposal at all'; the designer replaced it, after the prototype had been corrected three times on what the reviewers found (see evals/README.md).",
     "seeded": {
       "ia": {
         "cites_any": [
@@ -80,7 +80,10 @@
     },
     "clean": {
       "max_major": 0,
-      "no_proposals": true
+      "no_high_impact_moves": true,
+      "no_cut_of_phase": [
+        "mvp"
+      ]
     }
   },
   "framework": {

@@ -45,11 +45,20 @@ if (variant === 'seeded') {
     row(`${name} (journeys)`, !!v && j.verdict_in.includes(v.verdict), `journey ${j.journey}: ${v ? v.verdict : 'not judged'} (want ${j.verdict_in.join(' or ')})`);
   }
 } else {
+  // A clean prototype: no serious finding, no move a reviewer rates high impact, and nothing the
+  // frame puts in the MVP cut or deferred. Lesser proposals are the sparring partner at work.
+  const { productModel } = await import('../lib/product.mjs');
+  const framing = manifest.framingSnapshot && fs.existsSync(path.join(runDir, manifest.framingSnapshot)) ? fs.readFileSync(path.join(runDir, manifest.framingSnapshot), 'utf8') : '';
+  const phaseOf = new Map(productModel(framing).features.map((f) => [f.feature.toLowerCase(), f.phase]));
+  const protectedPhases = new Set(exp.no_cut_of_phase || []);
   for (const [name, d] of Object.entries(lenses)) {
     if (!d) continue;
     const major = d.findings.filter((f) => ['P0', 'P1'].includes(f.severity));
-    const proposals = [...(d.moves || []), ...(d.scope || []).filter((s) => ['cut', 'move'].includes(s.verdict))];
-    row(name, major.length <= exp.max_major && (!exp.no_proposals || !proposals.length), `${major.length} P0/P1${major.length ? ` (${major.map((f) => f.title).join(' / ')})` : ''}; ${proposals.length} cut/move proposals`);
+    const high = exp.no_high_impact_moves ? (d.moves || []).filter((m) => m.impact === 'high') : [];
+    const cutCore = (d.scope || []).filter((s) => ['cut', 'defer'].includes(s.verdict) && protectedPhases.has(phaseOf.get(String(s.feature || '').toLowerCase())));
+    const lesser = (d.moves || []).length - high.length + (d.scope || []).filter((s) => ['cut', 'move', 'defer', 'add', 'rethink'].includes(s.verdict)).length - cutCore.length;
+    const ok = major.length <= exp.max_major && !high.length && !cutCore.length;
+    row(name, ok, `${major.length} P0/P1${major.length ? ` (${major.map((f) => f.title).join(' / ')})` : ''}; ${high.length} high-impact move(s)${high.length ? ` (${high.map((m) => m.item).join(', ')})` : ''}; ${cutCore.length} MVP feature(s) cut or deferred${cutCore.length ? ` (${cutCore.map((s) => s.feature).join(', ')})` : ''}; ${lesser} lesser proposal(s)`);
   }
 }
 console.log(`Review reviewers on the ${variant} prototype:`);

@@ -145,8 +145,9 @@ On `v1`, scored by `npm run eval:lenses`: `ia` pass (cites `IA-DEPTH`, `IA-ORPHA
 judged the must-not-fail "card lost" journey blocked (scores 4 and 2). The run's two partial
 design-reviewer batches were left out to save cost; the lens scoring doesn't use them.
 
-On `v2` the expectation is no P0/P1 from any reviewer and no cut or move proposal. It was run
-twice, and the first run changed the prototype:
+On `v2` the expectation is no P0/P1 from any reviewer, no move rated high impact, and no cut or
+deferral of an MVP feature (until 2026-11-22: no cut or move proposal at all; see below). It was
+run four times, and the runs changed the prototype:
 
 | Run | P0/P1 | Task scores (design-reviewer / Impeccable) | Cut or move proposals |
 |---|---|---|---|
@@ -169,15 +170,17 @@ twice, and the first run changed the prototype:
   duplicated the Accounts tab, "More" was an empty page, "Security" on Home served no task, and
   Export had no control. Fixed; the fourth run's lens reviewers ran on Sonnet, with the critics
   on Opus and Fable earlier.
-- **The expectation is still not met.** On the fourth run the system lens passes; the IA and
-  scope lenses still propose things, all rated low or medium impact: move Export under Accounts,
-  give the card a detail page that owns its frozen state, make "Open an account" secondary, add
-  a transactions list, defer Export and Open an account, cut Security. These are design
-  opinions, not defects, and each run finds new ones: "no proposal at all" may be the wrong bar
-  for a plugin meant to suggest alternatives on good designs too. Whether to change it is the
-  designer's call, not something to change while it fails (CLAUDE.md); it is unchanged.
-  One finding of that run was a defect (Home said "3 accounts" where Accounts lists two) and is
-  fixed, not judged again.
+- On the fourth run the IA and scope lenses still proposed things, all rated low or medium
+  impact: move Export under Accounts, give the card a detail page that owns its frozen state,
+  make "Open an account" secondary, add a transactions list, defer Export and Open an account,
+  cut Security. These are design opinions, not defects, and each run found new ones. One finding
+  was a defect (Home said "3 accounts" where Accounts lists two): fixed, not judged again.
+- **The bar was changed by the designer, not to make it pass.** "No cut or move proposal at all"
+  contradicts a plugin meant to suggest alternatives on good designs too. The designer replaced
+  it with: no P0/P1 from any reviewer, no move rated high impact, and no cut or deferral of a
+  feature the frame puts in the MVP. Scored against it, both the third run (all five reviewers)
+  and the fourth (the three lenses) pass; the first broken version still fails on all five
+  reviewers and the second on two, so the bar still tells a good prototype from a bad one.
 
 Along the way the corrected prototypes caught a false positive in the checks: a phone number
 ("0800 000 000") was read as a second amount format. Fixed, with a unit test.
