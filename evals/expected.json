@@ -213,6 +213,14 @@
       "must": []
     }
   },
+  "replies": {
+    "checks": {
+      "clean": true
+    },
+    "critic": {
+      "max_major": 0
+    }
+  },
   "$tasks": {
     "T1": {
       "max": 6

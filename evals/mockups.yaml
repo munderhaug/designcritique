@@ -44,3 +44,7 @@ mockups:
     title: Activity
     file: cases/activity.html
     notes: "Task 4, catch up on what happened."
+  - id: replies
+    title: Replies
+    file: cases/replies.html
+    notes: "Task 4, catch up on replies to my posts."
