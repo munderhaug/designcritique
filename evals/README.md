@@ -222,8 +222,9 @@ The three lenses on Sonnet 5.5, the plan's default, on `v1` and `v2` (`eval:lens
   lens now says its own rule holds and what the finding adds (what the item costs the jobs and
   key tasks). Re-run: `v1` scope passes (`SCOPE-OUT`, cut present), and `v2` scope still passes
   the clean bar (4 lesser proposals). The bar was not changed.
-- Impeccable on Fable judged the must-not-fail "card lost" journey blocked (4). It looked at 7
-  of the screenshots and judged the rest from the HTML, and said so in `not_examined`.
+- Both critics judged the must-not-fail "card lost" journey blocked: the design-reviewer on Opus
+  (3) and Impeccable on Fable (4), so all five `v1` rows pass. Impeccable looked at 7 of the
+  screenshots and judged the rest from the HTML, and said so in `not_examined`.
 
 ## Sparring: cold read and frame challenge (`npm run eval:frame`, 2026-11-22)
 
@@ -331,7 +332,7 @@ phone. Critics should judge bars from the viewport screenshots.
 |---|---|---|---|
 | cold read, Sonnet | 1 (3 screens) | 75k | 0.2 |
 | frame challenge, Opus | 1 | 106k | 2.7 |
-| design-reviewer, Opus | whole view of 10 screens; batches of 5 and 3 screens | 244k; 227k, 142k | 9.7; 8.4, 3.2 |
+| design-reviewer, Opus | whole view of 10 screens; 16-screen review; batches of 5 and 3 screens | 244k; 212k; 227k, 142k | 9.7; 9.0; 8.4, 3.2 |
 | Impeccable, Fable | 10 screens; 16-screen review | 172k; 126k | 3.8; 2.7 |
 | lenses, Sonnet | 8 (two prototypes, three lenses, two re-runs) | 104k to 123k | 0.7 to 1.4 |
 
