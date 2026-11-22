@@ -58,5 +58,8 @@ Return one JSON object and nothing else, in the designcritique format (`output-f
 }
 ```
 
-`kind` is one of `first-read`, `assumption`, `premortem`, `alternative`, `blind-spot`. You
-return no findings, no severities and no scores: those are the critics' job, after you.
+`kind` is one of `first-read`, `assumption`, `premortem`, `alternative`, `blind-spot`. Use
+`first-read` only when the cold reading and the frame differ on what the product is, who it is
+for or what matters most; when they agree and your concern is with the concept itself, it is an
+`assumption` (step 2 and 3) or one of the others. You return no findings, no severities and no
+scores: those are the critics' job, after you.

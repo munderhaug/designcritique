@@ -1,5 +1,5 @@
 {
-  "$comment": "Sparring eval, scored by npm run eval:frame after the cold read and the frame challenge ran (stages 1 and 2 of briefs/plan.json) on evals/frame/f1.yaml. The frame is wrong on purpose (see evals/README.md); the screens are sound. cold.mentions_any: words the cold reading's product, problem or tasks must contain (it read the screens, not the frame); cold.not_first_task: words its first task must not contain (they exist only in the frame). challenges.must: each a FRAME-* ID or {any:[...]} some challenge must cite; challenges.max: the cap. control: the same two stages on evals/review/v2.yaml, whose frame matches its screens: no first-read challenge at high confidence.",
+  "$comment": "Sparring eval, scored by npm run eval:frame after the cold read and the frame challenge ran (stages 1 and 2 of briefs/plan.json). flawed: evals/frame/f1.yaml, whose frame is wrong on purpose (see evals/README.md) while its screens are sound. cold.mentions_any: words the cold reading's product, problem or tasks must contain (it read the screens, not the frame); cold.not_first_task: words its first task must not contain (they exist only in the frame). challenges.must: each a FRAME-* ID or {any:[...]} some challenge must cite; challenges.max: the cap. control: the same two stages on evals/review/v2.yaml, whose frame matches its screens: the cold reading must describe the same product and the challenger must stay within the cap and return no findings. A first version also required no high-confidence first-read challenge on the control; two independent runs both raised one, and on reading it is right (see evals/README.md), so that rule was wrong and is gone rather than being met.",
   "flawed": {
     "cold": {
       "mentions_any": [
@@ -37,8 +37,7 @@
       ]
     },
     "challenges": {
-      "max": 8,
-      "no_confident_kind": "first-read"
+      "max": 8
     }
   }
 }

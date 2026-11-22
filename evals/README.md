@@ -108,34 +108,77 @@ principle and proposes a move; the scope reviewer cites `SCOPE-OUT` and proposes
 or move; the system reviewer cites a `CONS-*` principle; the design-reviewer and Impeccable judge
 the must-not-fail "card lost" journey blocked or at risk. On `v2`, no reviewer raises a P0/P1
 or proposes a cut or move. Run `/designcritique:review evals/review/v1.yaml` (and
-`v2.yaml`), then `npm run eval:lenses -- --run <run>`. **Not yet run:** the reviewers have
-no recorded score.
+`v2.yaml`), then `npm run eval:lenses -- --run <run>`. Results are under "Lens reviewers" below.
 
-## Critic results
+## Critic results (2026-11-22, plugin 0.8.0)
 
-First end-to-end run of both critics on this set (2026-11-17). Each ran in a fresh agent that
-had never seen the screens, the seeded flaws or the other critic's output, and the two ran on
-different models. **Out of date:** this run covered the first six screens only; `signup`,
-`choices` and `activity` came later, and so did key-task IDs, task coverage and Impeccable using
-`severity.md` instead of its own scale. Re-run both critics before relying on these numbers.
+All nine screens, with the briefs written by `briefs.mjs` and given unchanged. Each reviewer ran
+in a fresh agent that had not seen the screens, the expectations or another reviewer's output.
+The eval projects were copied to a folder whose path doesn't say what they are. The reviewers
+ran as general-purpose agents given this repository's agent files, because the installed plugin's
+agents predate these briefs, and they wrote their reply to a file for `save-critique.mjs`. The
+design-reviewer, the lens reviewers, the cold reader and the frame challenger ran on Fable 5.2;
+Impeccable ran on Opus 5.5.
 
 | Critic | Setup | Recall on seeded screens | P0/P1 on clean screens | Findings |
 |---|---|---|---|---|
-| design-reviewer | Anthropic design plugin (knowledge-work-plugins `e91a134`) | 10/10 | 0 | 15 |
-| Impeccable critique | Impeccable 4.9.2 (`pbakaus/impeccable` `d41d986`), native path | 10/10 | 0 | 15 |
-| Both, merged | | 10/10 | 0 | 59 with the checks |
+| design-reviewer (one whole view + two batches) | Anthropic design plugin skills, copied from GitHub by `setup.sh` | 11/12 | 0 | 33 |
+| Impeccable critique | Impeccable 4.9.2, native path | 9/12 | 0 | 15 |
+| Both, pooled | | 12/12, one of them through a check | 0 | 68 open after merging, with the checks |
 
-Key-task scores (0–10) from the two critics agreed within one point: checkout 3 / 3, log in
-5 / 5, settings 9 / 9, feed 6 / 7, trips 9 / 9, welcome 4 / 4. Both kept the clean screens
-at 9 and put checkout, the must-not-fail task, lowest. Impeccable labelled two tasks
-`at-risk` while scoring them 3 and 4; the validator now warns when a verdict and score
-disagree.
+- The twelfth is the gradient on `welcome`: the detector reports it, and critics are told not to
+  repeat `checks/all.json`, so neither raised it. The scorer now counts a seeded flaw a check
+  already reported on that screen as covered, and says so.
+- Key-task scores (design-reviewer / Impeccable), all within the bounds in `expected.json`:
+  T1 pay 4 / 2, T2 log in 5 / 5, T3 settings 8 / 7, T4 catch up 5 / 6, T5 trip 8 / 7,
+  T6 welcome 4 / 4, T7 sign up 4 / 3. The two critics agree within two points on every task.
+- All eleven reviewer replies across the three runs validated on the first save: no invented
+  principle ID, no wrong enum, no coverage to correct by hand, and the largest reply was 34 KB.
+- Sparring fields were used: 3 to 7 challenges per reviewer, alternatives on 1 to 4 findings
+  each, and 5 to 8 `not_examined` lines each.
 
-Not yet measured: whether the critics stay quiet on subtler clean screens, and run-to-run
-variance. Re-run both critics after changing a brief, the agent or the principles index, and
-update this table.
+## Lens reviewers (2026-11-22)
+
+On `v1`, scored by `npm run eval:lenses`: `ia` pass (cites `IA-DEPTH`, `IA-ORPHAN`,
+`IA-NAV-CONSISTENT`; moves proposed), `scope` pass (`SCOPE-OUT`; a cut proposed), `system` pass
+(`CONS-FIGURES`, `CONS-TERM`, `CONS-COMPONENT`), and both the design-reviewer and Impeccable
+judged the must-not-fail "card lost" journey blocked (scores 4 and 2). The run's two partial
+design-reviewer batches were left out to save cost; the lens scoring doesn't use them. The lens
+reviewers have **not** been run on `v2`, so "no P0/P1 and no cut or move on the clean version"
+is still unmeasured.
+
+## Sparring: cold read and frame challenge (`npm run eval:frame`, 2026-11-22)
+
+`evals/frame/` is three sound screens of a plant-watering reminder under a frame that is wrong
+on purpose: it describes a social app of streaks, badges and a leaderboard, its problem
+statement names those features, its users are "everyone", and its must-not-fail task (sharing a
+streak) has no screen. The cold reader must describe what the screens show and not echo the
+frame; the challenger must question the frame (`FRAME-FIRST-READ` or `FRAME-PROBLEM`, and
+`FRAME-ASSUMPTION`) within the cap and return no findings.
+
+| Run | Cold reading | Frame challenge | Score |
+|---|---|---|---|
+| `evals/frame/f1.yaml` (wrong frame) | "A houseplant watering tracker", high confidence; no social task listed | 7 challenges; the first: the screens are a private reminder and the frame describes a social competition app | pass (twice: before and after the agent's wording change below) |
+| `evals/review/v2.yaml` (control) | "A personal banking app", the frame's top task first | 6 to 8 challenges, no findings | pass on the corrected criterion |
+
+What the control taught: the first version of the control also required no high-confidence
+`first-read` challenge. Two independent runs both raised one, and it is right: on `v2` the "Card
+lost" screen lists steps and a "Done" button, and a reader told nothing can't tell whether the
+app freezes the card or only tells you to. `v2` is clean for the deterministic checks, not
+beyond question. The rule was removed rather than met, and the challenger's instructions now
+say to use `first-read` only for a difference between the cold reading and the frame. Running
+the control on `v1` instead (done once by mistake) is no control at all: the challenger found two
+of its seeded flaws.
+
+Not measured: whether challenges are ones a designer would find useful (that needs a designer),
+the discuss skill (whether a critic concedes when it should and holds when it should), and
+run-to-run variation of the sparring stages.
 
 ## Noise: the same screens judged twice (2026-11-17)
+
+**Not repeated for 0.8.0.** The numbers below are from six screens and the briefs of that date.
+`gate.confirm` (a finding only one critic raised doesn't block until a second source saw it)
+exists because of them.
 
 `npm run eval:noise` measures occasion noise (Kahneman, Sibony & Sunstein, *Noise*, 2021): the
 critics judged the critic run above a second time, cold, with the same models, briefs and plugin
