@@ -125,7 +125,7 @@ export function pinned(name) {
 export const withPins = (text) => String(text).replace(/\{pinned:([\w@/.-]+)\}/g, (_, n) => pinned(n) || 'latest');
 /** Files in <run>/checks/ holding deterministic findings (run-all.mjs writes them, the report reads them). */
 export const CHECK_FILES = ['findings.json', 'motion.json', 'detectors.json', 'structure.json', 'consistency.json'];
-export const DEFAULT_GATE = { enabled: true, fail_on: 'P1', target_score: 8, journey_target_score: null, min_feature_coverage: 0.8, no_dead_end_on_critical: true };
+export const DEFAULT_GATE = { enabled: true, confirm: false, fail_on: 'P1', target_score: 8, journey_target_score: null, min_feature_coverage: 0.8, no_dead_end_on_critical: true };
 
 /** taste: a folder or a list of images of the direction the person chose, resolved to image files. */
 export function expandImages(spec, baseDir) {
@@ -176,7 +176,7 @@ function normalizeAppearance(v, id) {
 //   tap: <accessible name>   click: <selector>   fill: <selector> + value: <text>   press: <key>   scroll: <selector>
 //   wait: <ms or selector>   goto: <#hash or ?query, relative to the page>   eval: <JS>
 // Selectors are Playwright selectors: CSS, text=Settings, role=button[name="Save"].
-const STEP_KINDS = ['tap', 'click', 'fill', 'press', 'scroll', 'wait', 'goto', 'eval'];
+const STEP_KINDS = ['tap', 'click', 'fill', 'press', 'scroll', 'wait', 'goto', 'eval', 'network'];
 export function normalizeSteps(steps, id) {
   if (steps == null) return [];
   if (!Array.isArray(steps)) throw new Error(`Mockup ${id}: steps must be a list`);

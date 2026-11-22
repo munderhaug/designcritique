@@ -361,3 +361,17 @@ test('skills, agents and reference files stay within their size budgets', () => 
   for (const f of list('scripts', (n) => n.endsWith('.mjs'))) if (tokens(path.join(ROOT, f)) > 7500) over.push(`${f}: ${tokens(path.join(ROOT, f))} (max 7500): split it`);
   assert.deepEqual(over, []);
 });
+
+test('gate.confirm: a finding one critic raised alone does not block; a P0 or a confirmed one does', () => {
+  const findings = [
+    { severity: 'P1', source: 'ia', raisedBy: ['ia'] },
+    { severity: 'P1', source: 'anthropic-design', raisedBy: ['anthropic-design', 'impeccable'] },
+    { severity: 'P0', source: 'ia', raisedBy: ['ia'] },
+    { severity: 'P1', source: 'check', raisedBy: ['check'] },
+  ];
+  const strict = evaluateGate({ findings }, { fail_on: 'P1', target_score: null });
+  assert.deepEqual(strict.reasons, ['[check] 1 open finding(s) at P1 or worse', '[critic] 3 open finding(s) at P1 or worse']);
+  const confirm = evaluateGate({ findings }, { fail_on: 'P1', target_score: null, confirm: true });
+  assert.deepEqual(confirm.reasons, ['[check] 1 open finding(s) at P1 or worse', '[critic] 2 open finding(s) at P1 or worse']);
+  assert.equal(confirm.unconfirmed, 1);
+});

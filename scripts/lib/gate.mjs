@@ -50,6 +50,7 @@ export function findingOrigin(f) {
  */
 export function evaluateGate({ findings, tasks = [], critics = [], journeys = [], coverage = null, criticalJourneys = [], keyTasks = [], incomplete = [] }, gate = DEFAULT_GATE) {
   const reasons = incomplete.map((r) => `[tooling] ${r}`);
+  let unconfirmed = 0;
   // Review mode: the must-not-fail journeys have no dead end, no missing way back and no broken step.
   if (gate.no_dead_end_on_critical !== false && criticalJourneys.length) {
     for (const cj of criticalJourneys) {
@@ -68,7 +69,14 @@ export function evaluateGate({ findings, tasks = [], critics = [], journeys = []
   }
   if (gate.fail_on && gate.fail_on !== 'none') {
     const limit = SEVERITIES.indexOf(gate.fail_on);
-    const blocking = findings.filter((f) => SEVERITIES.indexOf(f.severity) <= limit);
+    const severe = findings.filter((f) => SEVERITIES.indexOf(f.severity) <= limit);
+    // confirm: true — a finding only one critic raised doesn't block until a second source (the
+    // other critic or a check) has seen it too: a third of a single run's lesser findings don't
+    // reproduce (evals/README.md, noise), and a verdict shouldn't turn on one of them. P0s
+    // always block. Unconfirmed ones are counted and stay open in the report.
+    const single = (f) => gate.confirm && f.severity !== 'P0' && findingOrigin(f) === 'critic' && new Set(f.raisedBy || [f.source]).size < 2;
+    const blocking = severe.filter((f) => !single(f));
+    unconfirmed = severe.filter(single).length;
     for (const origin of ['check', 'check + critic', 'critic']) {
       const n = blocking.filter((f) => findingOrigin(f) === origin).length;
       if (n) reasons.push(`[${origin}] ${n} open finding(s) at ${gate.fail_on} or worse`);
@@ -86,7 +94,7 @@ export function evaluateGate({ findings, tasks = [], critics = [], journeys = []
     for (const s of scores) if (s.score < gate.target_score) reasons.push(`[critic] ${s.id ? `${s.id} ` : ''}"${s.task}" scored ${s.score} (target ${gate.target_score}, by ${s.source})`);
   }
   // Gate off: nothing fails; the reasons are kept as what would have counted.
-  return { pass: gate.enabled === false ? true : reasons.length === 0, off: gate.enabled === false, reasons, scores, journeyScores: journeyScores(journeys), gate };
+  return { pass: gate.enabled === false ? true : reasons.length === 0, off: gate.enabled === false, unconfirmed, reasons, scores, journeyScores: journeyScores(journeys), gate };
 }
 
 /**

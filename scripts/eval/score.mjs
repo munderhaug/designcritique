@@ -64,6 +64,9 @@ for (const [screen, exp] of Object.entries(expected)) {
     const options = typeof want === 'string' ? [want] : want.any;
     tally.criticMust++;
     if (theirs.some((f) => options.some((o) => findingCites(f, o)))) tally.criticHit++;
+    // Critics are told not to repeat what checks/all.json already reports: a seeded flaw a
+    // check or detector raised on this screen under the same principle is covered, and said so.
+    else if (mine.some((f) => options.some((o) => findingCites(f, o)))) { tally.criticHit++; tally.byCheck = (tally.byCheck || 0) + 1; }
     else missed.push(options.join('|'));
     for (const n of criticNames) if (theirs.some((f) => f.critic === n && options.some((o) => findingCites(f, o)))) perCritic[n].hit++;
   }
@@ -82,7 +85,7 @@ console.log(rows.map((r) => r.map((c, i) => (i < 3 ? String(c).padEnd(w[i]) : c)
 console.log('');
 console.log(`Checks: recall ${tally.checkHit}/${tally.checkMust}, false positives ${tally.checkFP}`);
 if (haveCritics) {
-  console.log(`Critics (pooled): recall ${tally.criticHit}/${tally.criticMust}, false positives on clean screens ${tally.criticFP}`);
+  console.log(`Critics (pooled): recall ${tally.criticHit}/${tally.criticMust}${tally.byCheck ? ` (${tally.byCheck} already reported by a check, which critics are told not to repeat)` : ''}, false positives on clean screens ${tally.criticFP}`);
   for (const n of criticNames) console.log(`  ${n}: recall ${perCritic[n].hit}/${tally.criticMust}, P0/P1 on clean screens ${perCritic[n].major}, ${criticFindings.filter((f) => f.critic === n).length} findings`);
   // Key-task scores: the lowest score from a critic that saw the whole task, against the bounds.
   const bounds = expected.$tasks || {};

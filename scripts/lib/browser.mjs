@@ -40,7 +40,7 @@ export async function preparePage(context, url, variant, screen = {}, insets = n
 }
 
 // Wait for running page transitions and animations (Web Animations, which capture's frozen CSS
-// doesn't stop: Ionic and Framer drive their page and sheet transitions with element.animate()),
+// doesn't stop: app frameworks drive their page and sheet transitions with element.animate()),
 // then two animation frames, so a screenshot doesn't catch a page half-way in. Endless
 // animations (spinners) are ignored; finite ones still running at the timeout are finished.
 export async function settleAnimations(page, { timeout = 2000 } = {}) {
@@ -125,6 +125,7 @@ export async function runSetupAndSteps(page, screen, variant) {
       else if (st.click != null) await page.locator(st.click).first().click({ timeout: 5000 });
       else if (st.fill != null) await page.locator(st.fill).first().fill(String(st.value), { timeout: 5000 });
       else if (st.press != null) await page.keyboard.press(String(st.press));
+      else if (st.network != null) await setNetwork(page, String(st.network));
       else if (st.scroll != null) await page.locator(st.scroll).first().scrollIntoViewIfNeeded({ timeout: 5000 });
       else if (st.goto != null) {
         const target = new URL(String(st.goto), page.url()).href;
@@ -147,6 +148,27 @@ export async function runSetupAndSteps(page, screen, variant) {
   }
 }
 
+
+// A `network:` step puts the app's own requests into a condition, so its error, offline and
+// loading states can be captured as they really are: offline (no connection), fail (requests
+// answer 500), slow (each waits three seconds), online (back to normal). The page's own
+// document and files loaded before the step are untouched.
+async function setNetwork(page, mode) {
+  const ctx = page.context();
+  await ctx.setOffline(false);
+  await page.unroute('**/*', page.dcNetwork).catch(() => {});
+  page.dcNetwork = null;
+  if (mode === 'online') return;
+  if (mode === 'offline') { await ctx.setOffline(true); return; }
+  if (mode !== 'fail' && mode !== 'slow') throw new Error(`network: must be offline, fail, slow or online (got ${mode})`);
+  page.dcNetwork = async (route) => {
+    if (!['fetch', 'xhr'].includes(route.request().resourceType())) return route.continue();
+    if (mode === 'fail') return route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+    await new Promise((r) => setTimeout(r, 3000));
+    return route.continue();
+  };
+  await page.route('**/*', page.dcNetwork);
+}
 
 // ---------- taps by accessible name ----------
 const TAP_ROLES = ['button', 'link', 'tab', 'menuitem', 'option', 'switch', 'checkbox', 'radio', 'treeitem'];

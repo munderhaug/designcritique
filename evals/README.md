@@ -89,7 +89,7 @@ folders are named neutrally because reviewers are given their paths:
   buttons in a shadow root, "Open an account" is a modal sheet over the page, page changes and
   the sheet are animated with the Web Animations API, and the app renders a moment after load.
   It must be as clean as `v2`, with every named screen reached and no tap or replay failing.
-  This is the regression test for what broke on a real Ionic prototype (0.7.2).
+  This is the regression test for framework-built prototypes: what the 0.7.2 fixes were for.
 
 The script crawls, captures, runs the checks, structure and consistency audits and scores
 against `review/expected.json`: every seeded rule must fire on `v1`, and on `v2` and `v3` none of

@@ -112,7 +112,8 @@ whoever builds it. The report says it is an inspection, not a test with users.
 
 The **gate** (`gate:` in mockups.yaml) fails on an open finding at `fail_on` or worse, a key
 task unscored or under `target_score`, or holes in the evidence (`[tooling]`). Challenges never
-count. `gate: off` turns the verdict off for a designer who wants the conversation without it;
+count. `gate.confirm: true` keeps a finding only one critic raised from blocking until a second source
+has seen it too; `gate: off` turns the verdict off for a designer who wants the conversation without it;
 `gate.mjs` exits 2 with the reasons for CI or a Stop hook.
 
 ## 6. Reply, then discuss

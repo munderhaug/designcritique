@@ -82,6 +82,21 @@ rendered angle sees what the user sees, the source angle sees what the screen ig
 user's text size, the back gesture, the safe area). The report merges a problem found from both
 angles into one finding marked "found on the rendered screen and in its source".
 
+## States that need the network to misbehave
+
+A `network:` step puts the app's own requests into a condition before the steps after it, so
+its error, offline and loading states are captured as they are, without hand-made mocks:
+
+```yaml
+states:
+  - { id: offline, title: Offline, steps: [{ network: offline }, Refresh] }
+  - { id: failed, title: Server error, steps: [{ network: fail }, Refresh] }   # requests answer 500
+  - { id: loading, title: Loading, steps: [{ network: slow }, Refresh] }       # each request waits 3 s
+```
+
+`{ network: online }` returns to normal. It affects the app's data requests (fetch, XHR), not
+the page's own files.
+
 ## Figma prototypes: flows and structure from the design itself
 
 ```bash
