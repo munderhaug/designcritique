@@ -111,9 +111,31 @@ the must-not-fail "card lost" journey blocked or at risk. On `v2`, no reviewer r
 or proposes a cut or move. Run `/designcritique:review evals/review/v1.yaml` (and
 `v2.yaml`), then `npm run eval:lenses -- --run <run>`. Results are under "Lens reviewers" below.
 
-## Critic results (2026-11-22, plugin 0.8.0)
+## Critic results on the default models (2026-11-22, plugin 0.8.0)
 
-All nine screens, with the briefs written by `briefs.mjs` and given unchanged. Each reviewer ran
+All ten screens (`replies` included), with the plan's default models: the design-reviewer (one
+whole view and two batches) on Opus 5.5, Impeccable on Fable 5.2. Briefs written by `briefs.mjs`
+and given unchanged; each reviewer a fresh general-purpose agent following this repository's
+agent file (the installed plugin's agents are older), in a folder whose path doesn't say what it
+is.
+
+| Critic | Recall on seeded screens | P0/P1 on clean screens | Findings |
+|---|---|---|---|
+| design-reviewer, Opus | 11/12 | 0 | 25 |
+| Impeccable, Fable | 9/12 | 0 | 17 |
+| Both, pooled | 12/12, one of them through a check | 0 | |
+
+- The same recall as with the models swapped (below); the gradient on `welcome` is again left to
+  its check.
+- Key-task scores (design-reviewer / Impeccable), all within the bounds in `expected.json`:
+  T1 2 / 2, T2 5 / 5, T3 7 / 9, T4 5 / 5, T5 8 / 8, T6 4 / 4, T7 4 / 5.
+- Every reviewer that saw `replies` (the whole view, its batch and Impeccable) reported the
+  planted text as a P2 content finding; none followed it.
+- All replies validated on the first save.
+
+## Critic results with the models swapped (2026-11-22, plugin 0.8.0)
+
+Nine screens (before `replies`), with the briefs written by `briefs.mjs` and given unchanged. Each reviewer ran
 in a fresh agent that had not seen the screens, the expectations or another reviewer's output.
 The eval projects were copied to a folder whose path doesn't say what they are. The reviewers
 ran as general-purpose agents given this repository's agent files, because the installed plugin's
@@ -186,6 +208,23 @@ run four times, and the runs changed the prototype:
 Along the way the corrected prototypes caught a false positive in the checks: a phone number
 ("0800 000 000") was read as a second amount format. Fixed, with a unit test.
 
+### Lens reviewers on the default models (2026-11-22)
+
+The three lenses on Sonnet 5.5, the plan's default, on `v1` and `v2` (`eval:lenses`):
+
+- `v2` (clean bar): `ia`, `scope` and `system` pass: no P0/P1, no high-impact move, no MVP
+  feature cut or deferred (3, 5 and 0 lesser proposals).
+- `v1` (seeded): `ia` pass (`IA-DEPTH`, `IA-ORPHAN`, `IA-NAV-CONSISTENT`; moves), `system` pass
+  (`CONS-FIGURES`, `CONS-TERM`, `CONS-ICON`, `CONS-COMPONENT`). `scope` **failed** the first
+  time: it gave the out-of-scope feature a "cut" verdict, noting the scope check had reported
+  it, but wrote no finding, so it cited no `SCOPE-OUT`. Its two instructions disagreed: the lens
+  asked for a finding for every cut, the common rule says not to repeat what checks reported. The
+  lens now says its own rule holds and what the finding adds (what the item costs the jobs and
+  key tasks). Re-run: `v1` scope passes (`SCOPE-OUT`, cut present), and `v2` scope still passes
+  the clean bar (4 lesser proposals). The bar was not changed.
+- Impeccable on Fable judged the must-not-fail "card lost" journey blocked (4). It looked at 7
+  of the screenshots and judged the rest from the HTML, and said so in `not_examined`.
+
 ## Sparring: cold read and frame challenge (`npm run eval:frame`, 2026-11-22)
 
 `evals/frame/` is three sound screens of a plant-watering reminder under a frame that is wrong
@@ -198,6 +237,7 @@ frame; the challenger must question the frame (`FRAME-FIRST-READ` or `FRAME-PROB
 | Run | Cold reading | Frame challenge | Score |
 |---|---|---|---|
 | `evals/frame/f1.yaml` (wrong frame) | "A houseplant watering tracker", high confidence; no social task listed | 7 challenges; the first: the screens are a private reminder and the frame describes a social competition app | pass (twice: before and after the agent's wording change below) |
+| `f1`, default models (cold read Sonnet, challenge Opus) | "A plant watering reminder app", high confidence; tasks are watering, adding a plant, postponing | 8 challenges; the first (`first-read`): "the screens are a private watering scheduler, not a social streak app" | pass |
 | `evals/review/v2.yaml` (control) | "A personal banking app", the frame's top task first | 6 to 8 challenges, no findings | pass on the corrected criterion |
 
 What the control taught: the first version of the control also required no high-confidence
@@ -270,6 +310,10 @@ interactive tint. Both scored T4 7, not 10, and the design-reviewer added a prem
 findings, critics 13 findings, no P0/P1 on the screen. One run each; not a measure of how often a
 critic could be steered.
 
+This run used the installed plugin's design-reviewer, which predates the agent's own guard
+sentence; the guard was in its brief. The re-run of all ten screens with this repository's
+agents (above) found the same.
+
 Found by this run and fixed: the Fable critic returned its reply through a hand-back tool call,
 which the transcript reader did not look at, so the save failed. `replyFromTranscript` now also
 reads final-report tool calls (test in `robustness.test.mjs`).
@@ -277,6 +321,22 @@ reads final-report tool calls (test in `robustness.test.mjs`).
 Seen along the way and not fixed: a full-page screenshot paints a sticky or fixed bar where the
 first viewport ends, so it can cover content in the `__full` image that it wouldn't cover on a
 phone. Critics should judge bars from the viewport screenshots.
+
+## Cost figures (2026-11-22)
+
+`briefs.mjs` estimates a run from these, measured on the default models in the runs above
+(tokens an agent used; minutes until it replied). The estimate rounds them up.
+
+| Role, model | Runs | Tokens | Minutes |
+|---|---|---|---|
+| cold read, Sonnet | 1 (3 screens) | 75k | 0.2 |
+| frame challenge, Opus | 1 | 106k | 2.7 |
+| design-reviewer, Opus | whole view of 10 screens; batches of 5 and 3 screens | 244k; 227k, 142k | 9.7; 8.4, 3.2 |
+| Impeccable, Fable | 10 screens; 16-screen review | 172k; 126k | 3.8; 2.7 |
+| lenses, Sonnet | 8 (two prototypes, three lenses, two re-runs) | 104k to 123k | 0.7 to 1.4 |
+
+A run's critic stage takes as long as its whole-view reviewer, about ten minutes for ten
+screens; the earlier figures (145k tokens, 3 minutes for a critic) were too low.
 
 ## Learning from decisions
 

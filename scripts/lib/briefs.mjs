@@ -226,15 +226,16 @@ export function planReviewers(ctx) {
   return { review, screens: screens.length, reviewers, stages, estimate: estimateCost(stages), warnings, local };
 }
 
-// What a run costs before it starts, from runs of this plugin measured in its own evals
-// (2026-11): tokens a reviewer agent used, and minutes until it replied. Reviewers in a stage run
-// in parallel, so a stage takes as long as its slowest reviewer.
+// What a run costs before it starts, from this plugin's eval runs on the default models
+// (2026-11-22; evals/README.md "Cost figures"): tokens a reviewer agent used, and minutes until it
+// replied, rounded up. Reviewers in a stage run in parallel, so a stage takes as long as its
+// slowest reviewer.
 export const MEASURED = {
-  cold_read: { tokens: 95000, minutes: 1 },
-  frame: { tokens: 105000, minutes: 1.5 },
-  critic: { tokens: 145000, minutes: 3 },
-  second_critic: { tokens: 160000, minutes: 3.5 },
-  lenses: { tokens: 135000, minutes: 2.5 },
+  cold_read: { tokens: 80000, minutes: 0.5 },
+  frame: { tokens: 110000, minutes: 3 },
+  critic: { tokens: 205000, minutes: 10 },
+  second_critic: { tokens: 150000, minutes: 4 },
+  lenses: { tokens: 110000, minutes: 1.5 },
 };
 export function estimateCost(stages) {
   let tokens = 0; let minutes = 0;
